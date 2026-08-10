@@ -11,9 +11,7 @@
       "parameters": {
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
-          { "context": "lint" },
-          { "context": "test (ubuntu-latest)" },
-          { "context": "test (macos-latest)" }
+          { "context": "ci" }
         ]
       }
     }
