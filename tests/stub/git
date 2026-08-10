@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+# A fake `git` for the installer tests — and it exists for one specific reason.
+#
+# The `curl … | sh` update path is only reachable with SKILLS_REPO **unset**, because the
+# checkout-detection is guarded by `[ -z "${SKILLS_REPO:-}" ]`. Setting SKILLS_REPO to a local path
+# to keep the test offline therefore disables the very branch under test — the first version of
+# this test did exactly that and passed against the broken installer.
+#
+# So: leave SKILLS_REPO unset, let the script reach for its hardcoded remote, and intercept only
+# the clone. $GIT_STUB_SRC is copied in place of whatever URL was asked for. Everything else is
+# handed to the real git — a stub that faked `rev-parse` too would start testing itself.
+set -u
+
+REAL="$(PATH="$(printf '%s\n' "$PATH" | sed "s|$(dirname -- "$0")||")" command -v git 2>/dev/null || echo /usr/bin/git)"
+
+# Record invocations so a test can assert HOW the clone was asked for, not just that it happened.
+[ -n "${GIT_STUB_LOG:-}" ] && printf '%s\n' "$*" >> "$GIT_STUB_LOG"
+
+case "${1:-}" in
+  clone)
+    : "${GIT_STUB_SRC:?GIT_STUB_SRC not set}"
+    # Last argument is the destination; everything before it is flags + the URL we ignore.
+    dest=""
+    for a in "$@"; do dest="$a"; done
+    mkdir -p "$dest"
+    # `cp -R src/. dest` copies the CONTENTS, so an existing empty dest is filled, not nested.
+    cp -R "$GIT_STUB_SRC/." "$dest/" 2>/dev/null || exit 1
+    exit 0
+    ;;
+  *)
+    exec "$REAL" "$@"
+    ;;
+esac

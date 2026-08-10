@@ -1,0 +1,148 @@
+# TEMPLATE — adapt by wai-cicd to the real stack, then write to
+# .github/workflows/ci.yml. Replace placeholders <...>.
+# Example: Node/pnpm monorepo with one app (api). For multiple apps, one job/image per app.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}-api   # adapt <app>
+
+jobs:
+  # ── Merge gate — every job here is a REQUIRED status check in the main branch ruleset.
+  #    These are what make "green" trustworthy enough for wai-pr-review to auto-merge.
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:                                  # ephemeral DB so integration/e2e actually run
+        image: postgres:16                       # adapt <db>
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: test }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4              # adapt <package-manager>
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20                       # <runtime-version>
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Guard: fail if a gate script is a STUB (e.g. lint = `echo "no lint"`) — a vacuous gate must
+      # score RED, not green. It flags only scripts that genuinely do nothing: empty, `true`/`:`/
+      # `exit 0`, or a bare `echo`. A real command that merely *contains* the word echo
+      # (`vitest run && echo ok`) passes — a guard that fails honest work is a guard people delete.
+      #
+      # IT WALKS EVERY WORKSPACE, NOT JUST THE ROOT. In a monorepo the root script is a delegator
+      # (`turbo run lint`) and looks perfectly real, while a package carries `"lint": "echo ok"`.
+      # A root-only check reports green and the package is 0% linted. That is a documented incident,
+      # not a hypothetical — and a root-only guard is exactly how it survives.
+      - name: Assert gate scripts are real
+        env:
+          GATE_SCRIPTS: "lint typecheck test test:integration build"
+        run: |
+          fail=0
+          for pkg in $(git ls-files 'package.json' '*/package.json'); do
+            for s in $GATE_SCRIPTS; do
+              cmd=$(node -p "(require('./$pkg').scripts||{})['$s'] ?? ''")
+              if [ -z "$cmd" ]; then
+                # Absent in a workspace is fine — the runner simply won't call it there.
+                # Absent at the ROOT is not: the workflow invokes it directly.
+                if [ "$pkg" = "package.json" ]; then
+                  echo "::error::root package.json has no '$s' script, but the gate runs it"
+                  fail=1
+                fi
+                continue
+              fi
+              norm=$(printf '%s' "$cmd" | tr -d "\"'" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+              stub=0
+              case "$norm" in
+                true|:|'exit 0') stub=1 ;;
+                echo*)  # a lone echo is a stub; an echo chained onto real work is not
+                  case "$norm" in *'&&'*|*';'*|*'|'*) ;; *) stub=1 ;; esac ;;
+              esac
+              if [ "$stub" = 1 ]; then
+                echo "::error::$pkg — gate script '$s' is a stub: '$cmd'"
+                fail=1
+              fi
+            done
+          done
+          [ "$fail" = 0 ]
+      - run: pnpm lint                           # gate — real linter, no stub
+      - run: pnpm typecheck                      # gate
+      - run: pnpm test                           # gate — unit (security/billing mandatory targets)
+      - run: pnpm test:integration               # gate — integration/e2e against the service DB
+      - run: pnpm build                          # gate — build each deployable on the PR, not only on main
+
+  security:
+    runs-on: ubuntu-latest                       # gate — secrets + CVEs across THREE surfaces
+    # A CVE gate on `pnpm audit` ALONE has a structural blind spot: it sees only the npm lockfile and
+    # misses two whole classes of runtime CVE that still ship in the image and run in production.
+    #   surface 1  lockfile deps (npm/pip/…)          seen by  pnpm audit / osv   fixed by  update the package
+    #   surface 2  OS packages (openssl, poppler…)    seen by  IMAGE SCAN (trivy) fixed by  bump/pin the base image
+    #   surface 3  runtime-bundled libs (Node's       seen by  IMAGE SCAN (trivy) fixed by  bump the base image —
+    #              undici behind fetch; corepack)                                           there is NO package to update
+    # Real incident: undici CVE-2026-12151 — `pnpm audit` reported 0 (undici is not an npm dependency,
+    # it is bundled in node:*-alpine); only the image scan saw it. So the IMAGE SCAN is a FIRST-CLASS
+    # layer of this gate, not an adjacent nicety. A green `pnpm audit` is not a clean runtime.
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2        # secrets
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level=high       # surface 1 — lockfile CVEs
+      # surfaces 2 + 3 — build the image and scan IT, on every PR (not only on main): the only step
+      # that sees OS + runtime-bundled CVEs. Pin the Dockerfile's base to a PATCH tag
+      # (node:24.12.0-alpine, not node:24-alpine) so this result is reproducible and every runtime-CVE
+      # fix is an auditable, gated version bump instead of silent base drift.
+      - uses: docker/build-push-action@v6
+        with: { context: ., file: ./Dockerfile, push: false, load: true, tags: "ci-scan:${{ github.sha }}" }
+      - uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: "ci-scan:${{ github.sha }}"
+          severity: HIGH,CRITICAL
+          # ignore-unfixed=true: gate ONLY on CVEs that HAVE a fix — a blocked check must be
+          # actionable, or it is a merge nobody can unblock. Set false to also SURFACE unfixed ones
+          # (they then report but do not block). Choose deliberately; do not inherit this by accident.
+          ignore-unfixed: true
+          exit-code: "1"
+
+  build-push:
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write                            # for GHCR push
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile                     # or apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy runs in deploy-ssh.yml (separate workflow), triggered after this one.

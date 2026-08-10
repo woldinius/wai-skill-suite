@@ -1,0 +1,17 @@
+#!/bin/sh
+# A fake `gh` for the rank-pr-candidates tests.
+#
+# rank-pr-candidates.sh reads a size proxy via `gh pr diff <n> --name-only`. This stub emits the
+# per-PR file list from $GH_FIXTURE/pr<N>.files. It handles nothing else the tests do not use.
+set -u
+F="${GH_FIXTURE:?GH_FIXTURE not set}"
+case "${1:-}" in
+  auth) exit 0 ;;
+  pr)
+    if [ "${2:-}" = "diff" ]; then
+      PR="${3:-}"
+      [ -f "$F/pr$PR.files" ] && cat "$F/pr$PR.files"
+      exit 0
+    fi ;;
+esac
+exit 0

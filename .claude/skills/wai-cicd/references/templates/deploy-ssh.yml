@@ -1,0 +1,30 @@
+# TEMPLATE — write to .github/workflows/deploy-ssh.yml.
+# Deploys the GHCR image built in ci.yml via SSH to the Hetzner server.
+name: deploy-ssh
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    # only deploy if CI was green
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}     # deploy
+          key: ${{ secrets.SSH_KEY }}           # private deploy key
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd /opt/app
+            ./deploy.sh "sha-${{ github.event.workflow_run.head_sha }}"
+
+# Required secrets: SSH_HOST, SSH_USER, SSH_KEY, optionally SSH_PORT.
+# The server must be logged in to GHCR (docker login ghcr.io) or the image
+# must be public; otherwise additionally store a GHCR pull token on the server.

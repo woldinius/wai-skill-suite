@@ -1,0 +1,65 @@
+#!/usr/bin/env sh
+# A fake `gh` for the merge-gate tests.
+#
+# It emits what the real one emits AFTER `--jq` has run, read from files in $GH_FIXTURE. That is a
+# deliberate simplification: a stub cannot evaluate gh's built-in jq, and the script only ever
+# consumes the post-jq lines anyway.
+#
+# TWO THINGS IT MUST GET RIGHT, because the real thing does and a lazy stub would not:
+#
+#  1. `gh api .../rulesets` is called BOTH with `--jq` (the required-check set) and WITHOUT it (the
+#     team-mode approval count, which greps raw JSON). Same URL, two shapes. A stub that ignores
+#     `--jq` would silently test only one of them.
+#  2. On 404 the real `gh` prints its error body to STDOUT and exits non-zero. That is what made a
+#     naive `|| true` read `{"message":"Branch not protected"}` in as a required check name. If the
+#     stub politely printed nothing, the test would pass while the bug lived.
+set -u
+F="${GH_FIXTURE:?GH_FIXTURE not set}"
+
+# Record every invocation. A test can then assert not just WHAT came back, but that the caller
+# actually asked the way it claims to — which is how the "--repo was advertised and never passed on"
+# defect stayed invisible: the answer looked right because it came from the only repo the stub knew.
+printf '%s\n' "$*" >> "$F/gh-calls.log" 2>/dev/null || true
+
+has_jq=0
+for a in "$@"; do [ "$a" = "--jq" ] && has_jq=1; done
+
+emit() { [ -f "$F/$1" ] && cat "$F/$1"; return 0; }
+
+case "${1:-}" in
+  auth) exit 0 ;;
+  repo)
+    # A repo that will not resolve: the real gh writes the GraphQL error to stderr and exits 1.
+    # That is the shape that used to reach the gate as exit 1 = NO-GO.
+    [ -f "$F/repo-fail" ] && { echo 'GraphQL: Could not resolve to a Repository with the name "gone/repo". (repository)' >&2; exit 1; }
+    emit repo ;;
+  pr)
+    case "${2:-}" in
+      view)   case "$*" in
+                *baseRefName*) [ -f "$F/base-fail" ] && { echo 'could not resolve to a PullRequest' >&2; exit 1; }
+                               emit base ;;
+                *state*)  emit state ;;
+                *number*) emit number ;;
+              esac ;;
+      checks) emit checks ;;
+      diff)   case "$*" in *--name-only*) emit files ;; *) emit diff ;; esac ;;
+    esac ;;
+  api)
+    url="${2:-}"
+    case "$url" in
+      *rulesets\?*)
+        [ -f "$F/rulesets-403" ] && { echo '{"message":"Resource not accessible","status":"403"}'; exit 1; }
+        if [ "$has_jq" = 1 ]; then emit ruleset-ids; else emit ruleset-raw; fi ;;
+      *rulesets/*)
+        if [ "$has_jq" = 1 ]; then emit required; else emit ruleset-raw; fi ;;
+      *protection*)
+        if [ -f "$F/protection" ]; then
+          if [ "$has_jq" = 1 ]; then emit protection; else emit protection-raw; fi
+        else
+          # Exactly what the real gh does for an unprotected branch: body on stdout, exit 1.
+          echo '{"message":"Branch not protected","documentation_url":"https://...","status":"404"}'
+          exit 1
+        fi ;;
+    esac ;;
+esac
+exit 0

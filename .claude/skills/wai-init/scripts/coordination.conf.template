@@ -1,0 +1,95 @@
+# coordination.conf — this repo's autonomy + cross-repo-comms configuration.
+#
+# `wai-init` writes this into `docs/architecture/coordination.conf` (proposal-only) and refines
+# it on each re-run. `coordination-lint.sh` validates it; a red lint STOPS setup.
+#
+# Format: KEY="value". PARSED, NEVER SOURCED. A repo-local file a script EXECUTES is an injection
+# vector, and the tools that read this run on a machine with git credentials and a webhook secret in
+# the environment. Nothing here is ever `. sourced` — every consumer greps the one key it needs.
+#
+# THIS FILE IS CONTRACT-DOMAIN. It decides what an agent may do WITHOUT a human. An agent-merged edit
+# to it could arm autonomy or widen its blast radius with no human in the loop — so it is off-limits
+# to the tuning pass, it is protected by the merge gate's guardrail floor, and it is fail-closed:
+# every default below is the SAFE state (autonomy off, comms none). An ABSENT file means exactly the
+# same thing as this file's defaults — autonomy is off. You opt IN, explicitly, or you get nothing.
+
+# ── AUTONOMY ────────────────────────────────────────────────────────────────────────────────────
+# Off by default, and off is a real answer, not a placeholder. Set to "yes" ONLY after the four
+# preconditions below are met — coordination-lint enforces them, and refuses to let autonomy arm
+# without them:
+#   1. AUTONOMY_SAFE_PATHS is non-empty          (the ALLOWLIST — an agent may drain a PR only if
+#                                                  EVERY path it touches is inside this set)
+#   2. CONTRACT_PATHS is non-empty in merge-gate.conf   (the blocklist floor is actually defined)
+#   3. ERASURE_PATHS is non-empty in merge-gate.conf    (the GDPR-erasure surface is actually named)
+#   4. AUTONOMY_AFFIRMED is present               (a human affirmed THIS surface, on a date, by hash)
+AUTONOMY_ENABLED="no"
+
+# The six policy domains that stay the human's IN EVERY MODE. This is the FLOOR: a human may only
+# WIDEN it (add tokens), never narrow it. coordination-lint sources the authoritative floor from
+# `excluded-domains.sh --list-domains --policy-only` and fails if any of the six is missing here.
+#
+# Each entry is three colon-separated fields:  TAG:human-name:catalog-id
+#   TAG          — the canonical domain-family tag from `agent-git-protocol.md § Excluded domains`.
+#                  This is the suite-wide, non-numeric vocabulary the whole autonomy model keys on —
+#                  it is NOT a catalog ID and does not rebind across repos.
+#   human-name   — the domain in words, so the file reads without a decoder ring.
+#   catalog-id   — an OPTIONAL slot, EMPTY in this template on purpose. A bare catalog ID copied into
+#                  a template rebinds to a different meaning in every repo (ADR-0003), so the template
+#                  ships none. If you want an ID anchor, `wai-init` RESOLVES the human-name
+#                  against THIS repo's quality-attributes.md at write time and fills it here; a filled
+#                  ID that no longer resolves is caught by coordination-lint's dangling-anchor check.
+AUTONOMY_EXCLUDED="EX-PAY:payment-token-billing: EX-AUTH:auth-login-and-user-management: EX-API:api-contract: EX-SEC:security: EX-MIG:destructive-migration: EX-GDPR:gdpr-erasure:"
+
+# The ALLOWLIST that actually authorises autonomy. Autonomy eligibility is NOT "the blocklist did not
+# trip" — a blocklist is under-inclusive by construction (it cannot know a novel risky path). It is
+# "every touched path is provably inside a human-affirmed safe set". Space-separated globs, same
+# syntax as merge-gate.conf. EMPTY (the default) means NO path is safe ⇒ autonomy drains nothing.
+AUTONOMY_SAFE_PATHS=""
+
+# The human affirmation. A date + a short hash/fingerprint of the safe set the human signed off on,
+# e.g. AUTONOMY_AFFIRMED="2026-08-02 sha256:1a2b3c…". EMPTY ⇒ unaffirmed ⇒ autonomy stays off, no
+# matter what the paths say. This is the "a human looked at THIS blast radius and said yes" record.
+AUTONOMY_AFFIRMED=""
+
+# Risk PATHS are NOT duplicated here. CONTRACT_PATHS, MIGRATION_PATHS and ERASURE_PATHS live in
+# `merge-gate.conf` and are INHERITED — one source of truth for "which paths are dangerous", read by
+# both the merge gate and the autonomy classifier. Editing them in one place changes both, on purpose.
+
+# ── CROSS-REPO COMMS ────────────────────────────────────────────────────────────────────────────
+# How agents in DIFFERENT repos signal each other. The default — "none" — is the file-based handoff
+# (each repo's gitignored temp/ mailbox, human-triggered), which needs no secret and no network.
+#
+# Allowed COMMS_TOOL values (a fixed set coordination-lint checks against):
+#   none                — file-based temp/ handoff (the safe default; also the degrade target when a
+#                         configured tool is unreachable or the forge is not GitHub)
+#   github-coordination — a shared GitHub issue/label as the wake-signal
+#   slack | discord | matrix — third-party notify transports (a channel + a webhook, NOTHING more:
+#                         the tool only NOTIFIES; the sensitive spec stays in-repo, never on the wire)
+COMMS_TOOL="none"
+
+# The channel/room identifier the wake-signal is posted to (e.g. "#eng-agents", a channel ID, a room
+# alias). An IDENTIFIER, not a secret. Empty when COMMS_TOOL=none.
+COMMS_CHANNEL=""
+
+# *** SECRET HYGIENE — STORE THE ENV-VAR *NAME*, NEVER THE SECRET ITSELF. ***
+# This value is the NAME of an environment variable that holds the webhook URL/token at runtime —
+# for example  COMMS_WEBHOOK_ENV="TEAM_COORD_WEBHOOK_URL"  — and the process reads
+# `$TEAM_COORD_WEBHOOK_URL` when it needs to post. It is NOT the URL, NOT the token, NOT `https://…`.
+# A literal secret committed here is a leaked secret in git history forever; coordination-lint
+# HARD-FAILS on any value that looks like a URL or a known token shape. Must match ^[A-Z_][A-Z0-9_]*$.
+COMMS_WEBHOOK_ENV=""
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────
+# EXAMPLE — a team repo that has opted into a bounded autonomous drain over its docs and tests only,
+# and posts a wake-signal to Slack. THIS IS NOT A DEFAULT. Delete it; do not uncomment it verbatim.
+#
+# AUTONOMY_ENABLED="yes"
+# The active key stays on ONE line — it is parsed single-line, so a "\"-continued value would be
+# silently truncated to its first line. The seventh entry WIDENS the floor with a repo-local domain
+# (allowed; narrowing is not):
+# AUTONOMY_EXCLUDED="EX-PAY:payment-token-billing: EX-AUTH:auth-login-and-user-management: EX-API:api-contract: EX-SEC:security: EX-MIG:destructive-migration: EX-GDPR:gdpr-erasure: EX-RELEASE:release-status-doc:docs/RELEASE.md"
+# AUTONOMY_SAFE_PATHS="docs/** tests/** *.md"
+# AUTONOMY_AFFIRMED="2026-08-02 sha256:1a2b3c4d"
+# COMMS_TOOL="slack"
+# COMMS_CHANNEL="#eng-agents"
+# COMMS_WEBHOOK_ENV="TEAM_COORD_WEBHOOK_URL"

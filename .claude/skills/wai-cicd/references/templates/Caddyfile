@@ -1,0 +1,21 @@
+# TEMPLATE — to /opt/app/Caddyfile.
+# Caddy automatically fetches a Let's Encrypt certificate for the domain.
+# Adapt <domain> and the upstream port to the app.
+
+api.example.com {
+	encode gzip
+	reverse_proxy api:3000
+
+	# optional security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+# Web app (if deployed separately), e.g. Next.js:
+# app.example.com {
+# 	encode gzip
+# 	reverse_proxy web:3000
+# }

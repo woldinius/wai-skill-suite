@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+# Refuse a commit on the default branch.
+#
+# `agent-git-protocol.md` has said "work happens on a branch, a human merges" since the suite
+# existed. It was enforced by nothing, and it has now been broken three times — every time by an
+# agent that simply did not look at `git branch --show-current` before committing.
+#
+# The last one is the whole argument. The commit landed on local `main`; the follow-up
+# `git push origin <branch>` pushed the branch REF, which was unchanged, so it was a silent no-op;
+# and `gh pr edit` succeeded, because you CAN edit a merged PR. Every signal came back green while
+# the most important fix of the day sat unpushed on the wrong branch.
+#
+# The failure case looked exactly like the success case. That is the one thing this whole suite
+# exists to make impossible — so it cannot be left to vigilance here either.
+#
+# A human who means it: `git commit --no-verify`. Explicit, visible, chosen.
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+default="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')"
+[ -n "$default" ] || default=main
+
+if [ "$branch" = "$default" ] || [ "$branch" = "master" ]; then
+  echo "pre-commit: refusing to commit on '$branch'." >&2
+  echo >&2
+  echo "  Work happens on a branch; a human merges. Your staged changes are safe — they" >&2
+  echo "  come with you:" >&2
+  echo >&2
+  echo "      git switch -c agent/<slug>" >&2
+  echo >&2
+  echo "  If you are the human and you mean it: git commit --no-verify" >&2
+  exit 1
+fi
+exit 0

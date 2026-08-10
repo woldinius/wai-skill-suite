@@ -1,0 +1,79 @@
+name: ci
+
+# The suite ships a merge gate that demands green CI — and had none itself. Run here, `merge-gate.sh`
+# returned `NO-GO: no CI checks report on this PR` on every PR in the repo that ships it. We did not
+# eat our own cooking, and it cost: the gate was dead in every repo for five field runs, the lint was
+# red for a day, and a PR merged red.
+#
+# Then it happened again, and worse. The lint went red for TWELVE DAYS — every branch and `main` —
+# because it failed on `info`-level findings and the runner's shellcheck is older than a developer's,
+# so the failure could not be reproduced locally. Nobody could fix what nobody could see. **Having CI
+# was never the lesson. Having CI that can go green, and that a human can reproduce, is.**
+#
+# REDUCED TO ONE JOB ON ONE RUNNER, 2026-08-06 — dated, because the reduction is a trade and the
+# reason will otherwise be invented later. This workflow was a lint job plus a two-OS matrix; in a
+# PRIVATE repo macOS bills at 10×, and the matrix burned the monthly Actions budget until GitHub
+# stopped creating runs AT ALL — every PR then hung on required checks that could never report
+# (PR #25). A required check that cannot run is worse than no check: it blocks everything and
+# verifies nothing. What the matrix bought, and where it went:
+#   · bash 3.2 (macOS /bin/sh) coverage — the shell the shipped `case … esac in $( )` bug needed —
+#     moves to the author's machine, where every branch's suites already run BEFORE its PR. What is
+#     lost is the ENFORCEMENT of that habit; that is stated here rather than papered over.
+#   · The standalone lang-guard and static numbers-lint steps are gone as STEPS because both run as
+#     cases INSIDE tests/run.sh — they are still enforced, once instead of twice.
+#   · The day this repo is public, Actions minutes are free and the matrix can return; the
+#     branch ruleset then requires this job by its name: `ci`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-tags, because numbers-lint (inside tests/run.sh) verifies version references against
+      # `git tag` — a shallow checkout has no tags, which once read as "this tag does not exist"
+      # and failed the job on tags that were real.
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+      # `-S warning` IS THE POINT, NOT A LOOSENING: without it this job was red for twelve days on
+      # `info`-level opinions (SC2015 on a correct pattern) that a developer's newer shellcheck
+      # does not even report — a red check nobody can reproduce locally is noise with a build
+      # number. Warnings and errors stay fatal; if the versions ever disagree at WARNING level,
+      # pin shellcheck here rather than guessing which one was right. (A linter is not a test —
+      # it passed the bash-3.2 syntax error the test suites were built to catch.)
+      - run: shellcheck -S warning $(git ls-files '*.sh') .githooks/pre-commit .githooks/pre-push tests/stub/gh tests/stub/git
+      # PyYAML arms the strict YAML-frontmatter guard inside tests/run.sh. Without it that check
+      # SKIPs — and the first CI run proved the skip is real: the one guard against the
+      # description-truncation blocker was off exactly where it mattered. Pinned, because this
+      # package feeds a GUARD: an unpinned install in the check's own path means a compromised
+      # release runs code in CI with the workflow token. If the install fails, the step fails
+      # LOUDLY rather than silently disarming the guard.
+      - run: python3 -m pip install --quiet 'pyyaml==6.0.2'
+      # `tee` keeps the summary lines for the case-count check below. `shell: bash` is
+      # LOAD-BEARING: GitHub's DEFAULT shell is `bash -e {0}` — NO pipefail — so a failing suite
+      # would exit 0 through the pipe and the step would go green. Naming the shell switches
+      # Actions to `bash --noprofile --norc -eo pipefail {0}`.
+      - run: sh tests/run.sh | tee /tmp/run.out
+        shell: bash
+      - run: sh tests/scripts.sh | tee /tmp/scripts.out
+        shell: bash
+      # The README's "N cases" claim, checked against the run that just happened — not against
+      # memory. $1+$5: "107 passed, 0 failed, 6 known defects pinned" — a pinned KNOWN DEFECT is a
+      # case this suite runs and counts, but it must never hide inside "passed" (that is how six
+      # defects once read as health). An empty $5 (no pins) adds 0.
+      - run: |
+          R=$(awk '/ passed, /{v=$1+$5} END{print v}' /tmp/run.out)
+          S=$(awk '/ passed, /{v=$1+$5} END{print v}' /tmp/scripts.out)
+          sh tests/numbers-lint.sh --cases $((R+S))
+      # The learning-gap skill ships its own harness and it once ran in NO ci — 88 cases that only
+      # executed when somebody remembered. A check that runs on memory is the thing this repo
+      # exists to argue against.
+      - run: sh .claude/skills/wai-learning-gap/scripts/tests/run.sh

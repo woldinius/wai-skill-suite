@@ -1,0 +1,62 @@
+# TEMPLATE — wai-cicd fills this in, then writes it to .github/CODEOWNERS.
+# Purpose: route CONTRACT-DOMAIN paths to a named human so those PRs get that human's eyes even
+# when CI is green. Skills never approve a PR (they only comment), so the approval on these paths
+# is always a human's. This is one half of the gated-merge policy; the branch-protection ruleset
+# is the other (see the runbook).
+#
+# ── THE PATHS COME FROM docs/architecture/merge-gate.conf — DO NOT INVENT A SECOND LIST ──
+#
+# `CONTRACT_PATHS` in that file is the suite's single answer to "which paths are sensitive", and
+# `merge-gate.sh` blocks the agent on exactly those. A second, hand-written list here would drift
+# the first time a module moves — and then CODEOWNERS would route a PR to a human that the gate
+# waved through, or the reverse. Both would look internally consistent. Nobody would notice.
+#
+# Translate each conf glob to a CODEOWNERS pattern: a shell `case` glob's `*` crosses `/`, so
+#     apps/api/src/auth/*     (conf)   →   /apps/api/src/auth/     (here)
+# If the conf does not exist, run wai-init first. Don't guess.
+#
+# Replace <human> with the GitHub handle(s) who own contract-domain changes.
+# The example paths below are an ILLUSTRATION of the translation, not a default.
+#
+# ── REPO MODE (catalog header: `**Repo mode:**`) — this decides how CODEOWNERS is enforced ──
+#
+# solo — a single <human> handle is correct: they are the only reviewer. But do NOT enable
+#        "Require review from Code Owners" with a required approval: that human is also the PR
+#        author, GitHub never counts an author's own review, and every contract PR would become
+#        unmergeable. In solo, CODEOWNERS *requests* the review (it shows up on the PR) and the
+#        real gate is the suite's policy: wai-pr-review never auto-merges a contract-domain
+#        PR — the human merges it themselves.
+#
+# team — list **two or more** owners per line, or a GitHub team (@org/platform-contract), so an
+#        owner who authors a PR is never its only possible approver. Here DO enable "Require
+#        review from Code Owners" plus the ruleset's "require 1 approving review": that is the
+#        server-side wall that lets wai-pr-review arm `gh pr merge --auto` instead of
+#        merging by itself — the PR lands only once another human has approved it.
+
+# Default: everything is fine for the agent flow unless a line below claims it.
+# (No catch-all owner — the contract domains below name a human; in team mode the ruleset's
+#  "require 1 approval" covers everything else.)
+
+# ── API & client contract (store clients cannot be force-updated: API versioning, min-version /
+#    force-update, the binding contract) ──
+/apps/api/src/**/*.controller.ts        @<human>
+/apps/api/src/**/dto/                    @<human>
+/packages/shared/                        @<human>     # shared DTOs/types = the contract seam
+/openapi/                                @<human>     # or wherever the API spec lives
+
+# ── Auth / Login / Security (authn/authz, secrets management, prompt injection) ──
+/apps/api/src/auth/                      @<human>
+/apps/api/src/encryption/                @<human>
+
+# ── Token / Billing / Quota (idempotency & retry safety, billing) ──
+/apps/api/src/billing/                   @<human>
+/apps/api/src/payments/                  @<human>
+/apps/api/src/quota/                     @<human>
+
+# ── Database migrations (destructive-migration risk) ──
+/apps/api/drizzle/                       @<human>     # adapt to the migrations dir
+
+# ── The quality catalog & the agent git protocol themselves ──
+/docs/architecture/quality-attributes.md @<human>
+/docs/architecture/agent-git-protocol.md @<human>
+/.github/                                @<human>     # CI, rulesets, CODEOWNERS, PR template

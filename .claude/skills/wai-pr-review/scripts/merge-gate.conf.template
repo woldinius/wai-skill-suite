@@ -1,0 +1,85 @@
+# merge-gate.conf — the ONLY repo-specific input to the merge gate.
+#
+# `wai-init` writes this into `docs/architecture/merge-gate.conf` and refines it on each
+# re-run. Everything else the gate checks (catalog present, repo mode, checks green, an approval
+# rule actually enforced) is generic and lives in the script.
+#
+# Format: KEY="space separated shell globs". Parsed, never sourced — a repo-local file that a
+# script executes would be an injection vector, and the gate runs on a machine with git creds.
+#
+# Fail-closed: if this file is missing, the gate returns UNKNOWN and the human merges. So an
+# EMPTY value is a real statement ("this repo has no migrations"), not a shrug — write it
+# explicitly rather than deleting the line.
+
+# Paths whose change is a CONTRACT DOMAIN: API surface, auth/login, user management, security,
+# token, billing. A PR touching any of these is never agent-merged — a human merges it.
+#
+# ── YOU DO NOT NEED TO LIST THE SUITE'S OWN GUARDRAILS HERE — AND YOU CANNOT REMOVE THEM ──
+#
+# The quality catalog, the testing strategy, THIS FILE, `.claude/skills/**`, the CI workflows and
+# CODEOWNERS are contract-domain **no matter what this config says**. That floor is hardcoded in
+# `merge-gate.sh`, on purpose: if it lived here, an agent could delete it. Step 1 — a PR "tidies"
+# this file and drops `billing/*` from the list; no Blocker, checks green, GO, merged. Step 2 —
+# billing is no longer protected and the agent merges billing changes freely. Neither PR looks
+# alarming on its own.
+#
+# So this file may WIDEN the protection. It can never go below the floor.
+#
+# ── AND WIDEN IT YOU MUST: YOUR REPO HAS ITS OWN RULE-DEFINING DOCUMENTS ──
+#
+# The floor covers the SUITE's guardrails. It cannot know about yours. If this repo holds a
+# document that decides what "good" means here — a release-status doc that flips "breaking changes
+# are free" on and off, an invariants doc, an ADR set, a threat model — then it belongs in
+# CONTRACT_PATHS. It is the same escalation, one level up: an agent-merged edit to
+# "breaking changes are free until release" changes the bar without a human ever seeing it.
+#
+# ONE CARVE-OUT, because it bites in every repo that adopts the audit skill: an ADR set or a threat
+# model is rule-DEFINING and goes below — but an audit REPORT (docs/architecture/audits/**) is a
+# narrative OUTPUT, not a rule. If you reflexively put the whole docs/architecture/** tree in
+# CONTRACT_PATHS, every architecture-audit report auto-fails the gate and waits for a human, and the
+# low-ceremony audit can never be low-ceremony. List the rule-defining docs by NAME; leave the audit
+# outputs out. (The audit's own findings still land as issues/PRs, which are gated normally.)
+#
+# Ask, once, plainly: which file in this repo, if an agent quietly edited it, would make a bad
+# change look acceptable? That file goes below.
+#
+# ── AND: THE GATE'S ENFORCEMENT CHAIN, WHERE IT LEAVES THE BEATEN TRACK ──
+#
+# The floor covers the standard enforcement surface — package.json scripts, the eslint / tsconfig /
+# ruff / gradle configs, the build files. But the gate's commands may reach further in YOUR repo: a
+# `tools/` directory with custom lint rules, a `scripts/` folder CI shells into, a generated config.
+# If `pnpm lint` ultimately executes code the floor does not know about, that code IS the gate —
+# and an agent that may merge it may switch the gate off.
+#
+# The test: follow ONE gate command all the way down.
+#     pnpm lint  →  package.json  →  eslint.config.mjs  →  a plugin in tools/naming/
+# Everything on that chain belongs in CONTRACT_PATHS.
+# Start conservative: it is cheap to hand a safe PR to the human, and expensive to auto-merge an
+# unsafe one. Widen only when you have seen the false positives.
+CONTRACT_PATHS=""
+
+# Paths that contain database migrations. A migration alone is fine; the gate then reads the diff
+# for destructive statements (drop / rename / type narrowing / SET NOT NULL) and only escalates on
+# those. Point this at the migration directory, not at the whole data layer.
+MIGRATION_PATHS=""
+
+# Paths that hold ERASURE / data-deletion logic — the code that permanently removes a user or their
+# data: account deletion, the GDPR "right to erasure" endpoint, a hard-delete job. A change here is
+# an EXCLUDED DOMAIN (EX-GDPR): the human merges it, always. This is DISTINCT from MIGRATION_PATHS —
+# a schema migration is not the same thing as the application code that runs `DELETE FROM users`,
+# and the two rarely live in the same directory.
+#
+# Empty is a real statement ("this repo has no dedicated erasure module"), NOT a shrug — like every
+# key here, it is PARSED, never sourced. Even empty, the gate's classifier still runs a narrow
+# erasure grep over the WHOLE diff as a fail-closed backstop, so an ad-hoc `DELETE FROM ...`,
+# `ON DELETE CASCADE` or `deleteAccount()` dropped anywhere is caught. Name your erasure module here
+# so that grep is a backstop and not the only thing standing between an agent and a hard-delete.
+ERASURE_PATHS=""
+
+# ---------------------------------------------------------------------------------------------
+# Example — a TypeScript backend+web monorepo. Delete this block; it is not a default.
+#
+# CONTRACT_PATHS="apps/api/src/**/dto/* apps/api/src/auth/* apps/api/src/billing/* \
+#                 apps/api/src/users/* packages/contract/* docs/api/*"
+# MIGRATION_PATHS="apps/api/migrations/* apps/api/drizzle/*"
+# ERASURE_PATHS="apps/api/src/**/erasure/* apps/api/src/gdpr/* apps/api/src/users/delete-account.*"

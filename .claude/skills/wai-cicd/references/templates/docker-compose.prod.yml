@@ -1,0 +1,51 @@
+# TEMPLATE — to /opt/app/docker-compose.prod.yml on the server.
+# The image tag is set via IMAGE_TAG env by deploy.sh (rollback = previous sha tag).
+services:
+  api:
+    image: ghcr.io/<owner>/<repo>-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env                 # root-only (chmod 600), contains secrets — NOT in the repo
+    expose:
+      - "3000"                     # internal port; Caddy routes to it
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:

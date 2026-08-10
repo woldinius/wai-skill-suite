@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+# Refuse to push to a branch whose PR is already MERGED.
+#
+# THIS HAS NOW HAPPENED THREE TIMES — and the third one was found only because
+# somebody asked which branches were safe to delete. The shape is always the same:
+#
+#   You push. The push SUCCEEDS. It prints almost nothing. The commits sit on a branch whose PR is
+#   closed, so they reach nobody's `main` — and `main` stays green, because everything that IS there
+#   is correct. NOTHING LOOKS LIKE SOMETHING THAT IS MISSING.
+#
+#   One lost a translation. One lost the enforcement-surface SECURITY fix. One lost the error
+#   statistics and an entire docs reorganisation. Deleting the branch would have destroyed them.
+#
+# `agent-git-protocol.md` said "verify the push". A push to a dead branch IS verified — it worked.
+# The thing to verify is the MERGE.
+#
+# Fail-OPEN on a gh error, deliberately: a hook that blocks pushes when you are offline is a hook
+# people delete, and then it protects nothing. The backstop is the tip-vs-headRefOid check.
+
+command -v gh >/dev/null 2>&1 || exit 0
+
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac   # all-zero = a branch deletion, not a push
+  branch="${remote_ref#refs/heads/}"
+  [ -n "$branch" ] || continue
+
+  state="$(gh pr list --head "$branch" --state all --json state --jq '.[0].state' 2>/dev/null)" || continue
+  [ "$state" = "MERGED" ] || continue
+
+  pr="$(gh pr list --head "$branch" --state all --json number --jq '.[0].number' 2>/dev/null)"
+  echo "pre-push: the PR for '$branch' (#$pr) is already MERGED." >&2
+  echo >&2
+  echo "  These commits would land on a dead branch and reach nobody's main. The push would" >&2
+  echo "  succeed, print almost nothing, and lose the work — silently. It has happened three" >&2
+  echo "  times; one of them was a security fix." >&2
+  echo >&2
+  echo "      git switch -c agent/<slug> main   &&   git cherry-pick <your commits>" >&2
+  echo >&2
+  echo "  If you mean it: git push --no-verify" >&2
+  exit 1
+done
+exit 0
