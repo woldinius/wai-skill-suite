@@ -3,7 +3,8 @@
 A development history — what was adopted when, and just as deliberately, what was dropped and why.
 Every claim below is backed by a dated artefact in this repo: the [ADRs](adr/), the
 [empirics ledger](empirics.md), the [field reports](field-reports/), the
-[July retrospective](retrospective-2026-07.md) and the [first structural audit](architecture/audits/2026-08-03.md).
+[July retrospective](retrospective-2026-07.md) and the first structural audit
+(`architecture/audits/2026-08-03.md` — not yet republished from the archive).
 
 > **Disclosure.** This repository is a **curated re-publication**. The suite was developed in a
 > private repo whose history carries product names and German drafts that
@@ -112,7 +113,7 @@ right; it cannot check whether the question was right** — proven by an agent t
 correct), and by a rule an agent reinterpreted for itself. Both caught by the human, neither by a
 tool. `doctor.sh` starts reporting repo drift at update time; the CVE gate learns that a scan
 that did not run must read as **not measured, never silently clean**. A 27-agent
-[tooling analysis](proposals/2026-07-21-suite-tooling-analysis.md) maps where scripts could cut
+tooling analysis (`proposals/2026-07-21-suite-tooling-analysis.md`, not yet republished) maps where scripts could cut
 randomness across all twelve skills — and an adversarial "creativity guardian" in that workflow
 kept judgment calls out of the script column.
 
@@ -133,8 +134,8 @@ force fixes in both directions:
 - the learning-gap hook **blocked the suite's own test fixture**; issue mining **fragmented
   German words at umlauts** — found because the suite runs in non-English repos, not despite it.
 
-The first [structural self-audit](architecture/audits/2026-08-03.md) measures the suite against
-its own baseline — verdict: *significant drift*, fifteen findings from one seam — and the two
+The first structural self-audit (`architecture/audits/2026-08-03.md`, not yet republished)
+measures the suite against its own baseline — verdict: *significant drift*, fifteen findings from one seam — and the two
 blockers are closed the same day. The audit is the suite's own medicine, taken.
 
 ## 2026-08 — The `wai` namespace and this repository

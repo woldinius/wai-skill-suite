@@ -317,8 +317,8 @@ of similar skills, drifting apart. On **2026-06-13** they were consolidated into
 that suite has been **in daily use in three commercial projects plus prototypes** since. This
 repository is a **curated re-publication** of that work: real milestone dates, cleaned content,
 and the dated evidence — [empirics](docs/empirics.md),
-[field reports](docs/field-reports/), [ADRs](docs/adr/),
-[audits](docs/architecture/audits/) — migrated with it. The full story, including what was
+[field reports](docs/field-reports/), [ADRs](docs/adr/), and the audits (returning from the
+archive; not yet republished) — migrated with it. The full story, including what was
 tried and dropped: [docs/history.md](docs/history.md).
 
 **Times are normalized.** Every timestamp this repo writes or publishes carries a date and no
@@ -357,8 +357,9 @@ The claims above are checkable, and the failures are part of the record on purpo
   and [`TEMPLATE.md`](docs/field-reports/TEMPLATE.md) is the paste-sized way to send it.
 - [`docs/adr/`](docs/adr/) — the four decisions that shaped the architecture, with the
   cases where the scripts lost.
-- [`docs/architecture/audits/`](docs/architecture/audits/) — the suite auditing itself
-  with its own audit skill (first verdict: *significant drift*, since fixed).
+- `docs/architecture/audits/` — the suite auditing itself with its own audit skill (first
+  verdict: *significant drift*, since fixed). Not yet republished from the archive; the link
+  returns with the files.
 - [`docs/retrospective-2026-07.md`](docs/retrospective-2026-07.md) — the July
   retrospective, written from the repo, not from memory.
 
