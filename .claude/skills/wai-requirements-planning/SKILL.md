@@ -134,21 +134,21 @@ human gave you in chat, and note the gap in the plan.
      verification + idempotent credit/debit, restore, refund clawback, reconciliation. And the
      **digital-goods rule**: tokens must be sold via StoreKit (iOS) / Play Billing (Android);
      Stripe only on web (`PAY-8`).
-   - **Cost/FinOps** — do new AI costs arise? Which budgets/quotas/caches are
+   - **Cost/FinOps** (`AI-9`/`AI-4`) — do new AI costs arise? Which budgets/quotas/caches are
      needed so that the unit economics hold up?
-   - **GDPR** — is new personal data processed? Does content go to
+   - **GDPR** (`GDPR-1`–`GDPR-4`) — is new personal data processed? Does content go to
      external providers (third-country transfer, redaction)? Does it concern minors/
      student data? Do deletion obligations/retention apply?
-   - **AI orchestration** — which model/routing, which output validation
+   - **AI orchestration** (`AI-3`/`AI-5`) — which model/routing, which output validation
      (JSON schema), which fallback on provider outage?
-   - **Resilience** — is the operation long-running → asynchronous/queue? Does it need
-     idempotency (retry safety)?
+   - **Resilience** (`RES-1`/`RES-3`) — is the operation long-running → asynchronous/queue?
+     Does it need idempotency (retry safety)?
    - **Client concerns** (`CLIENT-*`) — for client-facing work: no secrets in the binary,
      attestation, offline/error states, accessibility, safe rendering of model output.
-   - **Security** — new AuthZ rules, new secrets, new attack surface (e.g.
-     prompt injection on new uploads)?
-   - **Observability** — what must be measured/logged to see success?
-   - **Testability** — how is the non-deterministic AI component made
+   - **Security** (`SEC-8`/`SEC-3`/`SEC-4`) — new AuthZ rules, new secrets, new attack
+     surface (e.g. prompt injection on new uploads)?
+   - **Observability** (`OBS-*`) — what must be measured/logged to see success?
+   - **Testability** (`MAINT-2`) — how is the non-deterministic AI component made
      deterministically testable, and how are the stores/billing faked?
 
 5. **Architecture decisions & risks** — Where there is a real decision with

@@ -217,12 +217,14 @@ against a half-mapped surface and you miss the paths that cross the parts you ha
 
 ## Severity & trend (security-framed)
 
-- **Blocker** — exploitable now, high impact: auth bypass, IDOR to another tenant's data, a
-  secret committed in the repo/history, RCE/SQL injection, an unauthenticated expensive endpoint
-  enabling cost-drain, a purchase path that credits on client trust.
+- **Blocker** — exploitable now, high impact: auth bypass (`SEC-1`), IDOR to another tenant's
+  data (`SEC-8`), a secret committed in the repo/history (`SEC-3`), RCE/SQL injection (`SEC-4`),
+  an unauthenticated expensive endpoint enabling cost-drain (`SEC-9`), a purchase path that
+  credits on client trust (`SEC-13`).
 - **Major** — exploitable under conditions, or a missing defense on a money/auth/PII path:
-  no rate limit on an expensive endpoint, a known-CVE dependency in the runtime, prompt
-  injection with a real sink, missing attestation on a protected call, plaintext PII in logs.
+  no rate limit on an expensive endpoint (`SEC-9`), a known-CVE dependency in the runtime
+  (`SEC-11`), prompt injection with a real sink (`SEC-4`), missing attestation on a protected
+  call (`CLIENT-2`), plaintext PII in logs (`GDPR-5`).
 - **Minor** — hardening / defense-in-depth: missing security header, over-broad token scope,
   no CVE-scan gate (advisory), verbose error leakage without direct impact.
 - **Nit** — cosmetic/optional.
