@@ -1,0 +1,22 @@
+{
+  "name": "wai-suite",
+  "version": "0.1.0",
+  "description": "A gated software lifecycle for Claude Code: 12 skills that plan, build, test and review on agent/** branches — and whether a PR may merge is decided by a script with an exit code and, above it, a human. Ships the merge gate, the quality-catalog system (one master, three generated variants), 24 enforcement scripts and 220+ tests founded on shipped bugs.",
+  "author": {
+    "name": "Benjamin Wolters",
+    "url": "https://github.com/woldinius"
+  },
+  "homepage": "https://github.com/woldinius/wai-skill-suite",
+  "repository": "https://github.com/woldinius/wai-skill-suite",
+  "license": "MIT",
+  "keywords": [
+    "lifecycle",
+    "merge-gate",
+    "code-review",
+    "quality-catalog",
+    "testing",
+    "security-audit",
+    "architecture-audit"
+  ],
+  "skills": "./.claude/skills/"
+}

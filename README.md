@@ -186,13 +186,26 @@ Not part of the wAI lifecycle — reusable helpers for the human, adopted per pr
 
 ## Installation
 
-The skills live in `.claude/skills/` and Claude Code detects them automatically once the folder
-is in the project. Install them with the bundled [`install.sh`](install.sh) — run it in your
-**project root**.
+**As a plugin (recommended).** This repo is its own [plugin marketplace](.claude-plugin/marketplace.json):
+one plugin, all twelve skills, versioned and updatable through Claude Code's plugin system.
 
-**Clone it, read it, then run it.** This is the recommended path, and the installer is built to
-make it honest: when the script sits inside a checkout, it installs *from that checkout* — so the
-tree you reviewed is the tree you get, not whatever the remote's default branch holds.
+```
+/plugin marketplace add woldinius/wai-skill-suite
+/plugin install wai-suite@wai
+```
+
+Updates arrive with `/plugin marketplace update wai`. The plugin ships the same tree as the
+installer below — skills, scripts and references included — so everything the skills invoke
+travels with them. (Plugin-installed skills live in the plugin cache, not in your repo;
+`wai-init` still writes `docs/architecture/` into the repo, which is the part that belongs to you.)
+
+**Or into the repo, with the installer.** The skills live in `.claude/skills/` and Claude Code
+detects them automatically once the folder is in the project. Install them with the bundled
+[`install.sh`](install.sh) — run it in your **project root**.
+
+**Clone it, read it, then run it.** The installer is built to make that honest: when the script
+sits inside a checkout, it installs *from that checkout* — so the tree you reviewed is the tree
+you get, not whatever the remote's default branch holds.
 
 ```bash
 git clone --depth 1 --branch v0.1.0 https://github.com/woldinius/wai-skill-suite.git /tmp/wai
