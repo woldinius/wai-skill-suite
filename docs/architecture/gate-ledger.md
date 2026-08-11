@@ -24,10 +24,8 @@ a missing row: it records that the gate *ran and was too late*, rather than read
 A verdict claimed in a review with **no matching row here** means the reviewer checked from memory
 instead of running the gate (empirical-test-plan §0). That is itself a finding.
 
-**The `when` column is date-only (`T00:00Z`) by design, never the wall-clock hour** — the ledger
-is public and append-only, and a real hour in it records when a human worked, not what the gate
-decided. `merge-gate.sh` writes it that way, so the rule cannot be forgotten by a contributor.
-Ordering inside a day is the append order. See [time normalization](../time-normalization.md).
+(Rows up to 2026-08-10 carry `T00:00Z`: they were migrated under a since-retired date-only rule.
+They are records and stay as written; newer rows carry the normal UTC timestamp.)
 
 | when (UTC) | PR | verdict | why | outcome |
 |---|---|---|---|---|

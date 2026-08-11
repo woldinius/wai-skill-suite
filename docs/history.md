@@ -12,8 +12,7 @@ Every claim below is backed by a dated artefact in this repo: the [ADRs](adr/), 
 > (times normalized to 00:00 UTC) and introduce the components in the order they actually arrived —
 > in their final, cleaned form, not as byte-exact snapshots of the day. The dated documents under
 > `docs/` migrated with their content intact; translated field reports say so, and the German
-> originals remain in the private archive. **Every timestamp in this repo is date-only, by rule** —
-> see [time normalization](time-normalization.md); the one exception is what GitHub itself stamps.
+> originals remain in the private archive.
 
 ---
 
