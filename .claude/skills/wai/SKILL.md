@@ -114,7 +114,7 @@ PERIODIC (after a few features/refactors, or on security triggers)
   `wai-mobile-release`.
 - **The quality catalog is missing or the stack changed fundamentally** → `wai-init`.
 - **Did a suite update leave this repo out of step — is the gate actually configured, did anything
-  silently switch off?** → run `sh .claude/skills/wai/scripts/doctor.sh`. `install.sh` runs it
+  silently switch off?** → run `sh scripts/doctor.sh` (from this skill's directory). `install.sh` runs it
   automatically after every update; run it anytime to check for **drift** (a missing
   `merge-gate.conf` → the gate returns UNKNOWN on every PR; a legacy learning ledger). Obey the
   exit code: `exit 0` = no drift that disables a feature (soft advisories may still print) ·
@@ -125,7 +125,7 @@ PERIODIC (after a few features/refactors, or on security triggers)
   `wai-cicd` re-run.
 - **Did a script and the prompt that invokes it drift apart** — after changing a script's exit
   codes, renaming a skill, or before a release? → run
-  `sh .claude/skills/wai/scripts/contract-lint.sh`. It reads both sides of the joint and fails
+  `sh scripts/contract-lint.sh` (from this skill's directory). It reads both sides of the joint and fails
   on three mechanical facts: a script no prompt names, a documented path that does not resolve from
   the repo root, and an exit code a script returns that no prompt naming it documents. `exit 0` =
   the two sides still describe each other · `exit 1` = a check failed; every finding names its file

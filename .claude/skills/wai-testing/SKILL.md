@@ -21,6 +21,8 @@ non-deterministic models* and contract tests).
 
 ## Platform context
 
+*(The suite's home platform — the worked example these skills grew against, kept concrete on purpose. `wai-init` scopes the quality catalog to what **your** repo actually is; where your product has none of this — no token economy, no mobile clients, no AI orchestration — read the matching rules as not-applicable, not as findings.)*
+
 A **multi-surface product** — cloud backend (AI orchestration + token ledger) with **Web, iOS
 and Android** clients joined by a **versioned API contract** (back-compat across the three
 clients is sacred), where **AI inference costs money per token** and each client **sells

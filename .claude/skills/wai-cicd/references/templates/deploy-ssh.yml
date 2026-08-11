@@ -1,5 +1,5 @@
 # TEMPLATE — write to .github/workflows/deploy-ssh.yml.
-# Deploys the GHCR image built in ci.yml via SSH to the Hetzner server.
+# Deploys the GHCR image built in ci.yml via SSH to your Linux server.
 name: deploy-ssh
 
 on:
