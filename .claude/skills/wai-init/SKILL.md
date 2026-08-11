@@ -234,8 +234,8 @@ rules.
    dimensions on day one.
 
 7. **Testing strategy** — write `docs/architecture/testing-strategy.md` at the **same tier** (default:
-   build e2e-testable, security/billing as mandatory targets). If it exists, step 3 applies. Get it
-   approved.
+   build e2e-testable; the catalog's `SEC-*`/`PAY-*` paths as mandatory targets, where the repo
+   has them). If it exists, step 3 applies. Get it approved.
 
 8. **Merge-gate config** — write `docs/architecture/merge-gate.conf` from the template in
    `wai-pr-review/scripts/merge-gate.conf.template` (read it — format + fail-closed contract). It

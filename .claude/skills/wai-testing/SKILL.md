@@ -44,7 +44,9 @@ sandbox/fakes.
   freeze time/seed randomness. A flaky test is worse than no test — it erodes the gate it feeds.
 - **Proportional, mandatory where it counts.** Build functions end-to-end testable; **no
   speculative unit tests**. But **security, billing, GDPR and idempotency paths are mandatory
-  targets** (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`) — never skipped.
+  targets** (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`) — never skipped **where the repo has them**:
+  mandatory binds to every such path that exists, it does not invent one for a repo whose
+  catalog carries no billing or GDPR surface.
 - **Git on the branch, never `main`.** Tests for a change land on its `agent/**` branch and
   update the PR. Merging stays gated (see *Git & PR*).
 
@@ -174,7 +176,8 @@ Omit sections that don't apply.
 ## Principles
 
 - **Deterministic or it doesn't ship** — no real models, no clock/random/network flakiness.
-- **Cover the irreversible** — security, billing, GDPR, idempotency are mandatory, always.
+- **Cover the irreversible** — security, billing, GDPR, idempotency: mandatory for every such
+  path the repo has, with no exceptions for the ones it has.
 - **Proportional** — value per test; a few strong e2e/contract tests beat many brittle units.
 - **Testing writes, cicd enforces** — this skill defines the policy and the tests; the gate and
   branch protection are `wai-cicd`'s.

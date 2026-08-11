@@ -158,7 +158,8 @@ cross-cutting core (`SEC`/`GDPR`/`MAINT`). Work in the repo of the surface you'r
   verification per provider, idempotent credit/debit, restore, refund clawback; digital-goods
   rule (StoreKit/Play on mobile, Stripe on web).
 - **Data / DB** — migrations (forward and backward), indexes, constraints/integrity,
-  idempotency, data minimization & retention (GDPR), tenant isolation.
+  idempotency (`RES-3`), data minimization & retention (`GDPR-2`/`GDPR-3`), tenant
+  isolation (`SEC-8`).
 - **Web client** (`WEB-*`/`CLIENT-*`) — contract fidelity, state/error/loading/offline states,
   accessibility, no secrets in the bundle, Stripe + webhook verification, CSP/XSS.
 - **iOS client** (`IOS-*`/`CLIENT-*`) — StoreKit 2 + server-verified crediting, App Attest, no

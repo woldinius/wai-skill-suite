@@ -61,10 +61,12 @@ necessary aspects as findings.
      OpenAPI, contract tests (`API-*`/`CLIENT-3`).
    - *Token/billing change* → server-side verification, idempotent credit/debit, refund
      clawback, reconciliation, digital-goods rule (`PAY-*`) — **always a contract domain**.
-   - *AI/prompt/model change* → output validation, prompt/model versioning, cost impact, PII
-     redaction, fallback.
-   - *Persistence/data model change* → GDPR, migration, retention, idempotency.
-   - *Auth/security change* → AuthN/AuthZ, secrets, attestation, injection.
+   - *AI/prompt/model change* → output validation (`AI-3`), prompt/model versioning (`AI-6`),
+     cost impact (`AI-9`), PII redaction (`AI-8`), fallback (`AI-5`).
+   - *Persistence/data model change* → GDPR (`GDPR-2`/`GDPR-3`), migration, retention,
+     idempotency (`RES-3`).
+   - *Auth/security change* → AuthN/AuthZ (`SEC-1`), secrets (`SEC-3`), attestation
+     (`CLIENT-2`), injection (`SEC-4`).
    - *Client change (web/iOS/Android)* → no secrets in binary/bundle (`CLIENT-1`), attestation
      (`CLIENT-2`), state coverage, accessibility, safe output rendering, and **store-policy
      conformance** (`IOS-3`/`AND-3`) — could it get rejected?
@@ -90,13 +92,14 @@ necessary aspects as findings.
      Is a refund/revocation not clawed back (`PAY-6`)? Stripe used for tokens on mobile (`PAY-8`)?
    - Client: a secret/provider key in the binary or bundle (`CLIENT-1`)? Attestation missing on a
      protected call (`CLIENT-2`)? A change that risks store rejection (`IOS-3`/`AND-3`)?
-   - Is model output passed through unchecked (without schema validation)?
-   - Is there a key/token somewhere in code, config or log?
+   - Is model output passed through unchecked (without schema validation — `AI-3`)?
+   - Is there a key/token somewhere in code, config or log (`SEC-3`)?
    - Does personal content go to an external
-     provider without a legal basis/redaction?
-   - Is a mutating or expensive endpoint missing idempotency protection?
-   - Is asynchronous processing missing for a long-running AI call?
-   - Does the change noticeably increase token/inference cost without a cache or a budget?
+     provider without a legal basis/redaction (`GDPR-1`/`AI-8`)?
+   - Is a mutating or expensive endpoint missing idempotency protection (`RES-3`)?
+   - Is asynchronous processing missing for a long-running AI call (`RES-1`)?
+   - Does the change noticeably increase token/inference cost without a cache or a budget
+     (`AI-9`/`AI-4`)?
 
    **If the diff touches the quality catalog, lint it**:
    `sh ../wai-init/scripts/catalog-lint.sh` (from this skill's directory — the skills install
@@ -287,9 +290,10 @@ in the ruleset gives you a server-side backstop.
 ## Severity levels
 
 - **Blocker** — must not be merged: security vulnerability, GDPR violation, an ad-hoc
-  hard-delete / data-erasure path (`DELETE FROM`, `ON DELETE CASCADE`, `deleteAccount()`) that is
-  not human-gated, breaking change without versioning, data loss risk, missing idempotency on a
-  payment-related mutation.
+  data-erasure path that is not human-gated (the EX-GDPR patterns — defined once in
+  `agent-git-protocol.md` §*Excluded domains* and detected by `excluded-domains.sh`; this skill
+  keeps no copy), breaking change without versioning, data loss risk, missing idempotency on a
+  payment-related mutation (`RES-3`).
 - **Major** — should be fixed before merge: missing output validation,
   missing error/timeout handling of external calls, missing tests at a
   risky spot, a material uncapped cost impact.
