@@ -70,9 +70,7 @@ gh auth status >/dev/null 2>&1 || { echo "mine-issues: gh is not authenticated �
 gh repo view --json nameWithOwner >/dev/null 2>&1 || { echo "mine-issues: origin is not a GitHub repo gh can resolve — degrade to code-only mining." >&2; exit 2; }
 
 TAB=$(printf '\t')
-# Date-only by design (T00:00Z): this header is pasted into reports and issues, and a wall-clock
-# hour there records when a human worked, not when the finding is true. docs/time-normalization.md
-NOW="$(date -u +%Y-%m-%dT00:00Z 2>/dev/null || echo '?')"
+NOW="$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')"
 
 # gh search qualifier for --since (created on/after the date). Empty ⇒ no date filter.
 SEARCH=""

@@ -170,10 +170,7 @@ LEDGER_HDR
   # cap400. The row stays one line (the awk in gate-stats.sh and the human's outcome cell both
   # depend on that); only the cell got wider, and a cut is now marked as one.
   _lw=$(printf '%b' "$2" | tr '\n' ';' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^[ ;]*//; s/[ ;]*$//' | cap400)
-  # The stamp is date-only by design: T00:00Z, never the wall-clock hour. The ledger is a public,
-  # append-only artefact, and a real hour in it is a record of WHEN A HUMAN WORKED, not of the
-  # verdict. See docs/time-normalization.md. Ordering within a day comes from the append order.
-  printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT00:00Z 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
+  printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
 }
 
 # --- 0. Toolchain -------------------------------------------------------------------------------

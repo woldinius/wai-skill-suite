@@ -46,10 +46,8 @@ The mandate fixes:
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
 (`date -u +%FT%TZ`). It bounds the cross-issue digest (step 6) and the autonomous-merge report,
 so both speak only to what changed *during this run*.
-This one keeps its full time **on purpose**: it is never written into an artefact, only compared
-against GitHub's own `updatedAt`/`createdAt`. Rounding it to midnight would widen the window to
-the whole day. Everything the suite *writes* is date-only
-([time normalization](../../../docs/time-normalization.md)).
+It keeps its full time: it is compared against GitHub's own `updatedAt`/`createdAt`, and
+rounding it would widen the window and change what the digest reports.
 
 Everything else (branch rules, merge gate, issue formats) comes from the suite protocols —
 this skill adds orchestration, **not** new authority.

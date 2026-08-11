@@ -321,12 +321,6 @@ and the dated evidence — [empirics](docs/empirics.md),
 archive; not yet republished) — migrated with it. The full story, including what was
 tried and dropped: [docs/history.md](docs/history.md).
 
-**Times are normalized.** Every timestamp this repo writes or publishes carries a date and no
-wall-clock hour (`T00:00Z`) — in the gate ledger, in script report headers, and in prose. The
-dates are the evidence; the hours would only be a record of when a human was at the keyboard.
-The exception is what GitHub itself stamps (commits, PR events, Actions), which the suite
-cannot rewrite: [docs/time-normalization.md](docs/time-normalization.md).
-
 **Built with AI, deliberately.** A range of AI models worked on this suite — whichever was most
 capable for the problem at hand, including on these very documents. That is a statement of
 method, not a confession: building today without the most capable model for the problem is

@@ -24,10 +24,8 @@ a missing row: it records that the gate *ran and was too late*, rather than read
 A verdict claimed in a review with **no matching row here** means the reviewer checked from memory
 instead of running the gate (empirical-test-plan §0). That is itself a finding.
 
-**The `when` column is date-only (`T00:00Z`) by design, never the wall-clock hour** — the ledger
-is public and append-only, and a real hour in it records when a human worked, not what the gate
-decided. `merge-gate.sh` writes it that way, so the rule cannot be forgotten by a contributor.
-Ordering inside a day is the append order. See [time normalization](../time-normalization.md).
+(Rows up to 2026-08-10 carry `T00:00Z`: they were migrated under a since-retired date-only rule.
+They are records and stay as written; newer rows carry the normal UTC timestamp.)
 
 | when (UTC) | PR | verdict | why | outcome |
 |---|---|---|---|---|
@@ -42,3 +40,4 @@ Ordering inside a day is the append order. See [time normalization](../time-norm
 | 2026-08-07T00:00Z | 30 | NO-GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ 1 CI check(s), all SUCCESS (main declares no required checks — strict rule applied); ✗ touches an excluded domain — the human merges these, always: EX-API EX-AUTH EX-CONTRACT EX-GDPR EX-GUARD EX-PAY EX-SEC | |
 | 2026-08-10T00:00Z | 1 | NO-GO | ✓ quality catalog present; ✓ repo mode: solo; ✗ required check(s) not green: lint=DID-NOT-REPORT test (macos-latest)=DID-NOT-REPORT test (ubuntu-latest)=DID-NOT-REPORT; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | |
 | 2026-08-10T00:00Z | 1 | GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | |
+| 2026-08-11T17:32Z | 2 | NO-GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✗ touches an excluded domain — the human merges these, always: EX-GUARD | |
