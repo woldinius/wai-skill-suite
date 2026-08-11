@@ -224,7 +224,8 @@ rules.
    is safely inferable; a **missing field keeps its documented default** (`Repo mode` absent = `solo`).
    Read the tier off the file itself; if it matches none cleanly, omit the field rather than force one.
 
-   **Then lint what you wrote:** `sh .claude/skills/wai-init/scripts/catalog-lint.sh` — every
+   **Then lint what you wrote:** `sh scripts/catalog-lint.sh` (from this skill's directory —
+   wherever the suite is installed, repo or plugin cache) — every
    dimension has a **Red Flag** (without one it isn't decidable), no **retired ID** reused, no skill
    cites a missing ID. Obey the exit code: `exit 0` = internally consistent · `exit 1` = a check
    failed and the reasons are printed — a **stop**, fix them before anything reads the catalog ·

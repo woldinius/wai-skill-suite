@@ -22,6 +22,8 @@ maps the attack surface, and measures the posture as a **trend over time**.
 
 ## Platform context
 
+*(The suite's home platform — the worked example these skills grew against, kept concrete on purpose. `wai-init` scopes the quality catalog to what **your** repo actually is; where your product has none of this — no token economy, no mobile clients, no AI orchestration — read the matching rules as not-applicable, not as findings.)*
+
 A **multi-surface product** — cloud backend (AI orchestration + server-side token ledger) with
 **Web, iOS and Android** clients, joined by a **versioned API contract**; each client sells
 tokens. Four consequences shape every security audit:

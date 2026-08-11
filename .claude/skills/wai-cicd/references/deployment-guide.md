@@ -1,9 +1,9 @@
-# Server Deployment Runbook (GitHub-native, e.g. Hetzner)
+# Server Deployment Runbook (GitHub-native, any Linux host)
 
 > Reference knowledge for `wai-cicd`. When setting up in a target project, this becomes
 > a tailored `docs/deploy/server-deployment.md`. The model is fixed and GitHub-native:
 > registry **GHCR**, pipeline **GitHub Actions**, reverse proxy **Caddy**, deploy
-> **Docker Compose over SSH** to your own Linux server (Hetzner as the worked example).
+> **Docker Compose over SSH** to your own Linux server, whatever the provider.
 
 ## The base
 
@@ -19,14 +19,14 @@
    Runtime secrets via server `.env` (root-only) or GitHub Actions secrets.
 6. **Migrations** — separate step before/at deploy; forward- and backward-compatible,
    so a rollback doesn't fail on the database.
-7. **Backups & DR** (`RES-6`) — DB dump regularly to Hetzner Storage Box / S3, restore
+7. **Backups & DR** (`RES-6`) — DB dump regularly to off-host object storage (S3-compatible), restore
    played through at least once.
 8. **Rollback** — redeploy of a previous `sha-` tag. Therefore never build only on `latest`.
 
 ## 1. Provision & harden the server
 
-- Hetzner Cloud VM (Ubuntu LTS), store SSH public key when creating.
-- Hetzner **Cloud Firewall**: only 22 (better on a custom port + source IP restriction),
+- A Linux VM at your provider (Ubuntu LTS), SSH public key deployed at creation.
+- The provider's **cloud firewall**: only 22 (better on a custom port + source IP restriction),
   80, 443 open.
 - On the server:
   ```bash

@@ -19,6 +19,8 @@ is written, and the docs stay consistent afterward.
 
 ## Platform context
 
+*(The suite's home platform — the worked example these skills grew against, kept concrete on purpose. `wai-init` scopes the quality catalog to what **your** repo actually is; where your product has none of this — no token economy, no mobile clients, no AI orchestration — read the matching rules as not-applicable, not as findings.)*
+
 A **multi-surface product**: a **cloud backend** (orchestrates multiple AI models/providers +
 owns the server-side **token ledger**), a **Web** app, an **iOS** app and an **Android** app —
 joined by a **versioned API contract**. Backend+Web are one TS monorepo; iOS (Swift/SwiftUI)

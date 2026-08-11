@@ -19,6 +19,8 @@ comparison.
 
 ## Platform context
 
+*(The suite's home platform — the worked example these skills grew against, kept concrete on purpose. `wai-init` scopes the quality catalog to what **your** repo actually is; where your product has none of this — no token economy, no mobile clients, no AI orchestration — read the matching rules as not-applicable, not as findings.)*
+
 The platform is a **multi-surface product**: a **cloud backend** (orchestrates multiple AI
 models/providers + owns the server-side **token ledger**) with **Web, iOS and Android** clients,
 joined by a **versioned API contract**. From this follow three things every review must keep in
@@ -97,7 +99,8 @@ necessary aspects as findings.
    - Does the change noticeably increase token/inference cost without a cache or a budget?
 
    **If the diff touches the quality catalog, lint it**:
-   `sh .claude/skills/wai-init/scripts/catalog-lint.sh`. The catalog is the document every
+   `sh ../wai-init/scripts/catalog-lint.sh` (from this skill's directory — the skills install
+   side by side, in a repo and in the plugin cache alike). The catalog is the document every
    other finding is anchored to — a new dimension without a Red Flag is not reviewable, and a
    reused retired ID silently rewrites the meaning of every past finding that cited it. A red lint
    is a **Blocker**, not a nit.
@@ -134,15 +137,15 @@ necessary aspects as findings.
    **The script's — mechanics.** Run it and **obey the exit code**:
 
    ```
-   sh .claude/skills/wai-pr-review/scripts/merge-gate.sh <PR>
+   sh scripts/merge-gate.sh <PR>      # from this skill's directory
    ```
 
    It checks, deterministically: the quality catalog exists · the repo mode · required checks
    exist **and** are green (zero checks is not green) · in `team` mode, that an approval rule is
    **actually enforced** on the base branch · and — by delegating to the shared classifier
-   `.claude/skills/wai/scripts/excluded-domains.sh` (which `merge-gate.sh` resolves internally
-   as a `../../wai/scripts/` sibling of itself; the path just given is the one *you* can run
-   from the repo root) — that the diff touches **no excluded domain**. The
+   `excluded-domains.sh` (which `merge-gate.sh` resolves internally as a `../../wai/scripts/`
+   sibling of itself, so the delegation works wherever the suite is installed — repo or plugin
+   cache) — that the diff touches **no excluded domain**. The
    excluded domains are defined canonically in `agent-git-protocol.md` §*Excluded domains* (the
    suite guardrail floor, the repo's contract domain, destructive migrations, and **GDPR-erasure /
    hard-delete**) — this skill keeps no copy of the set. pr-review inherits EX-GDPR coverage for

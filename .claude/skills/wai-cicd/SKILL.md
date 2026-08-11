@@ -2,11 +2,11 @@
 name: wai-cicd
 description: >-
   One-time setup of GitHub-native CI/CD for a backend+web repo (Actions, GHCR, Docker Compose over
-  SSH to your own Linux server, e.g. Hetzner) — and owner of the merge gate that makes "green
+  SSH to your own Linux server, any provider) — and owner of the merge gate that makes "green
   checks" trustworthy. Creates Dockerfiles, compose, a Caddy proxy, the Actions required-check gate,
   the branch-protection ruleset, CODEOWNERS, PR template, deploy script and runbook. GitHub-only by
-  design; mobile store delivery is wai-mobile-release. Use it for: "set up CI/CD", "deploy to
-  Hetzner", "create GitHub Actions", "containerize", "wire required checks". Not for implementation,
+  design; mobile store delivery is wai-mobile-release. Use it for: "set up CI/CD", "deploy to my
+  server", "create GitHub Actions", "containerize", "wire required checks". Not for implementation,
   tests, PR review or the catalog (wai-init).
 license: MIT
 ---
@@ -14,7 +14,7 @@ license: MIT
 # CI/CD & Deployment Setup
 
 Prepare a repo **one-time** for **GitHub-native** CI/CD and a deployment to your own Linux
-server (e.g. Hetzner): GitHub Actions as the pipeline, **GHCR** as the registry, Docker
+server, whatever the provider: GitHub Actions as the pipeline, **GHCR** as the registry, Docker
 Compose + Caddy + SSH deploy on the box. The value: a deep
 scan of the real project and, from it, correct, tailored deploy artifacts instead of
 generic boilerplate — as a visible proposal, nothing is committed.
@@ -74,7 +74,7 @@ Depending on stack and deploy target (not everything is always needed):
   `scripts/server-bootstrap` notes.
 - **`.env.example`** — documents all runtime variables (values do NOT belong in the repo).
 - **`docs/deploy/server-deployment.md`** — runbook, derived from
-  `references/hetzner-deployment-guide.md`.
+  `references/deployment-guide.md`.
 - A **setup report** (format below) including the manual server steps.
 
 ## Stance
@@ -148,7 +148,7 @@ Depending on stack and deploy target (not everything is always needed):
 ## The deploy model
 
 Details, commands, hardening, backups and rollback are in the runbook:
-`references/hetzner-deployment-guide.md`.
+`references/deployment-guide.md`.
 
 You own the VPS: Docker + Compose, **Caddy** as reverse proxy with auto-TLS, deploy via
 GitHub Actions → SSH → `docker compose pull && up -d`, images from **GHCR** (`sha`-tagged for

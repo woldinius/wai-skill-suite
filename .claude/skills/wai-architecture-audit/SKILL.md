@@ -29,6 +29,8 @@ defers the **exploitability** side to the security audit. Run both periodically.
 
 ## Platform context
 
+*(The suite's home platform — the worked example these skills grew against, kept concrete on purpose. `wai-init` scopes the quality catalog to what **your** repo actually is; where your product has none of this — no token economy, no mobile clients, no AI orchestration — read the matching rules as not-applicable, not as findings.)*
+
 A **multi-surface product** — cloud backend (AI orchestration + token ledger) with **Web, iOS
 and Android** clients, joined by a **versioned API contract**; in the hybrid topology each
 client is its own repo. Three consequences shape every audit:

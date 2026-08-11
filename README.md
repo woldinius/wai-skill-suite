@@ -166,7 +166,7 @@ repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explici
 |-------|-------|----------|----------|--------------------|
 | [`wai`](.claude/skills/wai/SKILL.md) | Router | less often · well-tested | Front door: recommends which skill to run next and how the suite hands off. Routes by **surface** (backend/web/iOS/Android) and lifecycle position. | "which skill do I use", "where do I start", "what's next" |
 | [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 91 IDs / ~530 lines). Every other skill reads the catalog at runtime, so its size is the suite's biggest cost lever. Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
-| [`wai-cicd`](.claude/skills/wai-cicd/SKILL.md) | Setup (backend+web) | once per repo · proving | **One-time:** GitHub-native CI/CD (Actions, GHCR) + deploy to your own server via Compose/SSH — Dockerfile, Compose, Caddy, the **merge gate** + branch protection. Other delivery systems are out of scope by design. | "set up CI/CD", "deploy to Hetzner", "wire required checks" |
+| [`wai-cicd`](.claude/skills/wai-cicd/SKILL.md) | Setup (backend+web) | once per repo · proving | **One-time:** GitHub-native CI/CD (Actions, GHCR) + deploy to your own server via Compose/SSH — Dockerfile, Compose, Caddy, the **merge gate** + branch protection. Other delivery systems are out of scope by design. | "set up CI/CD", "deploy to my server", "wire required checks" |
 | [`wai-mobile-release`](.claude/skills/wai-mobile-release/SKILL.md) | Setup (iOS/Android) | once per repo · proving | **One-time:** build, code signing (match / Play App Signing), the **mobile merge gate**, and store delivery (TestFlight / Play tracks). | "set up the iOS build", "Fastlane", "TestFlight", "Play Console" |
 | [`wai-requirements-planning`](.claude/skills/wai-requirements-planning/SKILL.md) | Plan | daily | Prepare a requirement; interview — or **grill-me mode** (one question at a time, recommended answers, alternatives for imprecise asks); decompose **per surface + contract-first**; diagrams over text; small items become issues, not planning docs. | "plan this requirement", "how do we build X", "grill me" |
 | [`wai-implementation`](.claude/skills/wai-implementation/SKILL.md) | Implement | daily | Concrete implementation — plan with risk/blast-radius first, then code, with per-surface concern sets. Default for code changes. | "implement X", "fix", "returns error 503", "refactor" |
@@ -258,6 +258,21 @@ Then the lifecycle skills take effect. As a second setup step, wire delivery + t
 
 > **Updating later:** just re-run the script (it prunes renamed skills and updates the rest),
 > then run `wai-init` again to reconcile the catalog.
+
+### What the suite writes — and what it never touches
+
+Everything below is the complete list of side effects; nothing else is written.
+
+| Actor | Writes | When |
+|---|---|---|
+| Plugin install | the plugin cache only — **nothing in your repo** | on `/plugin install` |
+| `install.sh` | `.claude/skills/` + its own manifest and version stamp | when you run it |
+| `wai-init` | `docs/architecture/` (catalog, testing strategy, gate config; optional coordination config) | after asking its setup questions |
+| `wai-cicd` / `wai-mobile-release` | CI/deploy/release artifacts — **as visible proposals; the human commits** | when you invoke them |
+| Lifecycle skills | `agent/**` branches, PRs, issues via `gh`, and appends to `docs/architecture/gate-ledger.md` | during normal work |
+| `wai-learning-gap` | `~/.claude/learning/` — personal, opt-in, never repo state | only for a human with a ledger |
+
+Nothing writes to `main` directly, nothing stores secrets, and no skill approves a PR.
 
 ## Quality catalog (Single Source of Truth)
 

@@ -21,6 +21,8 @@ backend+web).
 
 ## Platform context
 
+*(The suite's home platform — the worked example these skills grew against, kept concrete on purpose. `wai-init` scopes the quality catalog to what **your** repo actually is; where your product has none of this — no token economy, no mobile clients, no AI orchestration — read the matching rules as not-applicable, not as findings.)*
+
 The platform is a multi-surface product; the native apps are first-class surfaces that **cannot
 be force-updated** and ship through **store review**, so two things dominate mobile delivery:
 - **The store is the gate, not your server.** A release passes Apple/Google review on their
