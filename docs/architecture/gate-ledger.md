@@ -10,9 +10,19 @@ once you have acted on the PR:
 
 - `ok` — the verdict matched your judgment (a GO you merged; a NO-GO you held or fixed).
 - `fp` — **false positive:** a NO-GO you then merged UNCHANGED. The gate was too strict here.
-- `fn` — **false negative:** a GO (or a clean review) you later judged SHOULD have been blocked.
+- `fn` — **false negative:** a GO you later judged SHOULD have been blocked.
   **This is the measurement that matters. One `fn` outweighs ten `fp`.** It is the only thing that
   turns "suggestive" into "evidence", and no script can supply it — only you can.
+  `fn` is defined on **GO rows only** — a NO-GO cannot be a "should have blocked and did not".
+  A NO-GO that blocked for a reason outside the code (CI still running) is `nil`, not `fn`.
+- `nil` — the verdict says **nothing about the code** (e.g. a NO-GO caused only by CI still
+  running). Excluded from the fp/fn math; counted on its own line by `gate-stats.sh`.
+
+Tags are matched on their **first two characters** — free text after a comma is welcome and
+preserved. `ok, besser GO` is the calibration signal: the block was correct by the rules, but a GO
+would have been fine here; `gate-stats.sh` counts it as its own metric. A field ledger once carried
+20 such suffixed tags and a literal-match parser silently dropped every one — writing them was
+never the mistake.
 
 A `MOOT` row is a review that ran AFTER the PR was merged — the gate could prevent nothing. It is
 not a decision; leave its outcome blank and do not count it in fp/fn. Its value is the opposite of

@@ -148,9 +148,19 @@ once you have acted on the PR:
 
 - `ok` — the verdict matched your judgment (a GO you merged; a NO-GO you held or fixed).
 - `fp` — **false positive:** a NO-GO you then merged UNCHANGED. The gate was too strict here.
-- `fn` — **false negative:** a GO (or a clean review) you later judged SHOULD have been blocked.
+- `fn` — **false negative:** a GO you later judged SHOULD have been blocked.
   **This is the measurement that matters. One `fn` outweighs ten `fp`.** It is the only thing that
   turns "suggestive" into "evidence", and no script can supply it — only you can.
+  `fn` is defined on **GO rows only** — a NO-GO cannot be a "should have blocked and did not".
+  A NO-GO that blocked for a reason outside the code (CI still running) is `nil`, not `fn`.
+- `nil` — the verdict says **nothing about the code** (e.g. a NO-GO caused only by CI still
+  running). Excluded from the fp/fn math; counted on its own line by `gate-stats.sh`.
+
+Tags are matched on their **first two characters** — free text after a comma is welcome and
+preserved. `ok, besser GO` is the calibration signal: the block was correct by the rules, but a GO
+would have been fine here; `gate-stats.sh` counts it as its own metric. A field ledger once carried
+20 such suffixed tags and a literal-match parser silently dropped every one — writing them was
+never the mistake.
 
 A `MOOT` row is a review that ran AFTER the PR was merged — the gate could prevent nothing. It is
 not a decision; leave its outcome blank and do not count it in fp/fn. Its value is the opposite of
@@ -166,10 +176,25 @@ instead of running the gate (empirical-test-plan §0). That is itself a finding.
 |---|---|---|---|---|
 LEDGER_HDR
   fi
+  # VERDICT REASONS FIRST. The reasons arrive in check order — ✓ preambles, then the failure — and
+  # under any cap the cell loses its LAST token first. Field-measured (issue #10): median 143
+  # characters of "everything fine" before the first ✗, so of 7 domain NO-GOs exactly one still
+  # carried readable EX-* IDs, and the human reconstructed the rest BY HAND as ledger comments —
+  # the most expensive possible proof that the ordering was wrong. So the ✗ and ? lines go first,
+  # ✓ and · after — reordered HERE, at assembly time only: the terminal output keeps its natural
+  # check order, and past rows are records (append-only), so only NEW cells carry the new order.
+  # index()==1, not a regex: ✗ is multibyte and a bracket expression over it is byte-roulette.
+  # Guarded like every other line in this function: a reorder that fails falls back to the raw
+  # reasons — a worse-ordered row is a data gap, aborting the verdict over it would be a real cost.
+  _srt=$(printf '%b' "$2" | awk '
+    index($0, "  ✗ ") == 1 || index($0, "  ? ") == 1 { f[++nf] = $0; next }
+    { r[++nr] = $0 }
+    END { for (i = 1; i <= nf; i++) print f[i]; for (i = 1; i <= nr; i++) print r[i] }' 2>/dev/null) \
+    || _srt=$(printf '%b' "$2")
   # Compact the reasons into one table-safe cell: newlines→';', pipes→'/', collapse spaces — then
   # cap400. The row stays one line (the awk in gate-stats.sh and the human's outcome cell both
   # depend on that); only the cell got wider, and a cut is now marked as one.
-  _lw=$(printf '%b' "$2" | tr '\n' ';' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^[ ;]*//; s/[ ;]*$//' | cap400)
+  _lw=$(printf '%s\n' "$_srt" | tr '\n' ';' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^[ ;]*//; s/[ ;]*$//' | cap400)
   printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
 }
 

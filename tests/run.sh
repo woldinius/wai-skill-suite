@@ -232,6 +232,33 @@ case "$cell" in
   *)   bad "an over-long reason is cut at a word boundary with a visible ellipsis" "no … in: $cell" ;;
 esac
 
+# VERDICT REASONS FIRST IN THE CELL. The cap cuts from the RIGHT, and the reasons used to arrive
+# preamble-first — field-measured at a median 143 characters of "✓ everything fine" before the
+# first ✗ (issue #10), so what the cap ate was systematically the EX-* ID the verdict hinged on,
+# and the human rebuilt the domain names by hand. The cell is reordered at assembly time only:
+# ✗/? first, ✓/· after — while the TERMINAL output keeps its natural check order, because a human
+# watching the run reads the checks in the order they ran.
+gfix; printf 'apps/api/src/billing/tokens.ts\n' > "$D/files"
+out="$(gate)"; rc=$?
+row="$(grep -E '^\| [0-9]' "$D/docs/architecture/gate-ledger.md" 2>/dev/null | tail -1)"
+cell="$(printf '%s\n' "$row" | awk -F'|' '{print $5}')"
+case "$cell" in
+  ' ✗ touches an excluded domain'*) ok "a NO-GO ledger cell leads with the ✗ reason, ✓ preamble after" ;;
+  *) bad "a NO-GO ledger cell leads with the ✗ reason, ✓ preamble after" "cell starts: $(printf '%s' "$cell" | cut -c1-72)" ;;
+esac
+first80="$(printf '%s' "$cell" | cut -c1-80)"
+case "$first80" in
+  *EX-*) ok "the EX-* IDs sit within the first 80 characters of the why cell (issue #8 acceptance)" ;;
+  *)     bad "the EX-* IDs sit within the first 80 characters of the why cell (issue #8 acceptance)" "first 80: $first80" ;;
+esac
+lok="$(printf '%s\n' "$out" | grep -n 'quality catalog present' | head -1 | cut -d: -f1)"
+lxx="$(printf '%s\n' "$out" | grep -n 'touches an excluded domain' | head -1 | cut -d: -f1)"
+if [ -n "$lok" ] && [ -n "$lxx" ] && [ "$lok" -lt "$lxx" ]; then
+  ok "the terminal output keeps its natural check order — only the ledger cell is reordered"
+else
+  bad "the terminal output keeps its natural check order — only the ledger cell is reordered" "✓ at line ${lok:-none}, ✗ at line ${lxx:-none}"
+fi
+
 # gate-stats.sh: it counts what the script emitted and what the human tagged — nothing more.
 STATS="$ROOT/.claude/skills/wai-pr-review/scripts/gate-stats.sh"
 N=$((N+1)); SD="$TMP/s$N"; mkdir -p "$SD"
@@ -242,6 +269,90 @@ N=$((N+1)); SD="$TMP/s$N"; mkdir -p "$SD"
 out="$(sh "$STATS" "$SD/led.md" 2>&1)"; rc=$?
 assert "gate-stats counts the false negative that makes the case" 0 "$rc" "$out" 'FALSE NEGATIVES[^0-9]*1'
 assert "gate-stats reports the 3 emitted verdicts as the denominator" 0 "$rc" "$out" '3 verdict'
+
+# THE 0% THAT WAS 15%. A three-week field ledger (issue #10) tagged with a vocabulary finer than
+# two letters — `ok, besser GO`, `ok, manual fix`, `fp, bug` — and the literal-match parser
+# silently dropped 20 of 52 judged NO-GO rows, printing a false-positive rate of 0% in the very
+# line meant to prove the gate trustworthy. This fixture is that ledger's tag vocabulary, count
+# for count (32× ok, 11× 'ok, besser GO', 3× 'ok, manual fix', 8× 'fp, bug'), and the assertions
+# are the numbers the report measured by hand: 8 of 52 judged NO-GOs = 15%.
+N=$((N+1)); FLD="$TMP/fld$N.md"
+SETUPWHY='✗ main declares no required status checks, so EVERY reported check must be SUCCESS — 1 of 1 are not: ci=IN_PROGRESS'
+DOMWHY='✗ touches an excluded domain — the human merges these, always: EX-GUARD EX-GDPR; ✓ all 1 check(s) main requires are SUCCESS'
+GOWHY='✓ all 1 check(s) main requires are SUCCESS; ✓ no excluded domain touched'
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-07-22T09:00Z | 100 | NO-GO | %s | ok |\n' "$SETUPWHY"
+  i=0; while [ "$i" -lt 22 ]; do i=$((i+1))
+    printf '| 2026-07-23T09:%02dZ | %d | NO-GO | %s | ok |\n' "$i" $((100+i)) "$SETUPWHY"; done
+  i=0; while [ "$i" -lt 7 ]; do i=$((i+1))
+    printf '| 2026-07-25T09:%02dZ | %d | NO-GO | %s | ok |\n' "$i" $((130+i)) "$DOMWHY"; done
+  i=0; while [ "$i" -lt 11 ]; do i=$((i+1))
+    printf '| 2026-07-27T09:%02dZ | %d | NO-GO | %s | ok, besser GO |\n' "$i" $((140+i)) "$SETUPWHY"; done
+  i=0; while [ "$i" -lt 3 ]; do i=$((i+1))
+    printf '| 2026-07-29T09:%02dZ | %d | NO-GO | %s | ok, manual fix |\n' "$i" $((160+i)) "$SETUPWHY"; done
+  i=0; while [ "$i" -lt 8 ]; do i=$((i+1))
+    printf '| 2026-08-01T09:%02dZ | %d | NO-GO | %s | fp, bug |\n' "$i" $((170+i)) "$SETUPWHY"; done
+  i=0; while [ "$i" -lt 3 ]; do i=$((i+1))
+    printf '| 2026-08-03T09:%02dZ | %d | NO-GO | %s | fn |\n' "$i" $((180+i)) "$SETUPWHY"; done
+  printf '| 2026-08-05T09:00Z | 190 | NO-GO | ✗ required check(s) not green: test=IN_PROGRESS | |\n'
+  printf '| 2026-08-06T09:00Z | 191 | GO | %s | ok |\n' "$GOWHY"
+  printf '| 2026-08-07T09:00Z | 192 | GO | %s | |\n' "$GOWHY"
+  printf '| 2026-08-08T09:00Z | 193 | MOOT | PR already merged before the gate ran | ok |\n'
+  printf '| 2026-08-12T09:00Z | 194 | MOOT | PR already merged before the gate ran | |\n'
+} > "$FLD"
+out="$(sh "$STATS" "$FLD" 2>&1)"; rc=$?
+assert "gate-stats: tags match on their first two characters — the 0% is 15%" 0 "$rc" "$out" '8 of 52 judged NO-GOs = 15%'
+assert "gate-stats: 'ok, besser GO' is a calibration dial, printed as its own line" 0 "$rc" "$out" \
+  "calibration: 11 of 44 correct NO-GOs were marked 'better GO' by the human"
+assert "gate-stats: fn tags on NO-GO rows never reach the headline false-negative number" 0 "$rc" "$out" 'FALSE NEGATIVES[^0-9]*0'
+assert "gate-stats: the misfiled fn tags get their own data-quality line" 0 "$rc" "$out" \
+  '3 fn tag\(s\) on NO-GO rows — fn is defined on GO rows only'
+assert "gate-stats: NO-GO causes split mechanically into setup/checks/domain/other" 0 "$rc" "$out" \
+  'setup 48 · checks 1 · domain 7 · other 0'
+assert "gate-stats: MOOT is a printed verdict total, and NO-GO never counts toward GO" 0 "$rc" "$out" \
+  'GO 2 · NO-GO 56 · UNKNOWN 0 · MOOT 2' 'GO 58'
+
+# A tag the parser cannot place is COUNTED AND PRINTED — a statistic that drops rows must say so —
+# and `nil` (the verdict says nothing about the code) stays out of the fp/fn math entirely.
+N=$((N+1)); NILF="$TMP/nil$N.md"
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | NO-GO | x | ok |\n'
+  printf '| 2026-08-01T01:00Z | 2 | NO-GO | x | fp |\n'
+  printf '| 2026-08-01T02:00Z | 3 | NO-GO | ✗ required check(s) not green: ci=IN_PROGRESS | nil |\n'
+  printf '| 2026-08-01T03:00Z | 4 | NO-GO | x | need inspection |\n'
+  printf '| 2026-08-01T04:00Z | 5 | GO | x | ok |\n'
+} > "$NILF"
+out="$(sh "$STATS" "$NILF" 2>&1)"; rc=$?
+assert "gate-stats: nil and unmatched rows are excluded from the judged denominator" 0 "$rc" "$out" '1 of 2 judged NO-GOs = 50%'
+assert "gate-stats: a nil tag is reported as its own count" 0 "$rc" "$out" '1 nil-tagged row'
+assert "gate-stats: an unmatched tag is counted AND named, never silently dropped" 0 "$rc" "$out" \
+  '1 unmatched tag\(s\): need inspection'
+
+# --report: the paste-ready extract docs/open-questions.md asks field users for. It must reproduce
+# the fixture's counts exactly, carry raw counts beside every rate, and never exit 0 with nothing.
+rep="$(sh "$STATS" --report "$FLD" 2>&1)"; rc=$?
+assert "--report reproduces the fp rate with raw counts beside it" 0 "$rc" "$rep" \
+  'false positives: 8 of 52 judged NO-GOs = 15% \(ok 44 · fp 8\)'
+assert "--report: verdict totals GO/NO-GO/UNKNOWN/MOOT, substring-proof" 0 "$rc" "$rep" \
+  'verdicts: 60 — GO 2 · NO-GO 56 · UNKNOWN 0 · MOOT 2' 'GO 58'
+assert "--report: outcome coverage tagged vs untagged" 0 "$rc" "$rep" '57 of 60 tagged \(95%\) · 3 untagged'
+assert "--report: period covered is first to last row date" 0 "$rc" "$rep" '2026-07-22 → 2026-08-12'
+assert "--report: top exclusion reasons, counted position-independently" 0 "$rc" "$rep" \
+  'top exclusion reasons: EX-GDPR 7 · EX-GUARD 7'
+out="$(sh "$STATS" --report "$TMP/absent-ledger.md" 2>&1)"; rc=$?
+assert "--report with no ledger → exit 2, never 0 with empty output" 2 "$rc" "$out" 'no ledger'
+
+# --report --mark appends the marker doctor.sh counts from — ONE line, an append, never an edit,
+# and never itself a verdict row.
+out="$(sh "$STATS" --report --mark "$FLD" 2>&1)"; rc=$?
+assert "--report --mark still prints the report" 0 "$rc" "$out" '## Gate report'
+nmark="$(grep -c '^<!-- report ' "$FLD" || true)"
+if [ "$nmark" = 1 ] && grep -q 'rows=60' "$FLD"; then ok "--mark appends exactly one marker line, carrying the row count"
+else bad "--mark appends exactly one marker line, carrying the row count" "markers=$nmark, rows grep: $(grep '^<!-- report ' "$FLD" | tr '\n' ' ')"; fi
+out="$(sh "$STATS" "$FLD" 2>&1)"; rc=$?
+assert "a marker line is never counted as a verdict row" 0 "$rc" "$out" '60 verdict\(s\)'
+out="$(sh "$STATS" --mark "$FLD" 2>&1)"; rc=$?
+assert "--mark without --report is refused — a marker for a report that never happened" 2 "$rc" "$out" 'only makes sense'
 
 # ── catalog-lint.sh ─────────────────────────────────────────────────────────────────────────────
 lfix() {
@@ -428,6 +539,27 @@ assert "committed hooks with no core.hooksPath → DRIFT, and it names the fix" 
 git -C "$DD" config core.hooksPath .githooks
 out="$( cd "$DD" && sh "$DOCTOR" . 2>&1 )"; rc=$?
 assert "wired hooks are not reported as drift" 0 "$rc" "$out" 'hooks are wired'
+
+# The report cadence: ~250 field verdicts produced zero reports, because reporting happened by
+# mood. doctor now counts verdicts since the last `<!-- report … -->` marker and names the
+# threshold — ADVISORY in every state, because WHAT is worth reporting stays judgment (ADR-0002).
+docdir; printf '# cat\n' > "$DD/docs/architecture/quality-attributes.md"
+printf 'CONTRACT_PATHS="src/billing/*"\n' > "$DD/docs/architecture/merge-gate.conf"
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | GO | x | |\n'
+  printf '| 2026-08-02T00:00Z | 2 | NO-GO | x | |\n'
+  printf '| 2026-08-03T00:00Z | 3 | GO | x | |\n'
+} > "$DD/docs/architecture/gate-ledger.md"
+out="$(sh "$DOCTOR" "$DD" 2>&1)"; rc=$?
+assert "doctor: a ledger with no marker → 'no report marker; N verdicts on record', exit 0" 0 "$rc" "$out" \
+  'no report marker; 3 verdict\(s\) on record' 'DRIFT'
+printf '<!-- report 2026-08-03 rows=3 -->\n| 2026-08-04T00:00Z | 4 | GO | x | |\n' >> "$DD/docs/architecture/gate-ledger.md"
+out="$(sh "$DOCTOR" "$DD" 2>&1)"; rc=$?
+assert "doctor: below threshold → verdicts-since-marker advisory, default threshold named" 0 "$rc" "$out" \
+  '1 verdict\(s\) since the last report marker \(threshold 25, override REPORT_THRESHOLD env\)' 'DRIFT'
+out="$(REPORT_THRESHOLD=1 sh "$DOCTOR" "$DD" 2>&1)"; rc=$?
+assert "doctor: at threshold → a pointer to cut the report, still advisory (never exit-1 drift)" 0 "$rc" "$out" \
+  'AT/OVER the report threshold \(1' 'DRIFT'
 
 # install.sh — through the REAL path: install from this checkout into a temp dir, then assert it
 # stamped the suite version and RAN doctor (the update-time signal that replaces the old sentence).
