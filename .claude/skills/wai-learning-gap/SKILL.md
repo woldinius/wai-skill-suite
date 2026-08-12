@@ -224,6 +224,14 @@ are in `references/axes.md`.
    close the gap there, it would only block the run. The normal case is the interactive one:
    commit the phase, plant the gap, hand control back to the human.
 
+   **And the gap belongs in the tree the human actually uses.** A repo with linked worktrees has
+   many trees but one ledger; a marker planted in a worktree the human never opens is invisible to
+   them (the sweep in `open-gap-check.sh` later reports it as misplaced). A session working from a
+   worktree plants only on code that also exists in the main checkout — and plants it there; if the
+   code lives only on the unmerged branch, wait until it merges. Use **absolute paths** when writing
+   the marker: the field fix for exactly this case landed back in the wrong tree once, through a
+   lingering `cd`.
+
    Once planted, confirm the gap fails visibly with `verify-gap-breaks.sh` — **except against a
    Socratic architecture gap**, which stays green by design and would be wrongly rejected by the
    probe (pass its `--form socratic` and it skips). Every other gap must go red.
@@ -246,16 +254,23 @@ are in `references/axes.md`.
      clients, project files a tool rewrites),
    - no lines whose absence would **silently** succeed — the gap MUST fail visibly, preferably as a
      compile/type error or a red test.
-4. **Difficulty by the topic's box (the code-removal ladder):**
-   - **Box 1–2 — restore:** leave the original line(s) commented out and **visible**; the exercise
-     is understand + restore + answer the why-question.
+4. **Difficulty by the topic's box (the code-removal ladder) — difficulty is hint STRENGTH, never
+   answer visibility:**
+   - **Box 1 — rebuild with a strong hint:** line REMOVED; the marker names the construct
+     concretely and carries a partial scaffold (`___ attempts = 0`).
+   - **Box 2 — rebuild with a concept hint:** line removed; a concept-level hint only, no scaffold.
    - **Box 3 — combine the building blocks:** remove the line(s); the marker lists the required
      ingredients as an **unordered** set (grouped calls/keywords · variables · operators/math,
      sorted within each bucket by `shuffle-ingredients.sh` so presentation order never leaks usage
      order). The human assembles them.
    - **Box 4–5 — reconstruct:** remove the line(s) entirely; only the task description remains.
 
-   All three CODE-REMOVAL rungs still fail visibly — confirm with `verify-gap-breaks.sh`. The
+   **INVARIANT: the original line(s) never appear in plaintext in the working tree — at any box.**
+   They live only in the gap log; the deliberate `solution` escalation is the only reveal, and flow
+   B prices it (box −1). An answer visible next to the gap reduces the exercise to transcription,
+   and the Leitner counter climbs on recall it never tested.
+
+   All CODE-REMOVAL rungs still fail visibly — confirm with `verify-gap-breaks.sh`. The
    Socratic architecture gap is a separate, non-removal form (see *Learning axes*) and does not use
    this ladder.
 5. **Plant the marker** in the file's comment syntax (`//`, `#`, `<!-- -->`, …); format per the
@@ -279,17 +294,26 @@ are in `references/axes.md`.
    solution") **or** a recorded edit of their own. Marker gone with no claim → status `expired`,
    box **unchanged**.
 
+   **Marker gone HERE is not marker gone everywhere.** `open-gap-check.sh` sweeps every worktree of
+   the repo; when it names the marker in **another** tree, the gap is neither solved nor expired —
+   it sits in a tree the human never looks at. Move it to the tree the human actually uses (or
+   resolve it right there); only when the move is impossible and the gap stays unresolved, book
+   status `misplaced`, box **unchanged**. Never book `expired` while the sweep reports another tree.
+
    **Socratic gaps verify against the recorded answer.** A Socratic architecture gap leaves the tree
    green, so there is no red-to-clean transition to read: assess the human's written explanation
    against the **expected answer recorded in the gap log** (`Original` column, for a `socratic`
    form). A solve is always an explicit claim *plus* that answer — never inferred from the green
    tree; marker gone with no answer → `expired`, box unchanged.
 2. **Leitner update:** solved without a hint → box +1 (max 5) · solved with a hint → box stays ·
-   solved wrong / solution requested → box −1 (min 1) · expired without a claim → box unchanged.
+   solved wrong / solution requested → box −1 (min 1) · expired without a claim → box unchanged ·
+   misplaced → box unchanged. **Promotion requires recall, not transcription:** where the marker
+   carries a why-question, a correct answer to it is part of "solved" — a correctly rebuilt line
+   without it counts as `solved-with-hint` (box stays).
 3. **Feedback (2–4 sentences):** what is the concept, and why is it needed *here*? On mistakes,
    correct concretely instead of just saying "wrong".
-4. **Ledger:** set the status (`solved` / `solved-with-hint` / `solved-with-solution` / `expired`),
-   record the date and the box movement.
+4. **Ledger:** set the status (`solved` / `solved-with-hint` / `solved-with-solution` / `expired` /
+   `misplaced`), record the date and the box movement.
 5. **Leave the tree in a defined state.** This is what keeps the whole mechanism honest: an
    equivalent solution means `tree ≠ HEAD`, and an uncommitted improvement left lying around will
    be stashed by the next skill that cleans the tree — or buried under the next gap. So finish the
@@ -348,19 +372,21 @@ Box 5: mastered, sprinkle in only occasionally.
 
 ## Template: marker (use each file's comment syntax)
 
-**Box 1–2 (restore) — the original line stays, commented and visible:**
+**Box 1 (rebuild with a strong hint) — task, why-question, hint and scaffold; never the original
+line:**
 
 ```
 // 🧩 LEARN #12 [tech-stack · state/mutable-binding] ★★☆
-// Task: restore the line below. Why is an immutable binding not enough here?
+// Task: rebuild the one line that declares the attempt counter. Why is an immutable binding not enough here?
 // Hint: the declaration form whose value may still change after initialisation.
+// Scaffold: ___ attempts = 0
 // Check: the build passes and the counter test goes green.
-// var attempts = 0
 ```
 
-The `//` is illustrative: **use whatever the file uses** — `#`, `--`, `%`, `<!-- -->`. The examples
-are stack-neutral on purpose — a worked example in one language reads as *the* template to a reader
-whose repo is another.
+**Box 2** uses the same form without the `Scaffold:` line — the concept hint is all the help there
+is. The `//` is illustrative: **use whatever the file uses** — `#`, `--`, `%`, `<!-- -->`. The
+examples are stack-neutral on purpose — a worked example in one language reads as *the* template to
+a reader whose repo is another.
 
 **Box 3 (combine the building blocks) — line removed, ingredients listed unordered:**
 

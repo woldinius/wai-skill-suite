@@ -140,6 +140,14 @@ for SH in $SHELLS; do
   out="$("$SH" "$LL" "$FIX/ledger-socratic-noanswer.md" 2>&1)"; rc=$?
   assert "$SH ledger-lint: socratic gap with no expected answer → 1" 1 "$rc" "$out" 'no recorded expected answer'
 
+  # THE THIRD OUTCOME (issue #13): `misplaced` is a valid status — a marker found in ANOTHER
+  # worktree is neither solved nor expired. The enum must accept it and still reject an invention.
+  out="$("$SH" "$LL" "$FIX/ledger-misplaced.md" 2>&1)"; rc=$?
+  assert "$SH ledger-lint: status misplaced is a valid enum member → 0" 0 "$rc" "$out" 'VERDICT: OK'
+
+  out="$("$SH" "$LL" "$FIX/ledger-bad-status.md" 2>&1)"; rc=$?
+  assert "$SH ledger-lint: an unknown status → 1" 1 "$rc" "$out" 'unknown status'
+
   # A divergent, human-authored ledger (other section names, another language, no Form column) is
   # NOT the template — it must be reported and skipped, never failed and never rewritten.
   out="$("$SH" "$LL" "$FIX/ledger-legacy.md" 2>&1)"; rc=$?
@@ -212,6 +220,29 @@ for SH in $SHELLS; do
 
   out="$( cd "$Rog" && "$SH" "$OGC" "$TMP/no-ledger-$SH.md" 2>&1 )"; rc=$?
   assert "$SH open-gap: a named ledger it cannot read → 2 (UNKNOWN)" 2 "$rc" "$out" 'could not read'
+
+  # THE WORKTREE SWEEP (issue #13): the ledger is shared across every worktree, the trees are not —
+  # a check that greps only its own tree compares two sides with different reach, and a marker
+  # planted from a linked worktree sat invisible for two days while flow B booked it `expired`.
+  Rwt="$TMP/ogwt-$SH"; gitrepo "$Rwt"
+  Wsec="$TMP/ogwt-second-$SH"
+  git -C "$Rwt" worktree add -q "$Wsec" -b "wt-$SH" >/dev/null 2>&1
+
+  # A clean multi-worktree repo is still a clear — the sweep must not cry wolf on mere existence.
+  out="$( cd "$Rwt" && "$SH" "$OGC" "$ledclear" 2>&1 )"; rc=$?
+  assert "$SH open-gap: clean multi-worktree repo → 0 (safe to plant)" 0 "$rc" "$out" 'safe to plant' 'ANOTHER worktree'
+
+  # A marker in the OTHER tree → 1, and the sentence says WHERE: misplaced, not expired.
+  printf '// %s #9 [x]\n' 'LEARN' >> "$Wsec/src/a.txt"
+  out="$( cd "$Rwt" && "$SH" "$OGC" "$ledclear" 2>&1 )"; rc=$?
+  assert "$SH open-gap: marker in ANOTHER worktree → 1 (misplaced, not expired)" 1 "$rc" "$out" 'ANOTHER worktree.*misplaced'
+
+  # A listed tree that cannot be read → 2: an unswept tree is never silently counted as clear.
+  git -C "$Wsec" checkout -q -- src/a.txt
+  rm -rf "$Wsec"
+  out="$( cd "$Rwt" && "$SH" "$OGC" "$ledclear" 2>&1 )"; rc=$?
+  assert "$SH open-gap: a listed worktree it cannot read → 2 (UNKNOWN)" 2 "$rc" "$out" 'could not read'
+  git -C "$Rwt" worktree prune 2>/dev/null || true
 
   Rnog="$TMP/og-notgit-$SH"; mkdir -p "$Rnog"
   out="$( cd "$Rnog" && "$SH" "$OGC" "$ledclear" 2>&1 )"; rc=$?
