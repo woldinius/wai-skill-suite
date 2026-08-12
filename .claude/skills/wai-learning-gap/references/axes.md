@@ -51,7 +51,7 @@ Two consequences worth stating plainly:
 ### 2a. Structural-first (preferred — stays a red gap)
 
 Whenever the change touched a structural line whose removal breaks the build, use it. It behaves like
-any other code-removal gap and rides the normal three-rung ladder (restore / combine / reconstruct).
+any other code-removal gap and rides the normal code-removal ladder (rebuild / combine / reconstruct).
 Generic examples of such lines:
 
 - a **protocol / interface conformance** declaration whose removal makes a consumer fail to compile;

@@ -91,6 +91,12 @@ awk '
     fm = tolower(trim(fmi ? c[fmi] : ""))
     og =         trim(oi  ? c[oi]  : "")
     if (st == "open") open++
+    # Status is an enum, and misplaced is a member: a marker found in ANOTHER worktree is neither
+    # solved nor expired (issue #13). A status outside the enum is a row flow B can never close.
+    if (sti && st != "" && st !~ /^(open|solved|solved-with-hint|solved-with-solution|expired|misplaced|resolved \(claude\))$/) {
+      print "  X  gaps: unknown status [" st "] — allowed: open, solved, solved-with-hint, solved-with-solution, expired, misplaced, resolved (Claude)"
+      gf = 1
+    }
     if (fmi && fm == "socratic") {
       if (og == "" || og == "-" || og == "--" || og == "n/a") {
         print "  X  gaps: a socratic gap has no recorded expected answer — it can never be marked solved"

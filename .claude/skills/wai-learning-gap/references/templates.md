@@ -58,7 +58,7 @@ indistinguishable from a solve.
 | # | Date | File:lines | Topic | Axis | Form | Difficulty | Original | Hints | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-_Status: open · solved · solved-with-hint · solved-with-solution · expired · resolved (Claude)_
+_Status: open · solved · solved-with-hint · solved-with-solution · expired · misplaced · resolved (Claude)_
 _Form: cloze · structural · socratic — for a **socratic** gap the `Original` column holds the
 recorded **expected answer**, not code._
 
