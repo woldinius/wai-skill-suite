@@ -31,7 +31,20 @@ dimensions below. It proposes; the human mandates.
 The mandate fixes:
 
 - **The issue set** — explicit numbers (`#12–#18`), a label query (default:
-  `gh issue list --label ready-for-agent`), or a named tier/epic.
+  `gh issue list --label ready-for-agent`), a named tier/epic — or **packages**:
+  `--packages "298,282,281,252" "288,260,270,287"`, where each quoted group is worked as **one
+  branch and one PR per package**. The criterion: bundle when the issues **share a root cause or
+  a single guard** — four blind guards belong in one PR, where the shared failure class is
+  stated once instead of half-told four times; four unrelated small fixes stay
+  one-PR-per-issue. Inside a package the per-issue mechanics survive in full: every issue is
+  **claimed individually**, keeps its **own counterproof and rigor**, and gets its own
+  `Closes #N` line in the package PR body. The first field run is the evidence: eight issues,
+  two packages, **2 PRs, 8/8 counterproofs, 2 skill cycles instead of 32 — at full per-issue
+  rigor**. This also resolves a previously documented disagreement with
+  `wai-requirements-planning`, whose rule is "a set means ONE requirement — but verify it":
+  planning **fuses** a set that IS one requirement into one plan; a team package bundles issues
+  that **share a cause but remain separate issues**. One vocabulary, two honest cases — not two
+  skills contradicting each other.
 - **Decision-point handling** — per `issues-protocol.md` the default is: **collect** —
   Blocker/Major findings and excluded-domain merges are gathered and presented at the end as
   the decision list; the run continues with the next issue. The human can instead mandate
@@ -85,7 +98,10 @@ this skill adds orchestration, **not** new authority.
    `agent/<handle>/<type>-<slug>` branch: `wai-requirements-planning` (proportional — a
    well-specified small issue skips the plan doc, per the planning skill's own rules) →
    `wai-implementation` (includes the plan-delta check) → `wai-testing` →
-   `wai-pr-review`. Clean, non-excluded PRs merge under the normal gate (in a `team` repo
+   `wai-pr-review`. Under a **packaged mandate** the cycle runs once per **package**, on the
+   package's one branch — the issues inside are still claimed one by one, counterproofed one by
+   one, and each closes through its own `Closes #N` in the package PR; the package shares the
+   branch and the PR, never the evidence. Clean, non-excluded PRs merge under the normal gate (in a `team` repo
    that means auto-merge armed and waiting for another human's approval — see the git protocol);
    everything else joins the **decision list**. After each merged issue, the next cycle starts
    from the fresh `main`. In **autonomous** mode the allowlist eligibility floor and the serial
@@ -118,11 +134,18 @@ this skill adds orchestration, **not** new authority.
      honest options are to approve as the run goes, or to mandate stacked PRs (each branched off
      its predecessor), which trades review simplicity for throughput.
 
-4. **Bounded parallelism — only when mandated, only when disjoint.** On explicit request
-   ("parallelize"), run at most **2–3 issues concurrently**, each in its **own worktree** on
-   its own branch, and only issues the disjointness check cleared. Contract/migration issues
-   stay serial regardless. Parallel results **never merge directly**: they enter the merge
-   queue.
+4. **Worktrees — and honesty about what they buy.** A single-agent session runs nothing
+   concurrently: mandated "parallelize", it works **sequentially through multiple worktrees**,
+   one per branch, and must say so. That is still worth having, for reasons that have nothing to
+   do with concurrency — **no branch switching, no rebase juggling, no ambiguity about which
+   state is checked out**. The first field run mandated "parallel", got exactly this (two
+   worktrees, run one after the other), and the worktrees earned their keep on those three
+   counts alone; pretending otherwise promises a simultaneity nobody delivers. **Genuine
+   concurrency exists only when the runtime actually runs sessions in parallel** — then, and
+   only when mandated, run at most **2–3 issues at once**, each in its own worktree on its own
+   branch, and only issues the disjointness check cleared. Contract/migration issues stay
+   serial in either mode. Name plainly, in the report, which of the two happened. Parallel
+   results **never merge directly**: they enter the merge queue.
 
 5. **Integrate through the merge queue — only what actually needs serializing.** The serial run
    (step 3) produces PRs that are **disjoint by construction**: contract/migration work is in the
@@ -151,8 +174,8 @@ this skill adds orchestration, **not** new authority.
    gap in the report** instead of reporting that there was nothing to gather. There is no `exit 1`.
 
 7. **Report** — end the run with the team report (format below): autonomously merged (if any),
-   merged, decision list, withheld, cross-issue notes, parked/failed, issues filed. The
-   decision list is the deliverable the mandate promised — never bury it.
+   merged, verified-nothing-to-fix, decision list, withheld, cross-issue notes, parked/failed,
+   issues filed. The decision list is the deliverable the mandate promised — never bury it.
 
 8. **Learning hand-off (clean run, opt-in)** — after a **clean run**, and **only at an
    interactive hand-back with a human present**, offer exactly **one** learning gap by
@@ -232,6 +255,9 @@ append-only gate ledger and the git log — never narrated from memory.
 ### Merged
 - #N [title] → PR #P (auto-merged | auto-merge armed, awaiting a human approval | queue-merged) · [1 line what shipped]
 
+### Verified — nothing to fix
+- #N [title] — measured: [what was run · what it showed] · claimed defect no longer exists · [hardened so it keeps holding | closed as-is]
+
 ### ▶ Your decision list
 - #N / PR #P — [Blocker/Major finding or excluded-domain merge] · [recommendation]
 
@@ -256,6 +282,14 @@ append-only gate ledger and the git log — never narrated from memory.
 Learning: one representative gap offered (opt-in)   ← only when the clean-run hand-off fired
 ```
 
+**`### Verified — nothing to fix` is a third outcome, not a variant of the other two:** without
+its own name it lands under "merged" (hiding that nothing was broken) or "parked" (hiding that
+something was done) — a common outcome once a backlog is older than a few weeks. The
+**measurement is mandatory in the line** — what was run, what it showed — so nobody closes an
+issue with "looks fine". Field case: issue #252 claimed a guard had gone blind; measured, the
+thresholds had been tightened since the issue was filed, and the counterproof fired on both
+tick rates.
+
 ## Principles
 
 - **Propose, don't self-mandate** — with no set named, the skill scans and proposes; the human
@@ -272,8 +306,10 @@ Learning: one representative gap offered (opt-in)   ← only when the clean-run 
   excluded domains and migrations are always serial.
 - **Mandate-bound** — the issue set, decision handling and budget come from the human;
   collected decisions are presented, never absorbed.
-- **One branch, one PR per issue** — the per-issue cycle is exactly the normal lifecycle;
-  the team adds batching, not shortcuts.
+- **One branch, one PR per issue — one per PACKAGE where the mandate packages** — the per-issue
+  cycle is exactly the normal lifecycle; a mandated package shares one branch and one PR because
+  its issues share a root cause, while every issue inside keeps its own claim, its own
+  counterproof and its own `Closes #N`. The team adds batching, not shortcuts.
 - **Honest report** — parked and failed issues appear in the report with the same prominence
   as merged ones.
 
@@ -296,4 +332,8 @@ Learning: one representative gap offered (opt-in)   ← only when the clean-run 
   `cross-issue-digest.sh` (step 6), `post-merge-verify.sh` (the serial barrier) and
   `autonomous-merge-report.sh` (the audit trail); excluded-domain classification is the shared
   `.claude/skills/wai/scripts/excluded-domains.sh`, obeyed by its exit code — never re-derived
-  here.
+  here. Worked call, from this skill's directory:
+  `sh ../wai/scripts/excluded-domains.sh --files <file-with-paths> --diff <file-with-diff>` —
+  **both flags take a FILE CONTAINING the path list / the diff**, not the paths or the diff
+  themselves; passing paths positionally cost the first field run a round trip
+  (`unknown argument 'test/…'`).
