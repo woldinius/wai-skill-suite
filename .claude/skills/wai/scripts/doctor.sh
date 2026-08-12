@@ -101,6 +101,35 @@ else
   note "no quality catalog yet — run wai-init to set the suite up here (nothing can drift until it is)."
 fi
 
+# ── THE LEDGER HAS A REPORT CADENCE, AND UNTIL NOW ONLY MOOD ENFORCED IT ────────────────────────
+# The honest field observation (issue #8): reports happen when someone asks. Roughly 250 verdicts
+# of friction produced zero reports in between — the suite's own core sentence ("the difference is
+# whether a mechanical check existed") applied to its own feedback channel, and failing. So
+# gate-stats.sh --report --mark appends a marker line when a report is cut, and doctor counts the
+# verdicts since. ADVISORY in both directions, never drift: WHEN to report is a threshold, but
+# WHAT is worth reporting stays judgment (ADR-0002) — a doctor that exits 1 over an overdue
+# retrospective teaches people to stop running doctor.
+if [ -f "$LEDGER" ] && [ -r "$LEDGER" ]; then
+  RT="${REPORT_THRESHOLD:-25}"
+  case "$RT" in ''|*[!0-9]*) RT=25 ;; esac      # garbage in the env is not a threshold; the default is
+  # Same row anchor as gate-stats.sh (a timestamped table line); the marker line never matches it.
+  SINCE="$(awk '
+    /^<!-- report / { n = 0; m = 1; next }
+    /^\| *[0-9][0-9][0-9][0-9]-/ { n++ }
+    END { printf "%s%d", (m ? "M" : "-"), n }' "$LEDGER" 2>/dev/null || printf '')"
+  case "$SINCE" in
+    M*) NV="${SINCE#M}"
+        if [ "$NV" -ge "$RT" ]; then
+          note "$NV verdict(s) since the last report marker — AT/OVER the report threshold ($RT, override REPORT_THRESHOLD env). Cut one: sh .claude/skills/wai-pr-review/scripts/gate-stats.sh --report --mark"
+        else
+          note "$NV verdict(s) since the last report marker (threshold $RT, override REPORT_THRESHOLD env)"
+        fi ;;
+    -*) NV="${SINCE#-}"
+        note "no report marker; $NV verdict(s) on record — a report is due at $RT (gate-stats.sh --report --mark plants the marker)" ;;
+    *)  unknown "$LEDGER exists but its report cadence could not be read — cannot tell how many verdicts the last report covers." ;;
+  esac
+fi
+
 # ── A PRESENT CONF IS NOT A CONFIGURED CONF ─────────────────────────────────────────────────────
 # The template ships CONTRACT_PATHS, MIGRATION_PATHS and ERASURE_PATHS all EMPTY — correctly, since
 # only the repo knows its own risky paths — and the classifier SKIPS any test whose key is empty
