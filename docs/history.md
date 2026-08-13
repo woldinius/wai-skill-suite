@@ -9,7 +9,7 @@ Every claim below is backed by a dated artefact in this repo: the [ADRs](adr/), 
 > **Disclosure.** This repository is a **curated re-publication**. The suite was developed in a
 > private repo whose history carries product names and German drafts that
 > have no business being public. The milestone commits here carry the **real dates** of the work
-> (times normalized to 00:00 UTC) and introduce the components in the order they actually arrived —
+> and introduce the components in the order they actually arrived —
 > in their final, cleaned form, not as byte-exact snapshots of the day. The dated documents under
 > `docs/` migrated with their content intact; translated field reports say so, and the German
 > originals remain in the private archive.
