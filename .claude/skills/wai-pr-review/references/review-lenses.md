@@ -65,6 +65,15 @@ codebase — audit **this diff's attack surface**. (The whole-codebase sweep is
   then drives a tool call or whose output is trusted downstream.
 - **Resource exhaustion.** Unbounded page size/upload/expansion, an uncapped AI call, no rate
   limit on an expensive route — cost *is* an attack surface here.
+- **The cache that doesn't.** The diff introduces or changes a cache: **does it hit at all?** A
+  cache that never hits is the full recomputation cost on every request, waiting for load — and
+  it hides behind green tests, because correctness is identical either way. Accept only two
+  forms of evidence: **key identity** (the key is provably stable across the calls that must
+  share it — an identity-keyed cache whose key object is recreated per call never hits) or a
+  **hit count**. **Never timing: a timer measures the machine, not the cache.** The field cache
+  never hit once — **500 queries, 500 full rebuilds** — and stayed invisible precisely because an
+  optimization in the same change made each rebuild cheap; a timing check would have called it
+  fine, the hit count showed zero, and the fix was worth **~130×** (`PERF-1`).
 - **Race windows.** Check-then-act without a constraint or a lock behind it.
 - **Leaky failure paths.** The error message, the log line, or the 500 body carries the PII, the
   token, the stack, the internal ID.
