@@ -121,6 +121,13 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    **wai-testing** to cover the change (same branch), then **wai-pr-review** on the
    PR; or the next planned task — and note if **wai-architecture-audit** is due (several
    features since the last one).
+   **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-implementation"
+   "<subject>" "<half-sentence outcome>"` (from this skill's directory) — a run without a row is
+   invisible work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing args).
+   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (same directory), paste
+   its output verbatim beneath the ▶ Recommended next block, then give your recommendation — in that
+   order: the script derives (exit 0 = emitted; exit 2 = nothing derivable — then say `not checked`
+   yourself), the model recommends.
 
 8. **Learning gap — the last action, and only when you hand back to the human.** Applies only if
    **this** human has a personal learning ledger (`~/.claude/learning/<repo-slug>/ledger.md`, or

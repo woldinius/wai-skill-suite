@@ -1,0 +1,16 @@
+# Run log
+
+One row per skill run — pure attendance: who ran, on what, with what result in a half-sentence.
+Written by the skill (or its script) at hand-back, never reconstructed afterwards from memory.
+**A run without a row is invisible work:** without this file a skill leaves a trace only if it
+files something, so an audit that finds nothing, a batch run that bundles its output, or a planning
+pass that comments on an existing issue simply vanishes — the record measures side effects, not
+work. This file is the denominator for every "how often does X actually run" question.
+
+**APPEND-ONLY.** Never edit or delete a past row; the count only means something if nobody curates
+it. Unlike the gate ledger there is no outcome column to tag — nothing here asks for judgment, and
+a suite update must never touch this file (the same never-eaten guarantee as the gate ledger's).
+
+| when (UTC) | skill | subject | outcome |
+|---|---|---|---|
+| 2026-08-13T20:48Z | wai-pr-review | PR #22 | NO-GO |

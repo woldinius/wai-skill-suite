@@ -8,6 +8,17 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ### Added
 
+- **Hand-back instrumentation** (#11, #7). A **run log** beside the gate ledger
+  (`wai/scripts/run-log.sh` → `docs/architecture/run-log.md`, append-only, fail-open): one
+  attendance row per skill run, because the record used to measure side effects, not work — a run
+  that filed nothing vanished. `merge-gate.sh`, `backlog-scan.sh` and `dep-cve-scan.sh` self-log
+  (their script↔skill mapping is 1:1); the prose skills log at their hand-off step.
+- **`wai/scripts/open-items.sh`** — the derived hand-back footer: open PRs, issues assigned to the
+  handle, branches with unique commits and no PR, the merged-but-unreachable sweep, untagged
+  ledger rows, merged PRs since the last audit, foreign worktrees — pasted verbatim beneath every
+  `▶ Recommended next`, because self-recall under-reports ~3×. Empty lines name their derivation,
+  absent artifact classes are skipped and named, a dead `gh` degrades per line.
+
 - The suite is its own **plugin marketplace**: `/plugin marketplace add woldinius/wai-skill-suite`,
   then `/plugin install wai-suite@wai`. `install.sh` remains as the copy-into-repo path.
 - This changelog, and a README section stating exactly what the suite writes into a repo — and

@@ -123,6 +123,9 @@ Depending on stack and deploy target (not everything is always needed):
 
 6. **Output the setup report** — including the **manual server steps** (provision,
    harden, install Docker, set secrets, first deploy).
+   **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-cicd" "<subject>"
+   "<half-sentence outcome>"` (from this skill's directory) — a run without a row is invisible
+   work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing arguments).
 
 ## Scan checklist
 

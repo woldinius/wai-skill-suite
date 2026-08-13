@@ -198,6 +198,16 @@ LEDGER_HDR
   printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
 }
 
+# emit_runlog LABEL — ONE attendance row beside the verdict (issue #11: the record measures side
+# effects, not work — and a gate verdict is the one side effect a review run reliably has, so the
+# run log's row for wai-pr-review is written HERE, where the script↔skill mapping is 1:1). Resolved
+# as a ../../wai/scripts/ sibling exactly like the domain classifier below. FAIL-OPEN for
+# emit_ledger's reason: a missing or failing logger must never change a merge decision.
+RUNLOG_SH="$(dirname "$0")/../../wai/scripts/run-log.sh"
+emit_runlog() {
+  [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-pr-review "PR #$PR" "$1" >/dev/null 2>&1 || true
+}
+
 # --- 0. Toolchain -------------------------------------------------------------------------------
 command -v gh  >/dev/null 2>&1 || { echo "merge-gate: gh is not installed — cannot verify anything." >&2; exit 2; }
 command -v git >/dev/null 2>&1 || { echo "merge-gate: git is not installed." >&2; exit 2; }
@@ -255,6 +265,7 @@ if [ "$STATE" = "MERGED" ]; then
   echo "  Nothing is left to prevent. Any review findings are FOLLOW-UPS, not gate conditions."
   echo "  If you authored this code, this is a self-review of your own just-merged work."
   emit_ledger MOOT "PR already merged before the gate ran"
+  emit_runlog MOOT
   echo "VERDICT: MOOT — the PR was merged before the gate ran; the human owns any follow-up."
   exit 2
 fi
@@ -476,5 +487,6 @@ esac
 # the suite to relearn that (ADR-0002), and tests/run.sh caught it on the first run — as designed.
 case "$VERDICT" in 0) _v=GO ;; 1) _v=NO-GO ;; 2) _v=UNKNOWN ;; *) _v='?' ;; esac
 emit_ledger "$_v" "$REASONS"
+emit_runlog "$_v"
 
 exit "$VERDICT"

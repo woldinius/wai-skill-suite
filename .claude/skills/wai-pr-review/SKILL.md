@@ -213,6 +213,12 @@ necessary aspects as findings.
    the PR? "I posted it" is a memory; the comment is the evidence. This closes the same hole the
    suite keeps finding in different clothes: a result that exists only in the agent's head did not
    happen. If it is not there, post it again before you report the run as done.
+   (The run-log row for this skill is written by `merge-gate.sh` itself — do not log it again.)
+   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (from this skill's
+   directory — a sibling path, like the classifier's), paste its output verbatim beneath the
+   ▶ Recommended next block, then give your recommendation — in that order: the script derives
+   (exit 0 = emitted; exit 2 = nothing derivable — then say `not checked` yourself), the model
+   recommends.
 
 ## Review lens
 

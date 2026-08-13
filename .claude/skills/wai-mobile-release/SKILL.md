@@ -106,6 +106,9 @@ Depending on platform (not everything is always needed):
    ruleset as a manual step. If existing: propose a diff.
 6. **Output the setup report** — including the **manual store-console steps** (App Store Connect
    app + agreements + IAP products; Play Console app + Data Safety + billing products + tracks).
+   **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-mobile-release"
+   "<subject>" "<half-sentence outcome>"` (from this skill's directory) — a run without a row is
+   invisible work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing args).
 
 ## Merge gate & store submission
 

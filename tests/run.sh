@@ -196,6 +196,16 @@ if [ -f "$LED" ] && grep -qE '^\| .* \| 1 \| GO \|' "$LED"; then ok "a GO run ap
 else bad "a GO run appends a GO row to the ledger" "no GO row in $LED"; fi
 if grep -q 'APPEND-ONLY' "$LED" 2>/dev/null; then ok "a fresh ledger writes its own tagging protocol"
 else bad "a fresh ledger writes its own tagging protocol" "no self-documenting header"; fi
+# The run-log self-log site (issue #11): a gate verdict IS a wai-pr-review run and the mapping is
+# 1:1, so the SCRIPT writes the attendance row beside the ledger row. The gate ran in the fixture's
+# cwd, so the row must land in the FIXTURE's docs/ — never in this repo.
+RLOG="$D/docs/architecture/run-log.md"
+if grep -qF '| wai-pr-review | PR #1 | GO |' "$RLOG" 2>/dev/null; then
+  ok "a GO run also appends a run-log row (skill=wai-pr-review, outcome=the verdict label)"
+else bad "a GO run also appends a run-log row" "no wai-pr-review GO row in $RLOG"; fi
+if grep -q 'A run without a row is invisible work' "$RLOG" 2>/dev/null; then
+  ok "a fresh run log writes its own self-documenting header"
+else bad "a fresh run log writes its own self-documenting header" "no #11 header in $RLOG"; fi
 
 gfix; MERGE_GATE_LEDGER=/proc/nonexistent/x/gate.md
 out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" MERGE_GATE_LEDGER="$MERGE_GATE_LEDGER" sh "$GATE" 1 2>&1 )"; rc=$?
@@ -211,6 +221,9 @@ out="$(gate)"; rc=$?
 assert "an already-merged PR → MOOT (not GO/NO-GO), exit 2" 2 "$rc" "$out" 'VERDICT: MOOT' 'VERDICT: (GO|NO-GO)'
 if grep -qE '^\| .* \| 1 \| MOOT \|' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then ok "a MOOT run records a MOOT ledger row (absent row would read as never-checked)"
 else bad "a MOOT run records a MOOT ledger row" "no MOOT row in the ledger"; fi
+if grep -qF '| wai-pr-review | PR #1 | MOOT |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "the MOOT short-circuit still writes its run-log row (checked-too-late is a run, not a gap)"
+else bad "the MOOT short-circuit still writes its run-log row" "no MOOT row in the fixture's run log"; fi
 
 # The why-cell must not be amputated silently. The first cap was `cut -c1-160`, and the ledger's
 # first real row ended mid-token ("test (ubuntu-") — a cut that read like the full reason. The cell
@@ -251,6 +264,9 @@ case "$first80" in
   *EX-*) ok "the EX-* IDs sit within the first 80 characters of the why cell (issue #8 acceptance)" ;;
   *)     bad "the EX-* IDs sit within the first 80 characters of the why cell (issue #8 acceptance)" "first 80: $first80" ;;
 esac
+if grep -qF '| wai-pr-review | PR #1 | NO-GO |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "a NO-GO run's run-log row carries the verdict label as its outcome"
+else bad "a NO-GO run's run-log row carries the verdict label" "no NO-GO row in the fixture's run log"; fi
 lok="$(printf '%s\n' "$out" | grep -n 'quality catalog present' | head -1 | cut -d: -f1)"
 lxx="$(printf '%s\n' "$out" | grep -n 'touches an excluded domain' | head -1 | cut -d: -f1)"
 if [ -n "$lok" ] && [ -n "$lxx" ] && [ "$lok" -lt "$lxx" ]; then
@@ -451,12 +467,21 @@ cvedir() { N=$((N+1)); CVD="$TMP/cve$N"; mkdir -p "$CVD"; [ -n "${1:-}" ] && pri
 cvedir ""                                     # no manifests at all
 out="$(cverun "$BASEP" "$CVD")"; rc=$?
 assert "no ecosystem detected → nothing to scan, exit 0" 0 "$rc" "$out" 'no dependency ecosystems'
+# The run-log self-log site (issue #11): the CVE sweep marks a wai-security-audit run, 1:1 mapping,
+# so the SCRIPT writes the attendance row — into the SCANNED tree, which here is the fixture.
+# Found-nothing is exactly the run that vanishes today; it must still leave a row.
+if grep -qF '| wai-security-audit | dep CVE scan | no ecosystems detected |' "$CVD/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "dep-cve-scan self-logs its run into the scanned tree (skill=wai-security-audit)"
+else bad "dep-cve-scan self-logs its run into the scanned tree" "no row in $CVD/docs/architecture/run-log.md"; fi
 
 # Package.swift with no osv-scanner on PATH: the script has no native swift scanner, so this is the
 # clean fail-loud case, deterministic on any runner (osv is never preinstalled).
 cvedir Package.swift 'name'
 out="$(cverun "$BASEP" "$CVD")"; rc=$?
 assert "a manifest with no scanner → not_measured, exit 2 (never a silent 0)" 2 "$rc" "$out" 'ecosystem=swift.*not_measured' 'ran=true'
+if grep -qF '| wai-security-audit | dep CVE scan | gap: at least one ecosystem not measured |' "$CVD/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "a gapped scan's run-log row names the gap state, never a silent zero"
+else bad "a gapped scan's run-log row names the gap state" "no gap row in $CVD/docs/architecture/run-log.md"; fi
 
 # A stub npm that FINDS vulns: valid JSON AND a non-zero exit — the exact shape real `npm audit` has.
 # The script must call this MEASURED (it keys on the JSON, not the exit code) and parse the counts.
