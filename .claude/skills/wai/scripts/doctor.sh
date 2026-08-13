@@ -252,11 +252,24 @@ fi
 # finding carries the line.
 if [ -d ".githooks" ]; then
   HP="$(git config --get core.hooksPath 2>/dev/null || true)"
-  case "$HP" in
-    .githooks|.githooks/) ok "git hooks are wired (core.hooksPath=$HP)" ;;
-    "")  drift "'.githooks/' exists but core.hooksPath is unset — git runs .git/hooks, so the pre-commit and pre-push guards NEVER FIRE. Fix: git config core.hooksPath .githooks" ;;
-    *)   drift "'.githooks/' exists but core.hooksPath='$HP' points elsewhere — the suite's guards never fire. Fix: git config core.hooksPath .githooks" ;;
-  esac
+  # Compare DIRECTORIES, not strings. An absolute path to the very same .githooks (tools that
+  # resolve paths before storing them write exactly that) is wired — the literal compare called it
+  # "points elsewhere" and told the operator to fix a non-problem. Predicted as an edge in review,
+  # then hit for real in this repo on 2026-08-13 (issue #18). Canonicalize both sides; a value
+  # whose directory does not exist stays honest drift — THAT one really never fires.
+  if [ -n "$HP" ]; then
+    HPC="$(CDPATH='' cd -- "$HP" 2>/dev/null && pwd -P || true)"
+    GHC="$(CDPATH='' cd -- .githooks 2>/dev/null && pwd -P || true)"
+  else
+    HPC=""; GHC="x"
+  fi
+  if [ -n "$HPC" ] && [ "$HPC" = "$GHC" ]; then
+    ok "git hooks are wired (core.hooksPath=$HP)"
+  elif [ -z "$HP" ]; then
+    drift "'.githooks/' exists but core.hooksPath is unset — git runs .git/hooks, so the pre-commit and pre-push guards NEVER FIRE. Fix: git config core.hooksPath .githooks"
+  else
+    drift "'.githooks/' exists but core.hooksPath='$HP' points elsewhere — the suite's guards never fire. Fix: git config core.hooksPath .githooks"
+  fi
 fi
 
 echo

@@ -539,6 +539,16 @@ assert "committed hooks with no core.hooksPath → DRIFT, and it names the fix" 
 git -C "$DD" config core.hooksPath .githooks
 out="$( cd "$DD" && sh "$DOCTOR" . 2>&1 )"; rc=$?
 assert "wired hooks are not reported as drift" 0 "$rc" "$out" 'hooks are wired'
+# An ABSOLUTE path to the very same directory is wired, not "elsewhere". The literal compare
+# called it drift and told the operator to fix a non-problem — predicted as an edge in review,
+# hit for real in this repo on 2026-08-13 (issue #18). Directories compare, strings don't.
+git -C "$DD" config core.hooksPath "$DD/.githooks"
+out="$( cd "$DD" && sh "$DOCTOR" . 2>&1 )"; rc=$?
+assert "an absolute core.hooksPath to the SAME dir is wired, not drift (#18)" 0 "$rc" "$out" 'hooks are wired' 'points elsewhere'
+# And a path that genuinely resolves elsewhere (or nowhere) stays honest drift.
+git -C "$DD" config core.hooksPath /nonexistent-hooks-dir
+out="$( cd "$DD" && sh "$DOCTOR" . 2>&1 )"; rc=$?
+assert "a hooksPath that resolves nowhere is still drift" 1 "$rc" "$out" 'points elsewhere'
 
 # The report cadence: ~250 field verdicts produced zero reports, because reporting happened by
 # mood. doctor now counts verdicts since the last `<!-- report … -->` marker and names the
