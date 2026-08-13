@@ -69,7 +69,7 @@ model cooperating:
 |---|---|---|
 | **Server-side** | branch protection on `main`, required checks, CODEOWNERS | No — the model does not run there |
 | **Local hooks** | [`pre-commit`](.githooks/pre-commit) (no commits on the default branch), [`pre-push`](.githooks/pre-push) (no pushes to a branch whose PR is merged) — **wire them once: `git config core.hooksPath .githooks`** | Only visibly, via `--no-verify` |
-| **Scripts a skill invokes** | `merge-gate.sh`, `catalog-lint.sh`, the audit and protocol lints — 26 scripts across the suite | In principle yes — which is why this was **measured**, not assumed ([Test 0](docs/empirics.md)) |
+| **Scripts a skill invokes** | `merge-gate.sh`, `catalog-lint.sh`, the audit and protocol lints — 27 scripts across the suite | In principle yes — which is why this was **measured**, not assumed ([Test 0](docs/empirics.md)) |
 
 The merge policy itself is **policy-as-code**: the guardrail floor is hardcoded in the scripts,
 the repo-specific half lives in `docs/architecture/merge-gate.conf` — and config can only ever
@@ -98,7 +98,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took nine repair commits in two days; the gate
 once failed *open* under zsh and later could never say GO at all. That is why
-[`tests/`](tests/) exists — 302 cases, **founded** on bugs that shipped and grown into the
+[`tests/`](tests/) exists — 321 cases, **founded** on bugs that shipped and grown into the
 regression guards around them, run on two shells because shellcheck passed a construct that is a
 syntax error in the `/bin/sh` of macOS. (The second shell runs locally on every branch, not in
 CI: macOS runners bill at 10× and exhausted the private repo's Actions minutes until no check
@@ -148,8 +148,9 @@ Smaller repos work too — `wai-init` scopes and sizes everything to what the re
 
 A **router** points you to the right skill; three one-time **setup** skills prepare the repos;
 four skills form the per-requirement **lifecycle** (plan → implement → test → review); one
-**batch orchestrator** works several issues at once under your mandate; two run **periodically**
-— a structural architecture audit and an adversarial security audit. All are triggered
+**batch orchestrator** works several issues at once under your mandate; three run **periodically**
+— a structural architecture audit, an adversarial security audit, and an artifact-derived
+retrospective of the suite's own record. All are triggered
 automatically via their `description` and demarcate themselves against the others to avoid
 mis-routing.
 
@@ -175,6 +176,7 @@ repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explici
 | [`wai-team`](.claude/skills/wai-team/SKILL.md) | Batch | less often · well-tested | **Mandated backlog orchestrator:** works a set of GitHub issues through the full cycle — one branch+PR per issue, serial by default, bounded parallelism only for disjoint issues — integrated via pr-review's **merge queue**; Blocker/Major & contract merges collect in **your decision list**. | "work the backlog", "process issues #12–#18", "burn down the tier" |
 | [`wai-architecture-audit`](.claude/skills/wai-architecture-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **structural** audit: decoupling/modularity, drift, dead code + **non-obvious semantic redundancy / inconsistency / cross-surface dead-ends**, efficiency & container topology — as a trend over time. Measures against a persisted **architecture baseline**. | "audit the codebase", "is it decoupled", "find redundancy/drift" |
 | [`wai-security-audit`](.claude/skills/wai-security-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **adversarial** cyber-security sweep: attack-surface map + authZ/IDOR, secrets, injection (incl. prompt), SSRF, rate-limiting, session/token lifecycle, dependency CVEs, crypto/TLS, **token-economy fraud**, client attestation — posture as a trend. Report-only; redacted. | "security audit", "are we secure", "pentest", "check the attack surface", "dependency CVEs" |
+| [`wai-retro`](.claude/skills/wai-retro/SKILL.md) | Periodic | new — proving | **Artifact-derived retrospective** of the suite's own record, at a threshold (doctor's report-cadence advisory) — never from recall: the gate ledger's report extract, the run log and `git log` in; a dated, narrated report with raw counts beside every rate out; the judgment column stays human. Finishes by advancing the ledger's report marker so the cadence resets. Collaboration level gated until a question trace exists; publication to this repo only on explicit request, sanitized + pseudonymized (`fr-<12hex>`). | "run the retro", "retrospective", "what did the suite do this month", "cut a report" |
 
 ## Personal skills
 
@@ -187,7 +189,7 @@ Not part of the wAI lifecycle — reusable helpers for the human, adopted per pr
 ## Installation
 
 **As a plugin (recommended).** This repo is its own [plugin marketplace](.claude-plugin/marketplace.json):
-one plugin, all twelve skills, versioned and updatable through Claude Code's plugin system.
+one plugin, all thirteen skills, versioned and updatable through Claude Code's plugin system.
 
 ```
 /plugin marketplace add woldinius/wai-skill-suite
@@ -405,9 +407,10 @@ install.sh                                       # idempotent installer (inject/
   wai-team/                                      # mandated batch orchestrator (merge queue) + scripts
   wai-architecture-audit/                        # + audit playbook
   wai-security-audit/                            # + security playbook + CVE/attack-path scripts
+  wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 302 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 321 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, audits, catalog, open questions
 ```
 

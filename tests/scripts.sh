@@ -1247,6 +1247,115 @@ N=$((N+1)); D="$TMP/oi-nothing$N"; mkdir -p "$D"
 out="$( cd "$D" && PATH="$GITONLY" "$SH" "$OPENITEMS" 2>&1 )"; rc=$?
 assert "no git repo AND no gh → exit 2: nothing could be derived, and it says so" 2 "$rc" "$out" 'nothing could be derived'
 
+# =================================================================================================
+echo
+echo "retro-compliance.sh"
+# The retro's denominator (issue #14): cross the run log × the gate ledger × git merge history and
+# report the share of merged PRs that left a trace. 0 = emitted — including named-empty lines for
+# an empty period — and 2 = an input could not be read, or misuse. There is deliberately no
+# exit 1: it counts; it renders no verdict (ADR-0002). And it does NOT self-log: it is an
+# extractor, not a skill run — a row from it would attribute a measurement to a retro that may
+# never be written (run-log.sh's own 1:1 attribution rule).
+# =================================================================================================
+RETRO="$ROOT/.claude/skills/wai-retro/scripts/retro-compliance.sh"
+
+rcfix() {   # a git repo with two PR-numbered merge commits, one plain merge, a run log, a ledger
+  N=$((N+1)); D="$TMP/rc$N"; gitrepo "$D"
+  printf 'base\n' > "$D/README.md"; gitcommit "$D" 'chore: base'
+  for pr in 1 2; do
+    git -C "$D" checkout -q -b "f$pr" 2>/dev/null
+    printf '%s\n' "$pr" > "$D/f$pr.txt"; gitcommit "$D" "feat: change $pr"
+    git -C "$D" checkout -q main 2>/dev/null
+    git -C "$D" merge -q --no-ff -m "Merge pull request #$pr from acme/f$pr" "f$pr" >/dev/null 2>&1
+  done
+  git -C "$D" checkout -q -b plain 2>/dev/null
+  printf 'p\n' > "$D/p.txt"; gitcommit "$D" 'feat: plain'
+  git -C "$D" checkout -q main 2>/dev/null
+  git -C "$D" merge -q --no-ff -m 'Merge branch plain' plain >/dev/null 2>&1
+  mkdir -p "$D/docs/architecture"
+  { printf '| when (UTC) | skill | subject | outcome |\n|---|---|---|---|\n'
+    printf '| 2026-08-10T09:00Z | wai-pr-review | PR #1 | GO |\n'
+    printf '| 2026-08-11T09:00Z | wai-pr-review | PR #3 | GO |\n'
+    printf '| 2026-08-11T10:00Z | wai-implementation | issue 4 | PR opened |\n'
+  } > "$D/docs/architecture/run-log.md"
+  { printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+    printf '| 2026-08-10T09:00Z | 1 | GO | x | ok |\n'
+    printf '| 2026-08-11T09:00Z | 3 | GO | x | |\n'
+    printf '| 2026-08-11T11:00Z | 4 | NO-GO | x | |\n'
+  } > "$D/docs/architecture/gate-ledger.md"
+}
+rc() { ( cd "$D" && "$SH" "$RETRO" "$@" 2>&1 ); }
+
+# THE PASS PATH. Ledger verdicts exist for PRs 1, 3, 4; merge commits exist for PRs 1, 2 — so
+# exactly one of the two number-carrying merges is traced. An extractor nobody has watched emit
+# a mid-range share is an untested branch: 0% and 100% are the two answers a broken join produces.
+rcfix; out="$(rc)"; rc_=$?
+assert "the traced share crosses ledger PRs × merged PRs — 1 of 2 = 50%, exit 0" 0 "$rc_" "$out" \
+  'traced share: 1 of 2 merged PRs carry a gate verdict in the period = 50%'
+assert "  · raw counts stand beside the rate (the counter-reader rule)" 0 "$rc_" "$out" \
+  'raw: merge commits 3 · ledger rows 3 · run-log rows 3'
+assert "  · per-skill run counts come from the run log" 0 "$rc_" "$out" \
+  'per skill: wai-pr-review 2 · wai-implementation 1'
+assert "  · verdict totals are substring-proof (NO-GO never counts toward GO)" 0 "$rc_" "$out" \
+  'gate-ledger verdicts: 3 — GO 2 · NO-GO 1 · UNKNOWN 0 · MOOT 0' 'GO 3'
+assert "  · a merge commit without a PR number is counted AND named as out of the rate" 0 "$rc_" "$out" \
+  '1 merge commit\(s\) without a PR number in the subject are in NO rate'
+# THE BOUNDARY: counts, never a verdict — and no self-log row (extractor, not a run).
+assert "  · it emits counts and renders NO verdict (ADR-0002)" 0 "$rc_" "$out" \
+  'COUNTS ONLY \(ADR-0002\)' 'VERDICT'
+if grep -q '| wai-retro |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  bad "an extractor writes NO run-log row of its own (1:1 attribution)" "a wai-retro row appeared in the fixture's run log"
+else
+  ok "an extractor writes NO run-log row of its own (1:1 attribution)"
+fi
+
+# The default anchor is the ledger's LAST report marker — the line gate-stats.sh --report --mark
+# appends. Rows dated before the marker's date fall out of the period, and the anchor is NAMED, so
+# a reader can tell "since the last report" from "all of history".
+rcfix
+printf '<!-- report 2026-08-11 rows=3 -->\n| 2026-08-12T09:00Z | 9 | GO | x | |\n' >> "$D/docs/architecture/gate-ledger.md"
+out="$(rc)"; rc_=$?
+assert "the last report marker anchors the period, and the anchor is named" 0 "$rc_" "$out" \
+  'period: last report marker in docs/architecture/gate-ledger.md \(2026-08-11\)'
+assert "  · pre-marker run-log rows fall out of the period (3 rows → 2)" 0 "$rc_" "$out" \
+  'run-log rows: 2 '
+
+# An EMPTY period is a real answer, and every empty line NAMES itself — an empty denominator must
+# never read as 100% compliance (the open-items empty-list rule, applied to a rate).
+rcfix; out="$(rc --since 2099-01-01)"; rc_=$?
+assert "an empty period → exit 0, run-log line names its emptiness" 0 "$rc_" "$out" \
+  'run-log rows: none — 0 rows in the period'
+assert "  · the ledger line names its emptiness too" 0 "$rc_" "$out" \
+  'gate-ledger verdicts: none — 0 rows in the period'
+assert "  · and the merge line names squash/rebase merges as a possible cause of its zero" 0 "$rc_" "$out" \
+  'merged PRs: none — 0 merge commits in the period \(git log --merges; squash'
+assert "  · the share over an empty denominator is NOT derivable, and says why" 0 "$rc_" "$out" \
+  'traced share: not derivable.*empty denominator, not 100% compliance'
+
+# FAIL CLOSED on every missing input: a share computed over two of three sources reads like the
+# real thing. No partial extract, no exit 1 — could-not-read is 2, and it says what it could not read.
+rcfix; rm -f "$D/docs/architecture/run-log.md"
+out="$(rc)"; rc_=$?
+assert "an absent run log → exit 2, named, and NO share is printed" 2 "$rc_" "$out" \
+  'could not read:.*run-log.md' 'traced share'
+rcfix; rm -f "$D/docs/architecture/gate-ledger.md"
+out="$(rc)"; rc_=$?
+assert "an absent gate ledger → exit 2, named" 2 "$rc_" "$out" 'could not read:.*gate-ledger.md'
+N=$((N+1)); D="$TMP/rc-nogit$N"; mkdir -p "$D/docs/architecture"
+printf '| when (UTC) | skill | subject | outcome |\n|---|---|---|---|\n' > "$D/docs/architecture/run-log.md"
+printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n' > "$D/docs/architecture/gate-ledger.md"
+out="$(rc)"; rc_=$?
+assert "no git history → exit 2 (both files present; the third source is still a source)" 2 "$rc_" "$out" 'git-history'
+
+# Misuse is 2, and an empty --since value is refused — never silently widened to 'all rows'
+# (the merge-gate --repo= lesson: a silent fallback restores the failure the flag exists to prevent).
+rcfix; out="$(rc --bogus)"; rc_=$?
+assert "an unknown option → exit 2" 2 "$rc_" "$out" 'unknown option'
+out="$(rc --since nonsense)"; rc_=$?
+assert "a malformed --since date → exit 2" 2 "$rc_" "$out" 'wants YYYY-MM-DD'
+out="$(rc --since=)"; rc_=$?
+assert "--since= (empty inline value) → exit 2, never silently 'all rows'" 2 "$rc_" "$out" 'must not silently'
+
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once
 # counted as `ok`, and "220 cases, all green" read as health. CI sums cases as $1+$5 of this line.
