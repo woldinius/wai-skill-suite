@@ -17,13 +17,11 @@ license: MIT
 # Retro (periodic, artifact-derived)
 
 Turn a period's accumulated evidence into a retrospective — **from artifacts, at a threshold,
-never from recall**. The gap this skill closes was measured twice (issue #14): *reports happen
-when someone asks* — roughly 250 verdicts of field friction produced zero reports in between,
-and a three-week ledger waited for a human to wonder before anyone measured it. And recall is
-not a fallback: retrospected from memory, one long field session reported **2 of 6** verified
-collaboration failures — and described one of the missed ones as handled. Any self-check an
-agent performs on its own conduct reports the comfortable answer unless it is anchored to an
-artifact.
+never from recall**. The gap this skill closes was measured twice (issue #14): roughly 250
+verdicts of field friction produced zero reports in between. And recall is not a fallback:
+retrospected from memory, one long field session reported **2 of 6** verified collaboration
+failures — any self-check an agent performs on its own conduct reports the comfortable answer
+unless it is anchored to an artifact.
 
 ## Trigger
 
@@ -56,11 +54,10 @@ Concretely:
 
 The retro's inputs are the **gate ledger** (via its one authorized parser), the **run log**,
 **git history**, and the **open-items footer**. Deliberately **not** an input: the quality
-catalog. Its dimension IDs anchor findings about *code*; a retro's rates are measurements of the
-*suite*, not dimension findings, so citing the catalog here would dress statistics as review
-results. There is also a counted reason: the number of catalog-reading skills is a lint-checked
-claim in this repo's prose, and a reader that consumes nothing from the file would move that
-count without adding information. This skill stays a non-reader.
+catalog — its dimension IDs anchor findings about *code*, while a retro's rates are measurements
+of the *suite*; citing the catalog here would dress statistics as review results. (Also a counted
+reason: the number of catalog-reading skills is a lint-checked claim, and a reader that consumes
+nothing from the file would move that count.) This skill stays a non-reader.
 
 ## Process
 
@@ -87,24 +84,22 @@ count without adding information. This skill stays a non-reader.
      `exit 2` = nothing derivable, then say `not checked` yourself.
 
 3. **Level 1 — suite performance (narrate the pasted numbers).** What the gate, the skills and
-   the checks did over the period: verdict totals and the fp/fn rates from the gate report;
-   the calibration signal (correct-but-unwanted NO-GOs) as the usefulness dial; run counts per
-   skill from the run log; the traced share as the suite monitoring its own prompt-contract
-   weakness — a merged PR without a verdict row is a review that ran without its script, or
-   never ran, and the narrative names which artifacts could tell. **Absence of failure is a
-   first-class result:** a codebase that stayed continuously runnable for three weeks was
-   captured by no metric — when it is true, say it, **with its denominator** (over how many
-   merged PRs, over which window). A report where everything went well and nothing is measured
-   is worthless; a measured quiet period is the strongest single result a period can produce.
+   the checks did over the period: verdict totals and the fp/fn rates from the gate report; the
+   calibration signal (correct-but-unwanted NO-GOs) as the usefulness dial; run counts per skill
+   from the run log; the traced share as the suite monitoring its own prompt-contract weakness —
+   a merged PR without a verdict row is a review that ran without its script, or never ran, and
+   the narrative names which artifacts could tell. **Absence of failure is a first-class
+   result:** when true, say it, **with its denominator** (over how many merged PRs, over which
+   window) — a measured quiet period is the strongest single result a period can produce.
 
 4. **Level 2 — collaboration: GATED, and this skill says so.** The collaboration retro needs a
    question trace — an artifact for "asked, unanswered" — and that artifact does not exist yet.
-   Until it does, the retro prints the honest line the open-items footer already prints:
-   `not derived — no artifact exists`. **Never reconstruct collaboration failures from memory**
-   — that is the measured 2-of-6 failure this skill exists to not repeat. The checklist of
-   failure modes (decisions that vanish, questions silently dropped, process skipped on one's
-   own code, opt-in modes suspended unsurfaced, guardrails moved without asking) stays in the
-   report as *what will be measured once the trace exists*, not as recalled findings.
+   Until it does, the retro prints the honest line: `not derived — no artifact exists`. **Never
+   reconstruct collaboration failures from memory** — that is the measured 2-of-6 failure this
+   skill exists to not repeat. The checklist of failure modes (decisions that vanish, questions
+   silently dropped, process skipped on one's own code, opt-in modes suspended unsurfaced,
+   guardrails moved without asking) stays in the report as *what will be measured once the trace
+   exists*, not as recalled findings.
 
 5. **Write the dated report** to `docs/architecture/retrospectives/<YYYY-MM-DD>.md` (create the
    folder if needed) using the format below. The human completes the outcome column; Blocker-class
@@ -125,8 +120,8 @@ count without adding information. This skill stays a non-reader.
    - **Pseudonym, not name:** the report carries the field-repo identifier `fr-<12hex>` — the
      first 12 hex digits of a keyed hash (HMAC-SHA-256) of the repository URL. The key is random,
      minted once per reporting repo, stored **gitignored in the private repo** (intended home for
-     minting: `wai-init`), and never leaves the reporter — so evidence groups across reports
-     without naming its source, and no outside party can confirm a guessed URL against it.
+     minting: `wai-init`), and never leaves the reporter — evidence groups across reports without
+     naming its source.
    - **Suite version** (from `.claude/.wai-suite-version`, or `not stamped`) rides along, so
      findings attach to the tree that produced them.
    - **Sanitization is checked before anything leaves:** English only; no product or repo names;
@@ -189,14 +184,13 @@ until the trace exists.
 
 - **Artifact-first, recall never.** Every claim names the artifact it stands on; an empty list
   names its derivation or prints `not checked`.
-- **The ADR-0002 split.** Scripts extract, the model narrates, the human judges. A generator
-  that decided per run what is "reportable" would be judgment smuggled into a script.
-- **No success stories — but absence of failure is a measurement.** Both belong in the same
-  report, and the quiet result carries its denominator.
-- **Every metric needs a counter-reader.** Raw row counts beside every rate, always — the
-  measuring chain itself errs.
-- **Threshold, not mood.** The suite announces when a report is due (doctor's advisory) instead
-  of waiting to be asked; the retro that answers it advances the marker so the count restarts.
+- **The ADR-0002 split.** Scripts extract, the model narrates, the human judges (see *The
+  three-layer split*).
+- **No success stories — but absence of failure is a measurement**, and the quiet result
+  carries its denominator.
+- **Every metric needs a counter-reader.** Raw row counts beside every rate, always.
+- **Threshold, not mood.** The suite announces when a report is due (doctor's advisory); the
+  retro that answers it advances the marker so the count restarts.
 - **Nothing leaves the repo by default.** Publication is explicit-request only, sanitized,
   pseudonymized, versioned.
 

@@ -13,19 +13,16 @@ license: MIT
 # Architecture & Structural-Health Audit
 
 Step back from individual changes and audit the **whole codebase** as a Senior Software
-Architect. The spine is a **clear, decoupled, modular architecture**: after a few features and
-refactorings, drift, coupling, dead code and — the subtle part — **semantic redundancy and
-inconsistency** accumulate **silently**. No single PR fails, but the structure slowly decays.
-This skill catches that early, measures it as a **trend over time**, and keeps the code clean,
-lean, consistent and **workable for humans and AI coding agents**. It is allowed to do more than
-report: where the architecture baseline or the rules themselves have gone stale, it proposes
-changes to them.
+Architect. After a few features and refactorings, drift, coupling, dead code and — the subtle
+part — **semantic redundancy and inconsistency** accumulate **silently**: no single PR fails, but
+the structure slowly decays. This skill catches that early, measures it as a **trend over time**,
+and keeps the code workable for humans and AI coding agents. Where the architecture baseline or
+the rules themselves have gone stale, it proposes changes to them.
 
-**Cyber-security is a separate skill.** The adversarial attack-surface sweep (authZ/IDOR,
-secrets, injection, SSRF, dependency CVEs, token-economy fraud) belongs to
-**`wai-security-audit`**. Where structure and security overlap — tenant isolation,
-DB-connection posture — this skill judges the **structural** side (is the boundary clean) and
-defers the **exploitability** side to the security audit. Run both periodically.
+**Cyber-security is a separate skill.** The adversarial attack-surface sweep belongs to
+**`wai-security-audit`**. Where structure and security overlap — tenant isolation, DB-connection
+posture — this skill judges the **structural** side (is the boundary clean) and defers the
+**exploitability** side to the security audit. Run both periodically.
 
 ## Platform context
 
@@ -73,19 +70,17 @@ last audit — don't re-derive a full report when nothing meaningful changed.
    **architecture baseline**: a **module/capability map** (what modules exist, their public
    surface) plus **allowed-dependency rules** (which module may depend on which; the shared core
    depends on nothing app-specific). If that baseline doesn't exist yet, **derive and propose
-   one** (persist it under `docs/architecture/`) so drift is measured against something concrete,
-   not vibes — and so the next audit diffs against it. If the catalog is missing, note it once
-   (suggest `wai-init`) and proceed with the dimensions below as the default standard.
+   one** (persist it under `docs/architecture/`) so drift is measured against something concrete
+   and the next audit can diff against it. If the catalog is missing, note it once (suggest
+   `wai-init`) and proceed with the dimensions below as the default standard.
 
 2. **Metrics pass** — Run stack-appropriate dead-code / dependency / complexity / coupling /
-   duplication tooling and **capture the numbers** (the exact commands per stack are in
-   `references/audit-playbook.md`). In a TypeScript repo that is e.g. `knip`, `ts-prune`,
-   `depcheck`, `madge` (cycles), `jscpd` (duplication) — pick the equivalents for the stack you
-   are actually in, and run them ad-hoc; you do not need them wired into CI to use them. If a
-   tool won't run, report the metric as **not measured this run** — never carry the previous
-   audit's number forward as if it were fresh. Record file/module sizes and import-cycle counts.
-   **Tools find the syntactic layer** (unreferenced exports, copy-paste) — the semantic layer is
-   step 3.
+   duplication tooling and **capture the numbers** (exact commands per stack in
+   `references/audit-playbook.md`; in a TypeScript repo e.g. `knip`, `ts-prune`, `depcheck`,
+   `madge`, `jscpd`) — run them ad-hoc; they need not be wired into CI. If a tool won't run,
+   report the metric as **not measured this run** — never carry the previous audit's number
+   forward as if it were fresh. Record file/module sizes and import-cycle counts. **Tools find
+   the syntactic layer** (unreferenced exports, copy-paste) — the semantic layer is step 3.
 
 3. **Semantic redundancy, consistency & dead-ends pass** — the part tools miss and the reason
    the audit exists. Read the code and **reason** (for a large codebase, fan out parallel readers
@@ -169,18 +164,18 @@ last audit — don't re-derive a full report when nothing meaningful changed.
 8. **Write the dated report, commit on a branch, hand off** — Persist to
    `docs/architecture/audits/<YYYY-MM-DD>.md` (create the folder if needed) using the output
    format below. Per the git protocol, commit the report (and any approved cleanups) on an
-   `agent/<handle>/chore-audit-<YYYY-MM-DD>` branch and open a PR; never touch `main`. Then summarize the
-   headline findings and the **▶ Recommended next** actions in the chat. The persisted file is
-   the trail the next audit diffs against. **Blocker/Major findings are the human's decision
-   point** (present with a recommendation and wait). Then apply the **landing rule**
-   (`issues-protocol.md` §*Where a finding lands*): every finding ends up **fixed**,
-   **deliberately rejected with a reason in the report**, or **filed as a GitHub Issue** — format,
-   labels, `**Skill:**` source and dedupe per the protocol; Nits from one area may be grouped.
-   An audit that names a problem and files nothing has produced a document, not work.
-   **Read existing issues first** (`gh issue list --label audit`) to avoid duplicates — link or
-   update the open one instead of re-filing. The dated report stays the **narrative** source of
-   truth; issues are the trackable handles into it. Without `gh`, list the would-be issues with
-   their `gh issue create` commands instead of dropping them.
+   `agent/<handle>/chore-audit-<YYYY-MM-DD>` branch and open a PR; never touch `main`. Then
+   summarize the headline findings and the **▶ Recommended next** actions in the chat; the
+   persisted file is the trail the next audit diffs against. **Blocker/Major findings are the
+   human's decision point** (present with a recommendation and wait). Then apply the **landing
+   rule** (`issues-protocol.md` §*Where a finding lands*): every finding ends up **fixed**,
+   **deliberately rejected with a reason in the report**, or **filed as a GitHub Issue** —
+   format, labels, `**Skill:**` source and dedupe per the protocol; Nits from one area may be
+   grouped. An audit that names a problem and files nothing has produced a document, not work.
+   **Read existing issues first** (`gh issue list --label audit`) — link or update the open one
+   instead of re-filing. The dated report stays the **narrative** source of truth; issues are
+   the trackable handles into it. Without `gh`, list the would-be issues with their
+   `gh issue create` commands.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-architecture-audit"
    "<subject>" "<half-sentence outcome>"` (from this skill's directory) — an audit that finds
    nothing still writes its row, because that is the run that vanishes today; fail-open: exit 0
@@ -283,30 +278,18 @@ Findings land per `issues-protocol.md` §*Where a finding lands* — fixed, deli
 decision point is untouched. The dated report stays the narrative source of truth. No git or no
 `gh` → write the report to the working tree, propose the commit/PR, and list the would-be issues
 with their `gh issue create` commands.
-## Principles
-
-- **Evidence-driven** — every finding carries a number or a concrete location, not a feeling.
-- **Trend over snapshot** — the persisted audit trail makes drift visible; compare against the
-  last run, don't judge in a vacuum.
-- **Proportional** — depth scales with the change surface; a healthy app gets a short report.
-- **Safe cleanups only on approval; `main` stays human** — proposals by default; mechanical
-  deletions only when the human says go, committed on a branch/PR, never to `main`.
-- **Allowed to evolve the rules** — when the catalog/ADRs are the thing that's outdated,
-  propose fixing them, separated from code findings.
+(The Stance section above is also this skill's principles list.)
 
 ## Related Skills
 
 This skill is the **periodic structural-health stage** that complements the lifecycle
 plan → implement → review:
-- **wai-security-audit** — the **adversarial** counterpart: same periodic, whole-codebase
-  cadence, but the attack surface (authZ/IDOR, secrets, injection, SSRF, CVEs, token fraud). This
-  skill judges structure; that one judges exploitability. Run both.
-- **wai-pr-review** — reviews a single diff *before merge*; this skill audits the *whole
-  codebase periodically*. Use that for "can this be merged", this for "is the structure still
-  clean".
-- **wai-implementation** — takes over fixing the findings (each recommended action is an
-  implementation order there).
-- **wai-init** — when drift means the **catalog itself** must change, or the catalog is
-  missing, (re-)run it to regenerate `docs/architecture/quality-attributes.md`.
-- **wai** — the suite router/overview, if you are unsure what to run next.
+- **wai-security-audit** — the **adversarial** counterpart: this skill judges structure; that one
+  judges exploitability. Run both.
+- **wai-pr-review** — reviews a single diff *before merge*; this skill audits the *whole codebase
+  periodically*.
+- **wai-implementation** — takes over fixing the findings.
+- **wai-init** — when drift means the **catalog itself** must change, or the catalog is missing,
+  (re-)run it to regenerate `docs/architecture/quality-attributes.md`.
+- **wai** — the suite router/overview.
 - Shared source of truth for all of them: `docs/architecture/quality-attributes.md`.

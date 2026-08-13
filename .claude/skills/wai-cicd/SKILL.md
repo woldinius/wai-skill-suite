@@ -34,33 +34,28 @@ Depending on stack and deploy target (not everything is always needed):
   fails if a gate script is a stub; then build the image and push to **GHCR** (`sha`-tagged) on
   `main`. The **required** checks are the workflow's **job names** (below) — not the step names.
 
-  **The security scan covers three CVE surfaces, not one — and a `pnpm audit`-only gate has a
-  structural blind spot.** The dependency audit (`npm`/`pnpm`/`yarn audit`, `pip-audit`,
-  `govulncheck`, `osv-scanner`) sees only **lockfile** dependencies. It cannot see **OS packages**
-  (openssl, poppler) or **libraries bundled in the runtime** — e.g. Node's `undici`, the engine
-  behind global `fetch()`. Those ship in the image and run in production, and only an **image scan**
-  (trivy/grype on the built image) sees them. This is not hypothetical: a real `undici` CVE reported
-  **0** under `pnpm audit` (undici is not an npm dependency — it is inside `node:*-alpine`) and was
-  caught **only** by the image scan; its fix was a **base-image bump**, not a package update. So the
-  template makes the **image scan a first-class layer of the gate** (built and scanned on every PR),
-  and — because the fix for a runtime CVE is a version bump — **pin the base image to a patch tag**
+  **The security scan covers three CVE surfaces, not one.** The dependency audit
+  (`npm`/`pnpm`/`yarn audit`, `pip-audit`, `govulncheck`, `osv-scanner`) sees only **lockfile**
+  dependencies — not **OS packages** or **libraries bundled in the runtime** (e.g. Node's
+  `undici`, the engine behind global `fetch()`). Those ship in the image and only an **image
+  scan** (trivy/grype on the built image) sees them: a real `undici` CVE reported **0** under
+  `pnpm audit` and was caught **only** by the image scan; its fix was a **base-image bump**, not
+  a package update. So the template makes the **image scan a first-class layer of the gate**
+  (built and scanned on every PR), and **pin the base image to a patch tag**
   (`node:24.12.0-alpine`, never floating `node:24-alpine`) so every such fix is a reproducible,
-  gated commit rather than silent drift. See the three-surface table in the `ci.yml` `security` job.
-- **`.github/CODEOWNERS`** — **generated from `docs/architecture/merge-gate.conf`**, not invented
-  here. That file's `CONTRACT_PATHS` is the suite's single answer to "which paths are sensitive",
-  and `merge-gate.sh` already blocks the agent on exactly those. If CODEOWNERS carried its own
-  list, the two would drift the first time someone moves a module — and then the human-review
-  routing and the agent's gate would disagree about the *same* PR, each looking internally
-  consistent. Read the conf, translate each glob to a CODEOWNERS pattern (a `case` glob's `*`
-  crosses `/`, so `apps/api/src/auth/*` becomes `/apps/api/src/auth/`), and say in the report
-  which paths you took from it. If the conf is missing, **stop and run `wai-init` first**
-  rather than guessing a second list into existence. What CODEOWNERS adds on top is *who* — the
-  handle(s). Note the catalog, the testing strategy, the gate config, `.claude/skills/**` and the
-  CI workflows are **already agent-blocking** — `merge-gate.sh` hardcodes them as a guardrail floor
-  that no config can lower, because an agent that can merge a change to them can lower the bar it
-  is judged against. CODEOWNERS routes them to a human on top of that.
-  It routes those paths to a named human so the PRs get that human's eyes even when CI is green;
-  skills never approve a PR, so any approval there is a human's.
+  gated commit rather than silent drift. See the three-surface table in the `ci.yml` `security`
+  job.
+- **`.github/CODEOWNERS`** — **generated from `docs/architecture/merge-gate.conf`**, not
+  invented here. That file's `CONTRACT_PATHS` is the suite's single answer to "which paths are
+  sensitive"; a second list here would drift the first time someone moves a module, and then the
+  human-review routing and the agent's gate would disagree about the *same* PR. Read the conf,
+  translate each glob to a CODEOWNERS pattern (a `case` glob's `*` crosses `/`, so
+  `apps/api/src/auth/*` becomes `/apps/api/src/auth/`), and say in the report which paths you
+  took from it. If the conf is missing, **stop and run `wai-init` first**. What CODEOWNERS adds
+  on top is *who* — the handle(s). Note the catalog, the testing strategy, the gate config,
+  `.claude/skills/**` and the CI workflows are **already agent-blocking** — `merge-gate.sh`
+  hardcodes them as a guardrail floor no config can lower. CODEOWNERS routes those paths to a
+  named human on top of that; skills never approve a PR, so any approval there is a human's.
 - **`.github/pull_request_template.md`** — the judgment-first PR body the lifecycle skills fill.
 - A **branch-protection ruleset** for `main` (documented as a manual step): require a PR, the
   required checks above, no direct/force push — the server-side wall behind the gated-merge
@@ -113,13 +108,12 @@ Depending on stack and deploy target (not everything is always needed):
    `.github/pull_request_template.md`, root artifacts, `docs/deploy/`), and document the `main`
    branch-protection ruleset as a manual step. If existing: propose a diff.
 
-   **And declare what the gate depends on.** You wrote the workflow, so you know what it *runs* —
-   follow each gate command all the way down and put every path it reaches into
-   `docs/architecture/merge-gate.conf`'s `CONTRACT_PATHS`. `node tools/size-gate/check-size.mjs`
-   means `tools/*` **is** gate-enforcement: an agent that may merge it may switch the check off, and
-   the hardcoded floor cannot know about it. The floor covers the standard chain (package.json, the
-   build files, the lint and type configs); **this closes the repo-specific tail, and it is not a
-   human's job to notice.** The skill that builds the gate is the one that knows its dependencies.
+   **And declare what the gate depends on.** Follow each gate command all the way down and put
+   every path it reaches into `docs/architecture/merge-gate.conf`'s `CONTRACT_PATHS`.
+   `node tools/size-gate/check-size.mjs` means `tools/*` **is** gate-enforcement: an agent that
+   may merge it may switch the check off, and the hardcoded floor cannot know about it. The floor
+   covers the standard chain; this closes the repo-specific tail — the skill that builds the gate
+   is the one that knows its dependencies.
 
 6. **Output the setup report** — including the **manual server steps** (provision,
    harden, install Docker, set secrets, first deploy).
@@ -165,20 +159,17 @@ The platform's gated-merge policy lets `wai-pr-review` **auto-merge** a clean,
 non-contract-domain PR — but only if "green" is trustworthy. This skill makes it so:
 
 - **Required checks — the names must be the workflow's JOB names.** GitHub matches a required
-  check against the name of a **check run**, which is the job, not the step inside it. The bundled
-  `ci.yml` runs lint, type-check, unit and integration as *steps* of one job called `test`, so the
-  only check runs it produces are **`test`** and **`security`** — and a ruleset that requires
-  `lint` or `build` will make every PR wait forever on *"Expected — waiting for status to be
-  reported"*, because nothing will ever report it. GitHub lets you type any name; it will not warn
-  you. So: **read the workflow, require exactly the job names it emits.** If you want per-gate
-  granularity, split `ci.yml` into one job per gate first — then require those names.
-  Also: the image push and the deploy are **post-merge** (`build-push` is `if: main`; the deploy
-  runs on `workflow_run`). They never report a check on a PR, so they can never be required checks.
-  **If the GitHub plan can't enforce this**
-  (rulesets/branch protection return 403 on private repos on the free plan), say so plainly in
-  the report: the gate then runs **advisory-only**, the suite's git protocol is the only wall,
-  and "green" means "checks ran", not "checks were required" — don't let the setup pretend
-  otherwise.
+  check against the name of a **check run**, which is the job, not the step inside it. The
+  bundled `ci.yml` runs lint, type-check, unit and integration as *steps* of one job called
+  `test`, so the only check runs it produces are **`test`** and **`security`** — a ruleset that
+  requires `lint` or `build` makes every PR wait forever on *"Expected — waiting for status to
+  be reported"*, and GitHub will not warn you. So: **read the workflow, require exactly the job
+  names it emits**; for per-gate granularity, split `ci.yml` into one job per gate first. Also:
+  the image push and the deploy are **post-merge** (`build-push` is `if: main`; the deploy runs
+  on `workflow_run`) — they never report a check on a PR, so they can never be required checks.
+  **If the GitHub plan can't enforce this** (rulesets return 403 on free-plan private repos),
+  say so plainly in the report: the gate then runs **advisory-only**, the suite's git protocol
+  is the only wall, and "green" means "checks ran", not "checks were required".
 - **No skip-through gates** — every gate job must fail loudly on its own. Watch the `needs:`
   chains: if all jobs `need` a cheap first job (e.g. format check), one miss there **skips**
   the whole downstream gate and the PR looks green while nothing was validated. Prefer
@@ -195,11 +186,10 @@ non-contract-domain PR — but only if "green" is trustworthy. This skill makes 
   catalog header (missing = `solo`). In **`team`**, the ruleset must **require 1 approving
   review** (plus "dismiss stale approvals on push"), and `CODEOWNERS` must name **two or more**
   owners — or a GitHub team — per contract line. That is what makes `wai-pr-review`'s
-  `gh pr merge --auto` safe: the PR arms itself and merges the moment another human approves,
-  so nothing lands on `main` unseen without anyone having to babysit the checks. Also **enable
-  "Allow auto-merge"** in the repo settings — without it the skill can't arm auto-merge and every
-  team PR falls back to a manual merge. In `solo`, a single owner and no required approval is the
-  correct, deliberate setting.
+  `gh pr merge --auto` safe: the PR merges the moment another human approves, so nothing lands
+  on `main` unseen. Also **enable "Allow auto-merge"** in the repo settings — without it every
+  team PR falls back to a manual merge. In `solo`, a single owner and no required approval is
+  the correct, deliberate setting.
 - **`wai-testing` decides *what* is tested; this skill wires it.** Testing defines the
   mandatory targets and writes the tests (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`); cicd turns them
   into required checks and provides the CI test infrastructure (ephemeral DB service, the

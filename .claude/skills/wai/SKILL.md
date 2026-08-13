@@ -23,19 +23,18 @@ review itself.
   its run with a **▶ Recommended next** block — a situational hand-off based on what it
   found (which skill, on what, why, and any decision you must make first). This router gives
   you the same recommendation as a *starting* point.
-- **Skills own the branch; `main` is gated.** Planning opens the `agent/<handle>/…` branch (local
-  + remote — the handle segment keeps two developers off each other's branch), implementation
-  commits and opens the PR. `wai-pr-review` then **auto-merges**
-  a clean, non-contract-domain PR with green checks to `main` (and deletes the branch, ready
-  for the next requirement); any contract-domain (API, Auth/Login, Token, Billing, Security)
-  or destructive-migration change is **left for your merge**. In a **`team`** repo (the
-  `**Repo mode:**` line in the quality catalog) the agent never merges by itself: it arms
-  GitHub auto-merge, and the PR waits for **another human's approval** — same tempo, but nothing
-  lands unseen. **Blocker/Major findings are
-  your decision point** — presented with a recommendation, handled differently only on your
-  explicit mandate ("collect as issues", "fix directly"). Merging ships a release. Full rules:
-  `references/agent-git-protocol.md` — the only authority; a repo copy under `docs/architecture/`
-  is read-only and never overrides it. Issue handling: `references/issues-protocol.md`.
+- **Skills own the branch; `main` is gated.** Planning opens the `agent/<handle>/…` branch
+  (local + remote — the handle segment keeps two developers off each other's branch),
+  implementation commits and opens the PR. `wai-pr-review` then **auto-merges** a clean,
+  non-contract-domain PR with green checks to `main` (and deletes the branch); any
+  contract-domain (API, Auth/Login, Token, Billing, Security) or destructive-migration change is
+  **left for your merge**. In a **`team`** repo (the `**Repo mode:**` line in the quality
+  catalog) the agent never merges by itself: it arms GitHub auto-merge, and the PR waits for
+  **another human's approval**. **Blocker/Major findings are your decision point** — presented
+  with a recommendation, handled differently only on your explicit mandate ("collect as issues",
+  "fix directly"). Merging ships a release. Full rules: `references/agent-git-protocol.md` — the
+  only authority; a repo copy under `docs/architecture/` is read-only and never overrides it.
+  Issue handling: `references/issues-protocol.md`.
 - **The contract is the spine.** The backend and the three clients live in separate repos but
   share one **versioned API contract**; a cross-surface feature changes it **first and
   backward-compatibly**, then the clients adopt. Full rules: `references/contract-protocol.md`.
@@ -93,19 +92,17 @@ PERIODIC (after a few features/refactors, or on security triggers)
   first, then `wai-cicd` if there's no pipeline/branch protection.
 - **A new feature/idea/requirement, even vague** → `wai-requirements-planning`. Hand it an
   issue (`plan #42`), a set that forms **one** requirement (`#42 #43 #44`), or just a sentence —
-  plus directives like `grill me` or `backend only`. It interviews you, then plans and pushes the
-  branch with the plan on it. The **PR comes later**, from `wai-implementation`, once there is
-  an actual diff to review.
-- **A backlog of *independent* issues**, each needing its own full lifecycle → `wai-team`.
-  (One requirement split across several issues is still **planning's** job, not the team's.)
+  plus directives like `grill me` or `backend only`. It interviews you, then plans and pushes
+  the branch with the plan on it. The **PR comes later**, from `wai-implementation`.
+- **A backlog of *independent* issues**, or **several issues as a batch** ("work the backlog",
+  "process #12–#18") → `wai-team` — needs your mandate (issue set, decision handling, budget).
+  A single issue goes through the lifecycle skills directly, and one requirement split across
+  several issues is still **planning's** job, not the team's.
 - **A clear, already-scoped change / bug / refactor** → `wai-implementation` directly
   (it still plans first and stops to ask on risky/contract-domain changes).
 - **Tests needed for a change, or "is this covered"** → `wai-testing` (typically right
   after implementation, on the same branch).
 - **An existing PR/branch/diff to evaluate** → `wai-pr-review`.
-- **Several issues to work as a batch** ("work the backlog", "process #12–#18") →
-  `wai-team` — needs your mandate (issue set, decision handling, budget); a single issue
-  goes through the lifecycle skills directly.
 - **"Is the app still healthy / decoupled / any drift, dead code or redundancy?"** →
   `wai-architecture-audit` (structure).
 - **"Are we secure / any vulnerabilities / check the attack surface / dependency CVEs?"** →
@@ -163,14 +160,12 @@ own ▶ Recommended next will confirm/adjust this as it learns more.]
 
 ## Principles
 
-- **Artefacts check the work, not the question.** The gate, the lints, the tests verify whether the
-  *work* is right. **None can verify whether the *question* was right** — a finding can pass every
-  check and still answer the wrong thing, and a review that ran *after* the merge, or a metric whose
-  tool never ran, passes exactly the same. So you are not the approver of a green diff; the checks
-  already approved it. You are the **owner of the *why*** — the one and only check on whether the
-  right thing was asked. A suite that treats you as a rubber stamp on green output wastes the one
-  thing it cannot replace. (This is why the two errors a full field run's artefacts *missed* were
-  both caught by the human: an invented denominator, and a rule the agent talked itself out of.)
+- **Artefacts check the work, not the question.** The gate, the lints, the tests verify whether
+  the *work* is right; **none can verify whether the *question* was right**. You are not the
+  approver of a green diff — the checks already approved it. You are the **owner of the *why***,
+  the one and only check on whether the right thing was asked. (The two errors a full field run's
+  artefacts *missed* were both caught by the human: an invented denominator, and a rule the agent
+  talked itself out of.)
 - **Route, don't do.** Hand off to the specialist skill; never absorb its job here.
 - **You orchestrate, skills guide.** The recommendation informs your decision — it does not
   replace it.

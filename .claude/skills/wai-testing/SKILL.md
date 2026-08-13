@@ -45,9 +45,7 @@ sandbox/fakes.
 - **The counterproof is the rule.** An assertion you have only ever seen green is unverified —
   green proves the test *ran*, not that it *checks*. Every **new** assertion is proven able to
   fail before it is trusted (process step 5). This generalizes implementation's house rule *"for
-  a bug, build the red first"* from bugs to every assertion: no red ever seen, no trust. The
-  field evidence: one session produced **three worthless assertions** in freshly written code —
-  all three caught by the counterproof, none by the test run.
+  a bug, build the red first"* from bugs to every assertion: no red ever seen, no trust.
 - **Proportional, mandatory where it counts.** Build functions end-to-end testable; **no
   speculative unit tests**. But **security, billing, GDPR and idempotency paths are mandatory
   targets** (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`) — never skipped **where the repo has them**:
@@ -90,12 +88,11 @@ sandbox/fakes.
    infrastructure that *runs* them — test DB service, required jobs — is `wai-cicd`'s).
 
    **When you introduce a heavy test tier, cap its parallelism in the same PR.** A tier whose
-   *per-file* setup is expensive — a real database booted per file, a container, a WASM runtime,
-   migrations applied — is fine at three files and starts timing out around ten, when the runner
-   boots them all at once. Check the runner's worker cap **when you add the tier**, not after the
-   first flake, and fix it in the runner config — **never** by raising the timeout, which only
-   hides the contention until the CI box is busier and then returns as a flake in an unrelated PR.
-   Shapes and pseudocode: `references/test-patterns.md`.
+   *per-file* setup is expensive (a real database booted per file, a container, migrations
+   applied) is fine at three files and starts timing out around ten. Check the runner's worker
+   cap **when you add the tier**, not after the first flake, and fix it in the runner config —
+   **never** by raising the timeout, which only hides the contention until it returns as a flake
+   in an unrelated PR. Shapes and pseudocode: `references/test-patterns.md`.
 
 4. **Write the tests** — following repo conventions; deterministic and fast; cover the
    mandatory targets first. Prefer a few high-value e2e/integration tests over many brittle
@@ -121,11 +118,10 @@ sandbox/fakes.
    `wai-cicd` (see hand-off) — don't wire branch protection here.
 
    **A 🧩 `LEARN #` marker is not a bug — never "fix" it.** If red traces back to a line marked
-   `LEARN #`, that is another human's open learning exercise (`wai-learning-gap`), deliberately left
-   red in the working tree and never committed. Do **not** restore it, do not work around it, and
-   do not report the phase as failed: stop, say a learning gap is open, and let the human close it
-   (or ask `wai-learning-gap` to resolve it) before testing continues. Silently solving it steals the
-   exercise and the human never learns the concept.
+   `LEARN #`, that is a human's open learning exercise (`wai-learning-gap`), deliberately red and
+   never committed. Do **not** restore it, work around it, or report the phase as failed: stop,
+   say a learning gap is open, and let the human close it (or ask `wai-learning-gap` to resolve
+   it) before testing continues. Silently solving it steals the exercise.
 
 7. **Update the strategy** — if the policy evolved (new mandatory target, a level promoted to
    the gate), update `docs/architecture/testing-strategy.md` as a visible change.
@@ -133,11 +129,10 @@ sandbox/fakes.
 8. **Commit on the branch, update the PR, hand off** — verify the branch (`git branch
    --show-current`, never `main`), commit the tests (and any fakes/fixtures) atomically; update
    the PR's test plan. **File coverage gaps you can't close now as GitHub issues** (a mandatory
-   target that needs infrastructure that doesn't exist yet, a flaky area that needs a harness) —
-   format, labels and `**Skill:**` source per `issues-protocol.md` in the `wai` skill. That
-   is the landing rule (§*Where a finding lands*): a gap you neither closed nor deliberately
-   accepted is **filed**, not mentioned in passing — an uncovered mandatory target that lives only
-   in a chat log is an uncovered mandatory target nobody will remember. Close with **▶ Recommended next**.
+   target that needs missing infrastructure, a flaky area that needs a harness) — format, labels
+   and `**Skill:**` source per `issues-protocol.md` in the `wai` skill. That is the landing rule
+   (§*Where a finding lands*): a gap you neither closed nor deliberately accepted is **filed**,
+   not mentioned in passing. Close with **▶ Recommended next**.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-testing" "<subject>"
    "<half-sentence outcome>"` (from this skill's directory) — a run without a row is invisible
    work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing arguments).
@@ -205,8 +200,8 @@ Omit sections that don't apply.
 
 - **Deterministic or it doesn't ship** — no real models, no clock/random/network flakiness.
 - **Cover the irreversible** — security, billing, GDPR, idempotency: mandatory for every such
-  path the repo has, with no exceptions for the ones it has.
-- **Proportional** — value per test; a few strong e2e/contract tests beat many brittle units.
+  path the repo has.
+- **Proportional** — a few strong e2e/contract tests beat many brittle units.
 - **Testing writes, cicd enforces** — this skill defines the policy and the tests; the gate and
   branch protection are `wai-cicd`'s.
 - **Branch, never `main`** — tests ride the requirement PR; merging stays gated.
@@ -214,19 +209,16 @@ Omit sections that don't apply.
 ## Related Skills
 
 This skill is the **test** companion to implement → review:
-- **wai-implementation** — builds the feature and hands over its **test-needs** notes;
-  run this skill right after, on the same branch.
-- **wai-cicd** — owns the **merge gate**: turns the mandatory tests into required checks,
-  provides the CI test infrastructure (ephemeral DB, integration/e2e jobs), and enforces
-  branch protection / CODEOWNERS.
+- **wai-implementation** — builds the feature and hands over its **test-needs** notes; run this
+  skill right after, on the same branch.
+- **wai-cicd** — owns the **merge gate**: turns the mandatory tests into required checks and
+  provides the CI test infrastructure.
 - **wai-pr-review** — checks that the change is adequately tested before it merges.
 - **wai-init** — writes the initial `docs/architecture/testing-strategy.md` and sets its
   **tier** (the `**Tier:**` field in the catalog header). When you update the strategy, stay at
-  that tier — don't quietly grow a compact strategy into a full one; if it genuinely needs more,
-  say so and let the human raise the tier via init.
-- **wai** — the suite router/overview, if you are unsure what to run next.
-- Own reference: `references/test-patterns.md` — reusable shapes for the mandatory targets
-  (erasure across all stores, real-infrastructure vs. mocks, heavy-tier parallelism, concurrent
-  idempotency/replay).
+  that tier; if it genuinely needs more, let the human raise the tier via init.
+- **wai** — the suite router/overview.
+- Own reference: `references/test-patterns.md` — reusable shapes for the mandatory targets.
 - Shared source of truth: `docs/architecture/quality-attributes.md` (`MAINT-2`); policy:
-  `docs/architecture/testing-strategy.md`; contract rules: `references/contract-protocol.md` (in the `wai` skill).
+  `docs/architecture/testing-strategy.md`; contract rules: `references/contract-protocol.md`
+  (in the `wai` skill).

@@ -32,10 +32,10 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
 
 ## Stance
 
-- **Always plan first.** Implementation never happens without a preceding, visible plan
-  — not even for supposedly trivial tasks. **The plan is proportional, never optional:** a one-line
-  fix gets a two-sentence plan in the PR body; a cross-surface change gets the full treatment. What
-  is never allowed is starting without having said what you are about to do.
+- **Always plan first.** Implementation never happens without a preceding, visible plan — not
+  even for supposedly trivial tasks. **The plan is proportional, never optional:** a one-line
+  fix gets a two-sentence plan in the PR body; a cross-surface change gets the full treatment.
+  Never start without having said what you are about to do.
 - **Senior level over layer concerns, not over a role label.** Determine the
   affected layers and apply their concrete check points (see below).
 - **Own the branch, not `main`.** Work on the requirement's `agent/<handle>/<type>-<slug>` branch
@@ -51,18 +51,17 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    which repo) and which layers (UI, API/Contract, Backend/AI, Data/DB, Token economy, Infra)?
    For a **bug, build the red first**: before hypothesizing a fix, construct **one command that
    goes red on exactly this bug** (a failing test, a curl, a CLI invocation — run it and keep
-   its output). No reproducible red, no fix — the red command is what later proves the fix and
-   becomes the regression test. Then find the root cause, don't just patch the symptom.
-   **If the task is remediating a CVE, triage by its SOURCE before reaching for a package manager.**
-   Lockfile dependency (in `package-lock`/`pnpm-lock`/`requirements`) → update or override it. **OS
-   package or a library bundled in the runtime** (e.g. Node's `undici` behind `fetch` — not an npm
-   dependency, it ships inside `node:*-alpine`) → **bump/pin the base image; there is no package to
-   update.** `pnpm update <a-thing-that-is-not-a-dependency>` is a burned cycle. The scanner that
-   found it tells you the surface: a lockfile audit → the package; an image scan (trivy) → the base
-   image.
-   **If the task is a GitHub Issue** (the human gives `#N`, a URL, or "the issue
-   about X"), read it first with `gh issue view <N> --comments` and use it as the task source;
-   note the issue number to wire `Closes #N` into the PR (step 7).
+   its output). No reproducible red, no fix — the red command later proves the fix and becomes
+   the regression test. Then find the root cause, don't just patch the symptom.
+   **If the task is remediating a CVE, triage by its SOURCE before reaching for a package
+   manager.** Lockfile dependency → update or override it. **OS package or a library bundled in
+   the runtime** (e.g. Node's `undici` behind `fetch` — not an npm dependency, it ships inside
+   `node:*-alpine`) → **bump/pin the base image; there is no package to update.** The scanner
+   that found it tells you the surface: a lockfile audit → the package; an image scan (trivy) →
+   the base image.
+   **If the task is a GitHub Issue** (`#N`, a URL, or "the issue about X"), read it first with
+   `gh issue view <N> --comments` and use it as the task source; note the issue number to wire
+   `Closes #N` into the PR (step 7).
 
 2. **Load context** — review relevant code and git history. **Check `docs/`**,
    especially the contract domains **API, User Management, Login, Security, Token,
@@ -110,17 +109,16 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    (Conventional Commits + `Co-Authored-By` trailer), then **open the PR** with `gh pr create`
    (what/why, link to the plan, catalog IDs, API back-compat statement) — or update it if one
    already exists; never touch `main`. **If an issue drove the work**, add `Closes #N` to the PR
-   body so merging closes it (same-repo only — for a cross-repo issue use `owner/repo#N` and
-   close manually); skip cleanly when there's no issue.
+   body (same-repo only — for a cross-repo issue use `owner/repo#N` and close manually); skip
+   cleanly when there's no issue.
    **What the self-review (step 5) surfaced but this PR does not fix** — a pre-existing weakness
-   you had to route around, a follow-up the change makes obvious — is either **deliberately
-   rejected with a reason in the PR body** or **filed as an issue** (`issues-protocol.md`
-   §*Where a finding lands*). Noticing a problem and shipping past it silently is how it gets
+   you routed around, a follow-up the change makes obvious — is either **deliberately rejected
+   with a reason in the PR body** or **filed as an issue** (`issues-protocol.md` §*Where a
+   finding lands*). Noticing a problem and shipping past it silently is how it gets
    re-discovered three audits later.
-   Close with a **▶ Recommended next** line: typically
-   **wai-testing** to cover the change (same branch), then **wai-pr-review** on the
-   PR; or the next planned task — and note if **wai-architecture-audit** is due (several
-   features since the last one).
+   Close with a **▶ Recommended next** line: typically **wai-testing** (same branch), then
+   **wai-pr-review** on the PR; or the next planned task — and note if
+   **wai-architecture-audit** is due.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-implementation"
    "<subject>" "<half-sentence outcome>"` (from this skill's directory) — a run without a row is
    invisible work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing args).
@@ -131,23 +129,22 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
 
 8. **Learning gap — the last action, and only when you hand back to the human.** Applies only if
    **this** human has a personal learning ledger (`~/.claude/learning/<repo-slug>/ledger.md`, or
-   the `temp/learning/` fallback). **No ledger → skip silently and create nothing**: learning mode
-   is a per-developer opt-in, never a repo-wide switch, so a colleague who never opted in must
-   never get a gap, a hook or a ledger (git protocol §*Personal state never becomes repo state*).
+   the `temp/learning/` fallback). **No ledger → skip silently and create nothing**: learning
+   mode is a per-developer opt-in, never a repo-wide switch (git protocol §*Personal state never
+   becomes repo state*).
 
-   For a participant, run **`wai-learning-gap`** as the **final action of the turn**, after the phase
-   commit — so exactly one gap is planted per implementation phase and the human finds it when
-   control returns to them. The `▶ Recommended next` line is a suggestion *to the human*, not an
-   automatic continuation: they close the gap first, then run testing.
+   For a participant, run **`wai-learning-gap`** as the **final action of the turn**, after the
+   phase commit — exactly one gap per implementation phase, found when control returns to the
+   human. The `▶ Recommended next` line is a suggestion *to the human*, not an automatic
+   continuation: they close the gap first, then run testing.
 
    **Two cases where you plant nothing:**
-   - **An autopilot run** (`wai-team` working a batch): the human isn't at the keyboard to
-     close the gap, so a gap would only stall the run. Skip it — planting resumes with the next
-     interactive phase.
+   - **An autopilot run** (`wai-team` working a batch): nobody is at the keyboard to close the
+     gap. Skip it — planting resumes with the next interactive phase.
    - **Anything else still runs on this branch in this same turn** (you're chaining straight into
-     `wai-testing` or `wai-pr-review` yourself). A gap is deliberately *red*; hand a red
-     tree to testing and it "fixes" the gap — silently solving the human's exercise — or reports
-     the phase as failed. Plant it only once nothing else follows.
+     `wai-testing` or `wai-pr-review` yourself). A gap is deliberately *red*; hand a red tree to
+     testing and it "fixes" the gap — silently solving the human's exercise — or reports the
+     phase as failed. Plant it only once nothing else follows.
 
 ## Affected surfaces & concerns
 
@@ -232,12 +229,12 @@ If the document doesn't exist in the current repo, the safe **default** applies:
   `RES-3`, `GDPR-*`) — mark them clearly as such, so they don't get lost in the later test
   phase.
 
-**Intermediate tests for foundational seams:** when a phase produces a seam that later phases
-build on — a contract endpoint, ledger/money logic, an auth boundary — you may invoke
-**`wai-testing` mid-implementation**, scoped to exactly that seam (same branch), so it is
-locked before more is stacked on it. For everything else, testing stays the step after
-implementation: one invocation, one coherent test commit, less PR noise. Don't make per-phase
-testing the default — it doubles cost for little gain on low-risk phases.
+**Intermediate tests for foundational seams:** when a phase produces a seam later phases build
+on — a contract endpoint, ledger/money logic, an auth boundary — you may invoke
+**`wai-testing` mid-implementation**, scoped to exactly that seam (same branch), so it is locked
+before more is stacked on it. For everything else, testing stays the step after implementation:
+one invocation, one coherent test commit. Don't make per-phase testing the default — it doubles
+cost for little gain on low-risk phases.
 
 ## Git & PR
 
@@ -270,18 +267,17 @@ specific to *this* skill:
 ## Related Skills
 
 This skill is the **implementation** stage in the lifecycle plan → implement → review:
-- **wai-requirements-planning** — when the task is still fuzzy or needs
-  extensive feature shaping/greenfield planning, instead of direct implementation; and
-  mid-flight in **delta-update mode** when the plan-delta check (step 2) finds a material
-  change (max one delta cycle, then the human decides).
-- **wai-testing** — normally right after this skill; mid-implementation only for
-  **foundational seams** (see *Tests*).
-- **wai-pr-review** — the full review stage; the self-review here (step 5)
-  is only the short form for your own diff before handover.
-- **wai-learning-gap** — run it as the **last action of the turn** (step 8), and **only** if *this*
-  human has a personal ledger (`~/.claude/learning/<repo-slug>/ledger.md`). `CLAUDE.md` never
-  activates learning mode — a committed file is a repo-wide switch, and this one is per-developer.
-  No ledger → skip silently and create nothing.
-- **wai** — the suite router/overview, if you are unsure what to run next.
+- **wai-requirements-planning** — for a still-fuzzy task or extensive greenfield shaping; and
+  mid-flight in **delta-update mode** when the plan-delta check (step 2) finds a material change
+  (max one delta cycle, then the human decides).
+- **wai-testing** — normally right after this skill; mid-implementation only for **foundational
+  seams** (see *Tests*).
+- **wai-pr-review** — the full review stage; the self-review here (step 5) is only the short
+  form for your own diff before handover.
+- **wai-learning-gap** — the **last action of the turn** (step 8), and **only** if *this* human
+  has a personal ledger. `CLAUDE.md` never activates learning mode. No ledger → skip silently
+  and create nothing.
+- **wai** — the suite router/overview.
 - Shared source of truth: `docs/architecture/quality-attributes.md` (testing strategy:
-  `docs/architecture/testing-strategy.md`; contract rules: `references/contract-protocol.md` (in the `wai` skill)).
+  `docs/architecture/testing-strategy.md`; contract rules: `references/contract-protocol.md`
+  (in the `wai` skill)).
