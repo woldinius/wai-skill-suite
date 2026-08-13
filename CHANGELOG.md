@@ -8,6 +8,18 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ### Added
 
+- **`wai-retro`** — the thirteenth skill (#14): retrospectives **from artifacts, at a threshold —
+  never from recall** ("reports happen when someone asks": ~250 field verdicts produced zero
+  reports in between, and a from-memory retrospective reported 2 of 6 verified collaboration
+  failures). Triggered by doctor's report-cadence advisory or on request, it consumes
+  `gate-stats.sh --report`, the run log and the open-items footer, narrates with raw row counts
+  beside every rate (ADR-0002: scripts extract, the model narrates, the human judges), and
+  finishes with `--report --mark` so the cadence resets. Ships
+  `wai-retro/scripts/retro-compliance.sh`: run-log rows × gate-ledger rows × `git log --merges`
+  → the share of merged PRs that left a trace. The collaboration level is gated until a question
+  trace exists; publication to this repo is explicit-request only, sanitized and pseudonymized
+  (`fr-<12hex>`, keyed hash, key stays with the reporter).
+
 - **Hand-back instrumentation** (#11, #7). A **run log** beside the gate ledger
   (`wai/scripts/run-log.sh` → `docs/architecture/run-log.md`, append-only, fail-open): one
   attendance row per skill run, because the record used to measure side effects, not work — a run

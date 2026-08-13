@@ -69,6 +69,9 @@ PERIODIC (after a few features/refactors, or on security triggers)
                                     dead code + semantic redundancy/inconsistency/dead-ends (on a branch)
   wai-security-audit         → whole-codebase ADVERSARIAL sweep: authZ/IDOR, secrets, injection,
                                     SSRF, CVEs, token fraud — attack surface + posture trend (on a branch)
+  wai-retro                  → the suite's own RETROSPECTIVE, from artifacts at a threshold:
+                                    gate-ledger report + run log + git history in, dated narrated
+                                    report out; advances the report marker (on a branch)
 ```
 
 ## How to route
@@ -108,6 +111,11 @@ PERIODIC (after a few features/refactors, or on security triggers)
 - **"Are we secure / any vulnerabilities / check the attack surface / dependency CVEs?"** →
   `wai-security-audit` (adversarial). Run it periodically and on triggers (new
   auth/upload/outbound-fetch code, dependency bumps, before a release).
+- **"What did the suite do this month / how many runs / cut a report" — or doctor's advisory says
+  the verdict count since the last report marker is at the threshold** → `wai-retro`. It builds
+  the retrospective from artifacts (the gate ledger's report extract, the run log, git history),
+  never from recall, and finishes by advancing the ledger's report marker so the cadence resets.
+  Not the per-PR review, not the code audits — it measures the suite's own record.
 - **Setting up CI/CD or deployment for backend+web, or that merge gate / branch protection** →
   `wai-cicd`.
 - **Setting up the iOS/Android build, signing or store release (TestFlight/Play)** →

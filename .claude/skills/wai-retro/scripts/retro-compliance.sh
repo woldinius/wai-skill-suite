@@ -1,0 +1,168 @@
+#!/usr/bin/env sh
+# retro-compliance.sh — the retro's denominator: did the period's work leave a trace?
+#
+# Issue #10, Part B, measured in the field: a skill left a trace ONLY if it filed something, so the
+# record measured the side effects of work, not the work. The run log (issue #11) is the fix — one
+# appended row per run — but the run log's own writers are split in two tiers, and the second tier
+# is PROSE: a skill's SKILL.md says "log the run at hand-back", and nothing checks that the model
+# obeyed. That is the suite's own prompt-contract weakness, pointed at itself. This script is the
+# check: it crosses the three artifacts that exist independently of each other — the run log (what
+# claims to have run), the gate ledger (what the gate demonstrably emitted) and `git log --merges`
+# (what demonstrably landed) — and reports the share of merged PRs that carry a gate verdict, with
+# every raw count printed beside the rate. A merged PR with no verdict row is a review that either
+# never ran or ran without its script; the ledger cannot tell those apart, and this line is where
+# that gap becomes visible instead of comfortable.
+#
+# ADR-0002, and the reason this script does not self-log: it EXTRACTS, it does not run a skill.
+# run-log.sh's own header restricts self-logging to scripts whose script↔skill mapping marks a real
+# run; an extractor row would attribute a measurement to a retrospective that may never be written.
+# The wai-retro SKILL logs the retro run itself, once, at hand-back. And in the same split: this
+# script counts; whether a missing trace is a broken prompt contract or a squash-merge artifact is
+# a judgment, and it stays out of here.
+#
+#   exit 0  the extract was emitted — including named-empty lines for an empty period
+#   exit 2  an input could not be read (run log, gate ledger, or no git history here), or misuse —
+#           nothing was counted, so read nothing as compliant. There is deliberately no exit 1:
+#           this script renders no verdict.
+#
+# Usage: sh retro-compliance.sh [--since YYYY-MM-DD] [repo-root]        (default root: .)
+#        Default period: every row/commit dated on or after the gate ledger's LAST report marker
+#        (the `<!-- report … -->` line gate-stats.sh --report --mark appends); with no marker, all
+#        rows. $RUN_LOG and $MERGE_GATE_LEDGER override the file paths, exactly as they do for the
+#        scripts that write those files.
+
+set -u
+if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
+
+SINCE=""
+ROOT="."
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --since)   [ $# -ge 2 ] && [ -n "${2:-}" ] || { echo "retro-compliance: --since needs a date (YYYY-MM-DD)" >&2; exit 2; }
+               SINCE="$2"; shift ;;
+    --since=)  echo "retro-compliance: --since needs a date (YYYY-MM-DD) — an empty value must not silently become 'all rows'" >&2; exit 2 ;;
+    --since=*) SINCE="${1#--since=}" ;;
+    -*)        echo "retro-compliance: unknown option '$1' (usage: sh retro-compliance.sh [--since YYYY-MM-DD] [repo-root])" >&2; exit 2 ;;
+    *)         ROOT="$1" ;;
+  esac
+  shift
+done
+case "$SINCE" in
+  '') ;;
+  [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+  *) echo "retro-compliance: --since wants YYYY-MM-DD, got '$SINCE'" >&2; exit 2 ;;
+esac
+cd "$ROOT" 2>/dev/null || { echo "retro-compliance: cannot cd to '$ROOT'" >&2; exit 2; }
+
+RLOG="${RUN_LOG:-docs/architecture/run-log.md}"
+LEDGER="${MERGE_GATE_LEDGER:-docs/architecture/gate-ledger.md}"
+
+# FAIL CLOSED, all inputs up front. A compliance share computed over two of its three sources is
+# not a smaller measurement — it is a different one that reads like the real thing. "I could not
+# look" must never print as a number.
+MISSING=""
+{ [ -f "$RLOG" ] && [ -r "$RLOG" ]; }     || MISSING="$MISSING $RLOG"
+{ [ -f "$LEDGER" ] && [ -r "$LEDGER" ]; } || MISSING="$MISSING $LEDGER"
+GIT_OK=no
+command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1 && GIT_OK=yes
+[ "$GIT_OK" = yes ] || MISSING="$MISSING git-history(not a git repository, or no git)"
+if [ -n "$MISSING" ]; then
+  echo "retro-compliance: could not read:$MISSING — nothing was counted; a share over a missing source would read like the real thing." >&2
+  exit 2
+fi
+
+# The anchor. --since wins; otherwise the last report marker's date; otherwise everything.
+ANCHOR="all recorded rows (no report marker, no --since)"
+if [ -n "$SINCE" ]; then
+  ANCHOR="--since $SINCE"
+else
+  MDATE="$(sed -n 's/^<!-- report \([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\).*/\1/p' "$LEDGER" | tail -1)"
+  if [ -n "$MDATE" ]; then
+    SINCE="$MDATE"
+    ANCHOR="last report marker in $LEDGER ($SINCE)"
+  fi
+fi
+
+echo "retro-compliance: $ROOT"
+echo "  period: $ANCHOR"
+
+# ── run-log rows in the period, per skill ────────────────────────────────────────────────────────
+# Same row anchor as run-log.sh writes (a timestamped table line); the header never matches.
+RLRAW="$(awk -F'|' -v since="$SINCE" '
+  function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+  /^\| *[0-9][0-9][0-9][0-9]-/ {
+    if (since != "" && substr(trim($2), 1, 10) < since) next
+    n++; sk[trim($3)]++
+  }
+  END { print n + 0; for (s in sk) print sk[s] " " s }' "$RLOG")"
+RLN="$(printf '%s\n' "$RLRAW" | head -1)"
+if [ "$RLN" = 0 ]; then
+  echo "  run-log rows: none — 0 rows in the period ($RLOG)"
+else
+  PERSKILL="$(printf '%s\n' "$RLRAW" | sed 1d | sort -rn | awk '{ s = s (s ? " · " : "") $2 " " $1 } END { print s }')"
+  echo "  run-log rows: $RLN ($RLOG)"
+  echo "    per skill: $PERSKILL"
+fi
+
+# ── gate-ledger verdicts in the period ───────────────────────────────────────────────────────────
+# Same row anchor as gate-stats.sh — one parser convention for the ledger, everywhere. This block
+# counts rows and collects PR numbers; every RATE about the ledger belongs to gate-stats.sh.
+LRAW="$(awk -F'|' -v since="$SINCE" '
+  function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+  /^\| *[0-9][0-9][0-9][0-9]-/ {
+    if (since != "" && substr(trim($2), 1, 10) < since) next
+    n++; v[trim($4)]++; pr = trim($3); if (pr != "") prs[pr] = 1
+  }
+  END {
+    printf "%d %d %d %d %d\n", n + 0, v["GO"] + 0, v["NO-GO"] + 0, v["UNKNOWN"] + 0, v["MOOT"] + 0
+    for (p in prs) print p
+  }' "$LEDGER")"
+LSUM="$(printf '%s\n' "$LRAW" | head -1)"
+LN="${LSUM%% *}"
+VPRS="$(printf '%s\n' "$LRAW" | sed 1d | sort -n)"
+if [ "$LN" = 0 ]; then
+  echo "  gate-ledger verdicts: none — 0 rows in the period ($LEDGER)"
+else
+  echo "$LSUM" | { read -r _t _go _nogo _unk _moot
+    echo "  gate-ledger verdicts: $_t — GO $_go · NO-GO $_nogo · UNKNOWN $_unk · MOOT $_moot ($LEDGER)"; }
+fi
+
+# ── merged PRs in the period, from git history ───────────────────────────────────────────────────
+# `git log --merges` reads merge COMMITS: a squash- or rebase-merged PR leaves none, and this line
+# says so instead of letting a 0 read as "nothing landed".
+if [ -n "$SINCE" ]; then
+  MERGELOG="$(git log --merges --since="$SINCE 00:00:00" --date=short --pretty=format:'%s' 2>/dev/null)" || MERGELOG=""
+else
+  MERGELOG="$(git log --merges --date=short --pretty=format:'%s' 2>/dev/null)" || MERGELOG=""
+fi
+MN="$(printf '%s\n' "$MERGELOG" | grep -c . || true)"
+MPRS="$(printf '%s\n' "$MERGELOG" | sed -n 's/^Merge pull request #\([0-9][0-9]*\).*/\1/p' | sort -n | uniq)"
+MPN="$(printf '%s\n' "$MPRS" | grep -c . || true)"
+NONUM=$((MN - MPN))
+if [ "$MN" = 0 ]; then
+  echo "  merged PRs: none — 0 merge commits in the period (git log --merges; squash/rebase merges leave none)"
+else
+  echo "  merged PRs: $MN merge commit(s), $MPN with a readable PR number (git log --merges)"
+fi
+
+# ── the traced share ─────────────────────────────────────────────────────────────────────────────
+# Of the merged PRs whose number is readable, how many carry a gate verdict row in the period? The
+# raw counts stand beside the rate (principle: every metric needs a counter-reader — a 0% that was
+# really 15% once shipped inside the very line meant to prove trustworthiness).
+if [ "$MPN" = 0 ]; then
+  echo "  traced share: not derivable — 0 merged PRs with a readable number is an empty denominator, not 100% compliance"
+else
+  MATCHED="$({ printf '%s\n' "$VPRS"; echo '=='; printf '%s\n' "$MPRS"; } | awk '
+    /^==$/ { second = 1; next }
+    !second { if (NF) a[$1] = 1; next }
+    NF && ($1 in a) { n++ }
+    END { print n + 0 }')"
+  PCT=$(((MATCHED * 200 + MPN) / (2 * MPN)))
+  echo "  traced share: $MATCHED of $MPN merged PRs carry a gate verdict in the period = $PCT% (raw: merge commits $MN · ledger rows $LN · run-log rows $RLN)"
+  [ "$NONUM" -gt 0 ] && echo "    $NONUM merge commit(s) without a PR number in the subject are in NO rate above — a share that drops rows must say so"
+fi
+
+echo
+echo "COUNTS ONLY (ADR-0002): whether a missing trace is a broken prompt contract, a squash merge,"
+echo "or a review that ran without its script is a judgment — the retro narrates it, the human owns it."
+exit 0
