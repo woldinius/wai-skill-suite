@@ -164,11 +164,19 @@ case "${1:-}" in
         [ -f "$F/issue-${3:-}" ] || exit 1
         cat "$F/issue-${3:-}" ;;
     esac ;;
+  api)
+    # open-items.sh asks `gh api user --jq .login` for the handle its assigned-issues line is
+    # labelled with (the handle, never "me"). Every other `api` URL is the shipped stub's business.
+    if [ "${2:-}" = user ]; then logcall "$@"; emit login; exit 0; fi
+    exec "$SHIPPED" "$@" ;;
   pr)
     case "${2:-}" in
       list)
         logcall "$@"
+        [ -f "$F/pr-list-fail" ] && exit 1
         case "$*" in
+          *headRefName*)   emit open-prs ;;     # open-items: open PRs (number FS headRef FS title)
+          *mergeCommit*)   emit merged-prs ;;   # open-items: merged sweep (number FS oid FS mergedAt)
           *number,labels*) emit pr-labels ;;
           *number,title*)  emit pr-titles ;;
         esac ;;
@@ -186,6 +194,14 @@ NOGH="$TMP/nogh"; mkdir -p "$NOGH"
 GITONLY="$TMP/gitonly"; mkdir -p "$GITONLY"
 GITBIN="$(command -v git 2>/dev/null || echo /usr/bin/git)"
 ln -sf "$GITBIN" "$GITONLY/git"
+
+# And a PATH with the standard toolbox and git but NO gh. open-items.sh KEEPS RUNNING on a dead gh
+# (per-line degradation is its rule 3), so unlike the early-exit scripts it still needs awk, sed
+# and date after the gh check fails — a bare git-only PATH would crash the very lines under test.
+NOGHBIN="$TMP/noghbin"; mkdir -p "$NOGHBIN"
+for t in git date awk sed grep tr head tail sort ls cat mkdir dirname find; do
+  tp="$(command -v "$t" 2>/dev/null)" && ln -sf "$tp" "$NOGHBIN/$t"
+done
 
 # ── throwaway git repos ──────────────────────────────────────────────────────────────────────────
 # Hooks OFF, identity pinned. This repo ships a pre-commit hook that refuses commits on the default
@@ -643,11 +659,26 @@ assert "and it renders NO actionability verdict anywhere" 0 "$rc" "$out" 'mechan
 assert "the exclusion domain is a HINT from issue text, and says the PR diff is the authority" 0 "$rc" "$out" 'exclusion_domain_hint=billing'
 assert "  · and it is labelled advisory, widening only" 0 "$rc" "$out" 'this hint only WIDENS'
 assert "backlog-scan renders no verdict of its own (it reports; the human mandates)" 0 "$rc" "$out" 'PROPOSAL' 'VERDICT'
+# The run-log self-log site (issue #11): backlog-scan's script↔skill mapping is 1:1 with wai-team,
+# so the SCRIPT writes the attendance row — and because the scan runs in the fixture's cwd, the row
+# lands in the FIXTURE's docs/, never in this repo (the property every self-log site depends on).
+if grep -q '| wai-team | backlog scan | 2 open issues |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "backlog-scan self-logs its run into the fixture's docs/ (skill=wai-team, outcome=2 open issues)"
+else
+  bad "backlog-scan self-logs its run into the fixture's docs/" "no wai-team row in $D/docs/architecture/run-log.md"
+fi
 
 # Zero open issues is an ANSWER. It must not be silent, or "nothing to work" is indistinguishable
 # from "never scanned".
 bkfix; rm -f "$D/backlog"; out="$(scan)"; rc=$?
 assert "an EMPTY backlog → exit 0, and says an empty backlog is valid" 0 "$rc" "$out" 'no open issues.*|empty backlog is a valid answer'
+# #11's acceptance case: the run that finds NOTHING still writes its row — that is the run that
+# vanishes today.
+if grep -q '| wai-team | backlog scan | 0 open issues |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "an empty scan STILL self-logs (0 open issues) — the found-nothing run is the one that vanishes"
+else
+  bad "an empty scan STILL self-logs (0 open issues)" "no row in $D/docs/architecture/run-log.md"
+fi
 
 bkfix; out="$(scan ready-for-agent)"; rc=$?
 assert "a label filter is reported in the header, so the scope of the proposal is visible" 0 "$rc" "$out" 'label: ready-for-agent'
@@ -1034,6 +1065,187 @@ msgnew "$GOODNAME" </dev/null
 out="$(sh "$HANDOFF" --message "$MSG" 2>&1)"; rc=$?
 assert_xfail "KNOWN DEFECT: an EMPTY envelope leaks a shell error from the length check" 1 "$rc" "$out" '\[: '
 assert_xfail "KNOWN DEFECT: …and the length check silently never ran (no length verdict either way)" 1 "$rc" "$out" 'VERDICT: VIOLATION' 'the envelope is [0-9]+ non-empty lines'
+
+# =================================================================================================
+echo
+echo "run-log.sh"
+# The suite's attendance record (issue #11: the record measures side effects, not work). 0 = row
+# emitted OR emission failed and was swallowed — FAIL-OPEN, a logging failure never breaks a run —
+# and 2 = misuse (missing arguments). There is no exit 1: this script renders no verdict.
+# =================================================================================================
+RUNLOG="$ROOT/.claude/skills/wai/scripts/run-log.sh"
+rlfix() { N=$((N+1)); D="$TMP/rl$N"; mkdir -p "$D"; RL="$D/docs/architecture/run-log.md"; }
+rl() { ( cd "$D" && sh "$RUNLOG" "$@" 2>&1 ); }
+
+# THE PASS PATH. An emitter nobody has watched emit is not an emitter.
+rlfix; out="$(rl wai-testing 'PR #12 tests' 'green - 14 cases')"; rc=$?
+assert "first call → header + one row, exit 0" 0 "$rc" "$out" 'row appended'
+if grep -q '| when (UTC) | skill | subject | outcome |' "$RL" 2>/dev/null \
+   && grep -q '| wai-testing | PR #12 tests | green - 14 cases |' "$RL" 2>/dev/null; then
+  ok "the table header and the row are both in the file"
+else
+  bad "the table header and the row are both in the file" "$(cat "$RL" 2>&1)"
+fi
+if grep -q 'A run without a row is invisible work' "$RL" 2>/dev/null && grep -q 'APPEND-ONLY' "$RL" 2>/dev/null; then
+  ok "a fresh log writes its own self-documenting header (what a row means, why append-only)"
+else
+  bad "a fresh log writes its own self-documenting header" "the #11 sentences are missing from $RL"
+fi
+
+rl wai-pr-review 'PR #13' 'GO' >/dev/null 2>&1
+rows="$(grep -c '^| 2' "$RL" 2>/dev/null)"; hdrs="$(grep -c 'invisible work' "$RL" 2>/dev/null)"
+if [ "$rows" = 2 ] && [ "$hdrs" = 1 ]; then
+  ok "a second call APPENDS a row and never re-writes the header"
+else
+  bad "a second call APPENDS a row and never re-writes the header" "rows=$rows headers=$hdrs"
+fi
+
+rlfix; out="$(rl wai-testing)"; rc=$?
+assert "missing arguments → misuse, exit 2 (the one defined negative — there is no exit 1)" 2 "$rc" "$out" 'usage'
+if [ ! -e "$RL" ]; then ok "and misuse writes nothing"
+else bad "and misuse writes nothing" "$RL exists"; fi
+
+rlfix; out="$( cd "$D" && RUN_LOG="custom/attendance.md" sh "$RUNLOG" wai-cicd setup 'gate wired' 2>&1 )"; rc=$?
+assert "RUN_LOG overrides the path (the MERGE_GATE_LEDGER pattern)" 0 "$rc" "$out" 'custom/attendance.md'
+if grep -q '| wai-cicd | setup | gate wired |' "$D/custom/attendance.md" 2>/dev/null; then
+  ok "  · and the row landed at the override path"
+else
+  bad "  · and the row landed at the override path" "no row in $D/custom/attendance.md"
+fi
+
+# FAIL-OPEN PROVEN. An unwritable target still exits 0 — losing a row is a data gap; breaking a
+# finished run over a read-only file would be a real cost (emit_ledger's exact polarity).
+rlfix; out="$( cd "$D" && RUN_LOG=/proc/nonexistent/x/run-log.md sh "$RUNLOG" wai-team '8 issues' '2 PRs' 2>&1 )"; rc=$?
+assert "an unwritable target → STILL exit 0, and says the row is lost (fail-open)" 0 "$rc" "$out" 'fail-open'
+
+# A pipe in a cell would split the table row; escaped exactly like emit_ledger's cells.
+rlfix; rl wai-x 'subj|ect' 'out|come' >/dev/null 2>&1
+row="$(grep '^| 2' "$RL" 2>/dev/null)"
+nf="$(printf '%s\n' "$row" | awk -F'|' '{ print NF }')"
+case "$row" in
+  *'subj/ect'*) ok "a pipe in a cell is escaped to '/' (the row stays one table row)" ;;
+  *)            bad "a pipe in a cell is escaped to '/'" "row: $row" ;;
+esac
+if [ "$nf" = 6 ]; then ok "  · and the row still has exactly four cells"
+else bad "  · and the row still has exactly four cells" "NF=$nf in: $row"; fi
+
+# The cap is visible, never a silent amputation (emit_ledger's cap400 lesson, one file over).
+rlfix; long="$(awk 'BEGIN { for (i = 0; i < 40; i++) printf "wordword " }')"
+rl wai-y "$long" 'ok' >/dev/null 2>&1
+row="$(grep '^| 2' "$RL" 2>/dev/null)"
+case "$row" in
+  *…*) ok "an over-long subject is capped at a word boundary with a visible ellipsis" ;;
+  *)   bad "an over-long subject is capped with a visible ellipsis" "row: $row" ;;
+esac
+
+# =================================================================================================
+echo
+echo "open-items.sh"
+# The hand-back footer (issue #7: self-recall under-reports ~3×, so the script derives and the
+# model pastes). 0 = footer emitted — including with skipped / not-checked lines, which are named —
+# and 2 = nothing at all could be derived, or misuse. There is no exit 1: it reports facts and
+# renders no verdict (ADR-0002).
+# =================================================================================================
+OPENITEMS="$ROOT/.claude/skills/wai/scripts/open-items.sh"
+
+oifix() {   # a one-commit git repo the stubbed gh answers for; every gh fixture starts EMPTY
+  N=$((N+1)); D="$TMP/oi$N"; gitrepo "$D"
+  printf '# fixture\n' > "$D/README.md"
+  gitcommit "$D" 'chore: baseline'
+  printf 'benw\n' > "$D/login"
+}
+oi() { ( cd "$D" && PATH="$GHBIN:$STUB:$PATH" GH_FIXTURE="$D" sh "$OPENITEMS" "$@" 2>&1 ); }
+
+# THE PASS PATH — and trust rule 1: an empty repo prints DERIVATIONS, never bare empty lists.
+oifix; out="$(oi)"; rc=$?
+assert "an empty repo → exit 0, every empty gh line NAMES its derivation" 0 "$rc" "$out" 'open PRs: none — 0 open PRs \(gh pr list --state open\)'
+assert "  · assigned issues are labelled with the HANDLE, never 'me'" 0 "$rc" "$out" 'issues assigned to benw: none — 0 open issues' 'assigned to me'
+assert "  · branches: none, with the git derivation named" 0 "$rc" "$out" 'branches with unique commits and no PR: none — 0 branches.*git cherry'
+assert "  · merged sweep: none — 0 merged PRs to sweep" 0 "$rc" "$out" 'merged-but-unreachable sweep: none — 0 merged PRs'
+assert "  · worktrees: none — this is the only worktree" 0 "$rc" "$out" 'other worktrees: none — this is the only worktree'
+assert "  · asked-unanswered prints 'not derived — no artifact exists', never 'none'" 0 "$rc" "$out" 'asked, unanswered: not derived — no artifact exists'
+# Trust rule 2: a class whose artifact is absent is SKIPPED, and the summary NAMES it.
+assert "  · absent ledger and audits are skipped AND named in the summary" 0 "$rc" "$out" 'skipped \(artifact absent\): gate-ledger audits'
+# The ADR-0002 boundary, stated on every run: facts here; the recommendation stays the model's.
+assert "  · it reports facts and leaves the judgment to ▶ Recommended next" 0 "$rc" "$out" 'FACTS ONLY \(ADR-0002\)' 'VERDICT'
+
+# Trust rule 3 — PER-LINE DEGRADATION: a dead gh kills the gh lines, never the local git lines.
+oifix
+git -C "$D" checkout -q -b orphan-work 2>/dev/null
+printf 'x\n' > "$D/w.txt"; gitcommit "$D" 'feat: unique work'
+git -C "$D" checkout -q main 2>/dev/null
+out="$( cd "$D" && PATH="$NOGHBIN" GH_FIXTURE="$D" "$SH" "$OPENITEMS" 2>&1 )"; rc=$?
+assert "dead gh → STILL exit 0; gh lines print 'not checked', never an empty list" 0 "$rc" "$out" 'open PRs: not checked — gh unavailable'
+assert "  · the git-derived branch line stays LIVE" 0 "$rc" "$out" 'orphan-work \(1 unique\)'
+assert "  · and carries the PR-state caveat instead of silently claiming no-PR" 0 "$rc" "$out" 'PR state NOT checked'
+assert "  · the summary names every class that was not checked" 0 "$rc" "$out" 'not checked \(tool/ref unavailable\):.*open-prs.*merged-sweep'
+
+# The ledger class: blank outcomes are counted; a MOOT row's blank is its documented state.
+oifix; mkdir -p "$D/docs/architecture"
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | GO | x | ok |\n'
+  printf '| 2026-08-02T00:00Z | 2 | GO | x | |\n'
+  printf '| 2026-08-03T00:00Z | 3 | NO-GO | x | |\n'
+  printf '| 2026-08-04T00:00Z | 4 | MOOT | reviewed too late | |\n'
+} > "$D/docs/architecture/gate-ledger.md"
+out="$(oi)"; rc=$?
+assert "ledger present: untagged rows counted, MOOT's blank excluded (2, not 3)" 0 "$rc" "$out" '2 row\(s\) still untagged'
+assert "  · and gate-ledger no longer appears among the skipped classes" 0 "$rc" "$out" 'skipped \(artifact absent\): audits'
+
+# THE MERGED-BUT-NOT-ARRIVED SWEEP, on a REAL ancestry fixture: a second repo plays origin, and the
+# clone holds a "merge" commit origin never saw — GitHub would say MERGED, origin/HEAD disagrees.
+# (Field report 2026-08-06: found a day later, by accident. This line is that check, every hand-back.)
+N=$((N+1)); OI_O="$TMP/oi-origin$N"; gitrepo "$OI_O"
+printf 'a\n' > "$OI_O/a.txt"; gitcommit "$OI_O" 'chore: base'
+OI_C="$TMP/oi-clone$N"
+git clone -q "$OI_O" "$OI_C" 2>/dev/null
+git -C "$OI_C" config user.email 'fixture@example.invalid'
+git -C "$OI_C" config user.name 'Fixture'
+git -C "$OI_C" config commit.gpgsign false
+git -C "$OI_C" config core.hooksPath "$NOHOOKS"
+git -C "$OI_C" checkout -q -b landed
+printf 'b\n' > "$OI_C/b.txt"; gitcommit "$OI_C" 'feat: the batch that never arrived'
+LOSTSHA="$(git -C "$OI_C" rev-parse HEAD)"
+git -C "$OI_C" checkout -q main 2>/dev/null
+printf 'benw\n' > "$OI_C/login"
+printf '42~%s~2026-08-10T12:00:00Z\n' "$LOSTSHA" | tr '~' '\034' > "$OI_C/merged-prs"
+mkdir -p "$OI_C/docs/architecture/audits"; printf '# audit\n' > "$OI_C/docs/architecture/audits/2026-08-01.md"
+D="$OI_C"; out="$(oi)"; rc=$?
+assert "a merged PR whose commit is NOT an ancestor of origin/HEAD is surfaced LOUDLY" 0 "$rc" "$out" 'MERGED BUT UNREACHABLE — #42'
+assert "  · and the line says what GitHub claims vs what the ancestry shows" 0 "$rc" "$out" 'GitHub says MERGED, but the merge commit is NOT an ancestor of origin/'
+assert "  · audits present: merged PRs newer than the last audit are counted" 0 "$rc" "$out" '1 merged PR\(s\) newer than the last audit \(2026-08-01\)'
+
+# The sweep's PASS path, same fixture: a merge commit that IS on origin sweeps clean and NAMES its
+# target — a sweep that has never said "all reachable" is an untested branch failing closed.
+BASESHA="$(git -C "$OI_C" rev-parse origin/main 2>/dev/null)"
+printf '41~%s~2026-07-01T12:00:00Z\n' "$BASESHA" | tr '~' '\034' > "$OI_C/merged-prs"
+out="$(oi)"; rc=$?
+assert "a reachable merge commit sweeps clean, naming count and target" 0 "$rc" "$out" 'none — all merge commits of the last 1 merged PRs are ancestors of origin/'
+assert "  · and a pre-audit merge does not count as newer than the audit" 0 "$rc" "$out" 'none — 0 merged PRs newer than 2026-08-01'
+
+# CAPS ARE VISIBLE. 25 open PRs → 10 shown, '+15 more' printed — never a silent truncation.
+oifix
+i=0; : > "$D/open-prs"
+while [ "$i" -lt 25 ]; do i=$((i+1))
+  printf '%s~branch-%s~change number %s\n' "$i" "$i" "$i" | tr '~' '\034' >> "$D/open-prs"
+done
+out="$(oi)"; rc=$?
+assert "25 open PRs → the count is stated and the cap is visible" 0 "$rc" "$out" 'open PRs \(25\):.*\(\+15 more\)'
+
+# Foreign work: another worktree and its dirty state, derived from git worktree list, not memory.
+oifix
+git -C "$D" worktree add "$TMP/oi-wt$N" -b side-wt >/dev/null 2>&1
+printf 'dirt\n' > "$TMP/oi-wt$N/dirt.txt"
+out="$(oi)"; rc=$?
+assert "another worktree is listed with its DIRTY state" 0 "$rc" "$out" 'oi-wt.*\(DIRTY\)'
+
+oifix; out="$(oi --bogus)"; rc=$?
+assert "an unknown option → exit 2, never a partial footer" 2 "$rc" "$out" 'unknown option'
+
+# NOTHING DERIVABLE AT ALL — the only other exit 2: no git repository and no usable gh.
+N=$((N+1)); D="$TMP/oi-nothing$N"; mkdir -p "$D"
+out="$( cd "$D" && PATH="$GITONLY" "$SH" "$OPENITEMS" 2>&1 )"; rc=$?
+assert "no git repo AND no gh → exit 2: nothing could be derived, and it says so" 2 "$rc" "$out" 'nothing could be derived'
 
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once

@@ -138,6 +138,13 @@ sandbox/fakes.
    is the landing rule (§*Where a finding lands*): a gap you neither closed nor deliberately
    accepted is **filed**, not mentioned in passing — an uncovered mandatory target that lives only
    in a chat log is an uncovered mandatory target nobody will remember. Close with **▶ Recommended next**.
+   **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-testing" "<subject>"
+   "<half-sentence outcome>"` (from this skill's directory) — a run without a row is invisible
+   work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing arguments).
+   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (same directory), paste
+   its output verbatim beneath the ▶ Recommended next block, then give your recommendation — in that
+   order: the script derives (exit 0 = emitted; exit 2 = nothing derivable — then say `not checked`
+   yourself), the model recommends.
 
 ## Mandatory test targets (never skipped)
 

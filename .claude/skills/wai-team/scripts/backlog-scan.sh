@@ -37,6 +37,13 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX word/glo
 command -v gh >/dev/null 2>&1 || { echo "backlog-scan: gh is not installed — cannot read the backlog (UNKNOWN)." >&2; exit 2; }
 gh auth status >/dev/null 2>&1 || { echo "backlog-scan: gh is not authenticated — cannot read the backlog (UNKNOWN)." >&2; exit 2; }
 
+# Attendance (issue #11: the record measures side effects, not work — a team run that files nothing
+# vanishes). This scan opens every wai-team run and maps 1:1 to that skill, so it self-logs the row.
+# Resolved as a ../../wai/scripts/ sibling like the shared classifier; FAIL-OPEN — a logging failure
+# must never break a scan.
+RUNLOG_SH="$(dirname "$0")/../../wai/scripts/run-log.sh"
+runlog() { [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-team "backlog scan" "$1" >/dev/null 2>&1 || true; }
+
 LABEL="${1:-}"
 
 # One record per open issue, fields joined by the FS control byte (0x1C) so a title or body can hold
@@ -68,8 +75,10 @@ if [ -z "$RECORDS" ]; then
   echo "  (no open issues) — the proposal is: nothing to work here."
   echo
   echo "NOTE: an empty backlog is a valid answer, not a failure."
+  runlog "0 open issues"
   exit 0
 fi
+NREC="$(printf '%s\n' "$RECORDS" | grep -c .)"
 
 printf '%s\n' "$RECORDS" | awk '
   BEGIN { FS = "\034" }
@@ -176,4 +185,5 @@ echo "    authoritative excluded-domain classification runs later on the PR diff
 echo "    (wai/scripts/excluded-domains.sh), obeyed by its exit code — this hint only WIDENS."
 echo "  · order/frontier are the mechanical default; step 2 refines with judgment but never reorders"
 echo "    a blocker after its dependent. Present this as a PROPOSAL and stop before claiming."
+runlog "$NREC open issues"
 exit 0

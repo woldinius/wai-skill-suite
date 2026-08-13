@@ -176,6 +176,11 @@ this skill adds orchestration, **not** new authority.
 7. **Report** — end the run with the team report (format below): autonomously merged (if any),
    merged, verified-nothing-to-fix, decision list, withheld, cross-issue notes, parked/failed,
    issues filed. The decision list is the deliverable the mandate promised — never bury it.
+   (The run-log row for this skill is written by `backlog-scan.sh` itself — do not log it again.)
+   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (from this skill's
+   directory — a sibling path), paste its output verbatim beneath the ▶ Recommended next block,
+   then give your recommendation — in that order: the script derives (exit 0 = emitted; exit 2 =
+   nothing derivable — then say `not checked` yourself), the model recommends.
 
 8. **Learning hand-off (clean run, opt-in)** — after a **clean run**, and **only at an
    interactive hand-back with a human present**, offer exactly **one** learning gap by

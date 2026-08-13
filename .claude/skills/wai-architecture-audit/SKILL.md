@@ -181,6 +181,14 @@ last audit — don't re-derive a full report when nothing meaningful changed.
    update the open one instead of re-filing. The dated report stays the **narrative** source of
    truth; issues are the trackable handles into it. Without `gh`, list the would-be issues with
    their `gh issue create` commands instead of dropping them.
+   **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-architecture-audit"
+   "<subject>" "<half-sentence outcome>"` (from this skill's directory) — an audit that finds
+   nothing still writes its row, because that is the run that vanishes today; fail-open: exit 0
+   even when the write fails, exit 2 only on misuse (missing arguments).
+   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (same directory), paste
+   its output verbatim beneath the ▶ Recommended next block, then give your recommendation — in that
+   order: the script derives (exit 0 = emitted; exit 2 = nothing derivable — then say `not checked`
+   yourself), the model recommends.
 
 ## Severity & trend
 
