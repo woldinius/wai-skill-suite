@@ -133,6 +133,17 @@ else
   done
 fi
 
+# THE LEDGER GUARANTEE — stated here because this is where the deletions live (steps 4 and 5).
+#
+# Everything under $DEST/docs is USER DATA, above all docs/architecture/gate-ledger.md and
+# docs/architecture/run-log.md: append-only experience that cannot be reconstructed. A field repo
+# lost its entire pre-2026-07-22 ledger to a suite update (issue #10) — weeks of verdicts, gone,
+# and the report window shrank with them. So the rule, permanent: every `rm -rf` in this script
+# stays inside "$SKILLS_DIR", and this script NEVER writes to or removes anything under
+# "$DEST/docs" — a suite update is a migration path for the ledger, not a file operation on it.
+# tests/run.sh holds this as a test: an update into a repo with a populated ledger and run log
+# must leave both byte-identical. Whoever teaches this script to "clean up" docs/ goes red there.
+
 # 4. Prune skills WE installed that no longer exist upstream (renamed or removed).
 for old in $OWNED; do
   if ! printf '%s\n' "$NEW_SET" | grep -qx "$old"; then
