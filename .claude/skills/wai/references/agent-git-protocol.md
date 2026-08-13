@@ -325,6 +325,27 @@ carrying their own copy of it.
 - Commit the skill's own durable artifacts on the branch too: the plan
   (`docs/planning/<slug>/`), an audit report (`docs/architecture/audits/`), doc updates.
 
+## The snapshot pattern — how a deliberate sabotage is undone
+
+Some steps in this suite break files **on purpose**: `wai-testing`'s counterproof proves a new
+assertion can go red by sabotaging the production line it guards, and the audit playbook's
+mutation pass plants one-line mutations to measure the suite's kill rate. The sabotage is the
+easy half; the **restore** is where finished work dies. The rule:
+
+- **Before** any deliberate sabotage — or any risky revert of uncommitted work — copy the file(s)
+  aside with plain `cp` (to your scratch space, or `<file>.snap` beside it). **Afterwards** copy
+  the snapshot back, delete it, and confirm green.
+- **Never `git checkout -- <file>`, `git restore <file>` or `git checkout-index` for this.** They
+  restore from the **index**, and at that moment the index may contain the sabotage itself (if
+  anything staged it) or nothing at all (a file never yet committed). Either way the command
+  destroys the finished work — and **exits 0**, so the failure case looks exactly like the
+  success case.
+- **A ban without a named replacement action breaks under pressure.** That is why this section
+  exists as a pattern, not only a prohibition: one field session destroyed finished work **three
+  times despite a standing written ban** on exactly these commands — each time while reverting a
+  sabotage from a counterproof, each time with a green exit code. What held afterwards was not a
+  stronger ban but a named action to reach for instead: `cp` aside before, copy back after.
+
 ## Pull request
 
 - Open/update via `gh` (`gh pr create` / `gh pr edit`). Target `main`. Open as **draft** when

@@ -42,6 +42,12 @@ sandbox/fakes.
   flakiness, no network. Stub the provider abstraction (`AI-1`) with schema-valid canned
   responses and stub billing the same way — store SDKs in sandbox, webhooks as signed fakes;
   freeze time/seed randomness. A flaky test is worse than no test — it erodes the gate it feeds.
+- **The counterproof is the rule.** An assertion you have only ever seen green is unverified —
+  green proves the test *ran*, not that it *checks*. Every **new** assertion is proven able to
+  fail before it is trusted (process step 5). This generalizes implementation's house rule *"for
+  a bug, build the red first"* from bugs to every assertion: no red ever seen, no trust. The
+  field evidence: one session produced **three worthless assertions** in freshly written code —
+  all three caught by the counterproof, none by the test run.
 - **Proportional, mandatory where it counts.** Build functions end-to-end testable; **no
   speculative unit tests**. But **security, billing, GDPR and idempotency paths are mandatory
   targets** (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`) — never skipped **where the repo has them**:
@@ -95,7 +101,22 @@ sandbox/fakes.
    mandatory targets first. Prefer a few high-value e2e/integration tests over many brittle
    unit tests. Assert behavior and contracts, not implementation detail.
 
-5. **Run locally & confirm green** — run the new tests (and the suite they belong to). If a
+5. **Counterproof every new assertion — see it red before you trust it green.** For each new
+   assertion (or each coherent group guarding one behavior): sabotage the **production line the
+   assertion guards** — snapshot the file aside first with `cp` and copy it back afterwards (the
+   **snapshot pattern**, `references/agent-git-protocol.md` §*The snapshot pattern* in the `wai`
+   skill; never `git checkout` / `git restore` to undo a sabotage) — run, **see red**, restore,
+   see green. A sabotage the test survives means the assertion never touched the path the product
+   takes; fix the **test**, never soften the sabotage. The anti-pattern to name when you find it:
+   **the test rebuilds the rule in a helper instead of calling the production path — if the logic
+   has no callable seam, create the seam; never adapt the test.** One field session hit all three
+   shapes of this failure: (a) a test that rebuilt the rule in a helper — two sabotages of the
+   real code passed unnoticed; (b) a grep that asserted the helper *call* and survived when the
+   function merely stopped being called; (c) a section asserted directly while no longer mounted
+   into the page at all. Three worthless assertions, all caught by the counterproof, none by the
+   test run.
+
+6. **Run locally & confirm green** — run the new tests (and the suite they belong to). If a
    test needs to become a **required merge check** that isn't wired yet, note it for
    `wai-cicd` (see hand-off) — don't wire branch protection here.
 
@@ -106,10 +127,10 @@ sandbox/fakes.
    (or ask `wai-learning-gap` to resolve it) before testing continues. Silently solving it steals the
    exercise and the human never learns the concept.
 
-6. **Update the strategy** — if the policy evolved (new mandatory target, a level promoted to
+7. **Update the strategy** — if the policy evolved (new mandatory target, a level promoted to
    the gate), update `docs/architecture/testing-strategy.md` as a visible change.
 
-7. **Commit on the branch, update the PR, hand off** — verify the branch (`git branch
+8. **Commit on the branch, update the PR, hand off** — verify the branch (`git branch
    --show-current`, never `main`), commit the tests (and any fakes/fixtures) atomically; update
    the PR's test plan. **File coverage gaps you can't close now as GitHub issues** (a mandatory
    target that needs infrastructure that doesn't exist yet, a flaky area that needs a harness) —

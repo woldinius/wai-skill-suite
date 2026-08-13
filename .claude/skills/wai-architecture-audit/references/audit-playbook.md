@@ -3,7 +3,7 @@
 > Reference for `wai-architecture-audit` (structural health). The SKILL describes *what* to
 > audit and the output format; this file gives the *how* — concrete commands per stack, the
 > semantic-redundancy / dead-end method, the modularity & decoupling rubric, the container
-> checklist, and the drift-detection method. Adapt to the repo you are actually in; run tools
+> checklist, the drift-detection method, and the mutation pass. Adapt to the repo you are actually in; run tools
 > ad-hoc (you do **not** need them wired into CI to use them once).
 >
 > **Security is a separate skill.** Secrets, injection, authZ/IDOR, SSRF, CVEs, crypto/TLS and
@@ -295,3 +295,38 @@ gap measurable:
 When a fitness function is wrong (the rule, not the code, is outdated), that belongs in the
 report's **Architecture baseline, design-principle & catalog proposals** section — propose the
 baseline/catalog/ADR change with a new ID, don't silently bend the code to a stale rule.
+
+---
+
+## 7. Mutation pass — kill rate as a trend, survivors verified (`MAINT-2`)
+
+Coverage numbers and enumeration guards measure what the tests *touch*; a mutation pass measures
+what they *check*. An enumeration guard finds **forgotten** cases (a new store missing from the
+erasure list breaks the build); it cannot find **untested present** ones — code that is listed,
+covered, and would pass green with its logic inverted. In the field, a budget of **28 one-line
+mutations found four real gaps** (24 killed = 86%) that no enumeration guard could have seen.
+
+**Method — a small budget, not a campaign:**
+
+1. **Budget.** Pick a small, fixed number of one-line mutations per audit (the field run used
+   ~25–30) on high-value logic: guards, money/quota math, validation branches, error paths.
+   One mutation at a time: flip a comparison, negate a condition, off-by-one a boundary, drop a
+   guard clause. Restore between mutations via the **snapshot pattern** — `cp` the file aside
+   before mutating, copy it back after; **never** `git checkout`/`git restore` for the undo
+   (`references/agent-git-protocol.md` §*The snapshot pattern*, in the `wai` skill).
+2. **Run** the test suite per mutation. Suite red = **killed**; suite green = **survivor**.
+3. **Verify every survivor before reporting it — the hard rule.** A surviving mutation may be
+   reported as a test gap **only after verifying the mutation hit executable code** — not a
+   comment, not a dead line, not a string the runtime never evaluates. Re-read the mutated line
+   in context; if in doubt, prove execution (a temporary trace, a type error, the debugger). The
+   field tool's first version replaced the first *text* occurrence — **three times a comment** —
+   and nearly reported **three false survivors**; only the second pass (did it hit executable
+   code?) separated real gaps from no-ops. **An instrument that finds test gaps must not produce
+   false ones**: one fabricated gap and every future survivor is doubted, which kills the pass.
+4. **Record the kill rate as a trend, never a lone snapshot.** A single kill rate has no
+   baseline — 86% is neither good nor bad in isolation. Log it in the audit report next to the
+   previous audit's rate and mark it `new` / `worsening` / `stable` / `improving`, exactly like
+   the §6 trend metrics; note the mutation budget and which areas were mutated so the next audit
+   can compare like with like. Each **verified** survivor becomes a finding (`MAINT-2`) naming
+   the mutated line and the assertion that should have killed it — the fix belongs to
+   `wai-testing`, not to this audit.
