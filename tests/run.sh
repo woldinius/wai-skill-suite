@@ -634,6 +634,43 @@ assert "source == destination is refused, not executed" 1 "$rc" "$out" 'same dir
 if [ -s "$RDIR/.claude/skills/wai-init/SKILL.md" ]; then ok "the refused run destroyed nothing"
 else bad "the refused run destroyed nothing" "wai-init/SKILL.md is gone or empty"; fi
 
+# THE LEDGER SURVIVES AN UPDATE. A field repo lost every gate verdict before 2026-07-22 to a
+# suite update (issue #10) — the ledger is append-only experience that cannot be reconstructed,
+# so an installer that can delete it is a data-loss risk, not a file manager. install.sh states
+# the guarantee next to its prune logic; THIS CASE IS THE GUARD: it goes red the day anyone
+# teaches install.sh to "clean up" docs/. The fixture is an UPDATE, not a first install — a
+# `.wai-suite-manifest` is present and a stale suite skill sits in place — because only the
+# update path runs the prune/replace loops next to which the user's data lives (the piped-update
+# bug above was invisible for the same reason: first installs were always fine). Two asserts
+# below prove the update path actually ran: the manifest suppressed the first-run collision
+# warning, and the stale skill was replaced.
+UDIR="$TMP/install-update-ledger"; mkdir -p "$UDIR/.claude/skills/wai-init" "$UDIR/docs/architecture"
+echo "stale" > "$UDIR/.claude/skills/wai-init/SKILL.md"
+printf 'wai\nwai-init\n' > "$UDIR/.claude/.wai-suite-manifest"
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-07-22T00:00Z | 1 | NO-GO | no required checks | ok |\n'
+  printf '| 2026-08-01T00:00Z | 2 | GO | all green | ok |\n'
+  printf '| 2026-08-12T00:00Z | 3 | NO-GO | test=IN_PROGRESS | fp, bug |\n'
+} > "$UDIR/docs/architecture/gate-ledger.md"
+printf '| 2026-08-12T09:00Z | wai-security-audit | repo | no findings |\n' > "$UDIR/docs/architecture/run-log.md"
+cp "$UDIR/docs/architecture/gate-ledger.md" "$TMP/ledger.before"
+cp "$UDIR/docs/architecture/run-log.md"     "$TMP/runlog.before"
+out="$(sh "$ROOT/install.sh" "$UDIR" 2>&1)"; rc=$?
+assert "an update into a repo with a populated ledger runs as an UPDATE (manifest honoured, no first-run collision warning)" \
+  0 "$rc" "$out" 'installed: wai-init' 'will be overwritten'
+if [ -s "$UDIR/.claude/skills/wai-init/SKILL.md" ] && [ "$(cat "$UDIR/.claude/skills/wai-init/SKILL.md")" != "stale" ]; then
+  ok "the update path was exercised: the stale suite skill was replaced"
+else bad "the update path was exercised: the stale suite skill was replaced" "wai-init/SKILL.md still 'stale' — this fixture no longer tests an update"; fi
+if cmp -s "$TMP/ledger.before" "$UDIR/docs/architecture/gate-ledger.md"; then
+  ok "the gate ledger (3 rows) is byte-identical after the update"
+else bad "the gate ledger (3 rows) is byte-identical after the update" "install.sh modified docs/architecture/gate-ledger.md"; fi
+if cmp -s "$TMP/runlog.before" "$UDIR/docs/architecture/run-log.md"; then
+  ok "the run log is byte-identical after the update"
+else bad "the run log is byte-identical after the update" "install.sh modified docs/architecture/run-log.md"; fi
+if [ "$(ls "$UDIR/docs/architecture" | wc -l | tr -d ' ')" = "2" ]; then
+  ok "the installer wrote nothing into docs/ (still exactly the two user files)"
+else bad "the installer wrote nothing into docs/" "docs/architecture now holds: $(ls "$UDIR/docs/architecture" | tr '\n' ' ')"; fi
+
 # ── excluded-domains.sh ─────────────────────────────────────────────────────────────────────────
 # The ONE "is this an excluded domain?" classifier. merge-gate.sh §5-6 and the autonomy drain both
 # delegate here — two copies of the most load-bearing safety question in the suite would be two
