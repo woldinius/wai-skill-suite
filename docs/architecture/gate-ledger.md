@@ -55,3 +55,4 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-08-11T22:21Z | 5 | NO-GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✗ touches an excluded domain — the human merges these, always: EX-GUARD | |
 | 2026-08-11T22:36Z | 6 | NO-GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✗ touches an excluded domain — the human merges these, always: EX-GDPR EX-GUARD EX-PAY EX-SEC | |
 | 2026-08-12T20:31Z | 17 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
+| 2026-08-13T05:25Z | 19 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
