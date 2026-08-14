@@ -1,7 +1,7 @@
 {
   "name": "wai-suite",
   "version": "0.2.0",
-  "description": "Sustainable software product development with Claude Code: 13 skills for the engineering lifecycle — plan, build, test, review, audit — built to keep architecture maintainable and clean and security first-class while agents write the code. Whether a PR may merge is decided by a script with an exit code and, above it, a human — never the model. Ships the merge gate, the quality-catalog system (one master, three generated variants), 27 enforcement scripts and 300+ tests founded on shipped bugs.",
+  "description": "Sustainable software product development with Claude Code: 13 skills for the engineering lifecycle — plan, build, test, review, audit — built to keep architecture maintainable and clean and security first-class while agents write the code. The premise: even frontier models lose context, are confident when wrong, and forget rules — so nothing here relies on the model remembering; each goal gets a gate, a rule, or a deterministic check, and whether a PR may merge is decided by a script with an exit code and, above it, a human. Ships the merge gate, the quality-catalog system (one master, three generated variants), 27 enforcement scripts and 300+ tests founded on shipped bugs.",
   "author": {
     "name": "Benjamin Wolters",
     "url": "https://github.com/woldinius"
