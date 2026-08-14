@@ -64,3 +64,4 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-08-13T22:24Z | 25 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-API EX-GDPR EX-GUARD EX-PAY EX-SEC; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
 | 2026-08-14T04:53Z | 25 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-API EX-GDPR EX-GUARD EX-PAY EX-SEC; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
 | 2026-08-14T05:02Z | 26 | NO-GO | ✗ required check(s) not green: ci=IN_PROGRESS; ✗ touches an excluded domain — the human merges these, always: EX-PAY; ✓ quality catalog present; ✓ repo mode: solo | |
+| 2026-08-14T05:08Z | 26 | NO-GO | ✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd; ✗ touches an excluded domain — the human merges these, always: EX-PAY; ✓ quality catalog present; ✓ repo mode: solo | |
