@@ -1,6 +1,6 @@
 {
   "name": "wai",
-  "description": "The wAI skill suite's own marketplace: one plugin, thirteen skills, and a merge decision that belongs to a script's exit code and a human — not to the model.",
+  "description": "The wAI skill suite's own marketplace: one plugin, thirteen skills for sustainable software product development — maintainable, clean architecture and first-class security — with a merge decision that belongs to a script's exit code and a human, not to the model.",
   "owner": {
     "name": "Benjamin Wolters",
     "url": "https://github.com/woldinius"
@@ -9,8 +9,8 @@
     {
       "name": "wai-suite",
       "source": "./",
-      "description": "The wAI gated-lifecycle suite: 13 skills (router, init, planning, implementation, testing, PR review with a mechanical merge gate, architecture & security audits, an artifact-derived retrospective, CI/CD and mobile-release setup, team orchestrator, personal learning mode). Evidence-first: every enforcement claim in the repo has a check behind it.",
-      "version": "0.1.0",
+      "description": "The wAI gated-lifecycle suite for sustainable software engineering: 13 skills (router, init, planning, implementation, testing, PR review with a mechanical merge gate, architecture & security audits, an artifact-derived retrospective, CI/CD and mobile-release setup, team orchestrator, personal learning mode) that keep architecture maintainable and security audited while agents build. Evidence-first: every enforcement claim in the repo has a check behind it.",
+      "version": "0.2.0",
       "author": {
         "name": "Benjamin Wolters"
       },
