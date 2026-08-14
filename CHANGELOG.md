@@ -52,6 +52,9 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ### Changed
 
+- **The purpose leads the pitch**: README intro, plugin and marketplace descriptions now state
+  what the suite is for — sustainable software product development, maintainable and clean
+  architecture, first-class security — before the mechanics that enforce it; keywords follow.
 - **Token-reduction pass** over the 13 SKILL.md bodies (−2,972 words, −7.7%): repeated rationale
   and narrative padding removed, every normative rule, script contract, pinned format and counted
   claim kept — the full battery holds it.

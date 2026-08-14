@@ -1,7 +1,7 @@
 {
   "name": "wai-suite",
   "version": "0.2.0",
-  "description": "A gated software lifecycle for Claude Code: 13 skills that plan, build, test and review on agent/** branches — and whether a PR may merge is decided by a script with an exit code and, above it, a human. Ships the merge gate, the quality-catalog system (one master, three generated variants), 27 enforcement scripts and 300+ tests founded on shipped bugs.",
+  "description": "Sustainable software product development with Claude Code: 13 skills for the engineering lifecycle — plan, build, test, review, audit — built to keep architecture maintainable and clean and security first-class while agents write the code. Whether a PR may merge is decided by a script with an exit code and, above it, a human — never the model. Ships the merge gate, the quality-catalog system (one master, three generated variants), 27 enforcement scripts and 300+ tests founded on shipped bugs.",
   "author": {
     "name": "Benjamin Wolters",
     "url": "https://github.com/woldinius"
@@ -11,7 +11,13 @@
   "license": "MIT",
   "keywords": [
     "lifecycle",
+    "software-engineering",
+    "sustainable-development",
+    "clean-architecture",
+    "maintainability",
+    "security",
     "merge-gate",
+    "quality-gate",
     "code-review",
     "quality-catalog",
     "testing",

@@ -4,10 +4,12 @@
 
 # wai-skill-suite
 
-Claude Code skills for a gated software lifecycle: skills plan, build, test and review on
-`agent/**` branches — and **whether a PR may merge is decided by a script with an exit code and,
-above it, a human. Not by the model.** In industry terms: a **deterministic quality gate** for
-agent-written code, shipped as skills — with the human in the loop above every risky decision.
+Claude Code skills for **sustainable software product development**: a gated engineering
+lifecycle that keeps architecture maintainable and clean and security first-class while agents
+write the code. Skills plan, build, test and review on `agent/**` branches — and **whether a PR
+may merge is decided by a script with an exit code and, above it, a human. Not by the model.**
+In industry terms: a **deterministic quality gate** for agent-written code, shipped as skills —
+with the human in the loop above every risky decision.
 
 > **Tool where it is decidable. Model where it takes judgment. Human where neither suffices —
 > and the boundaries between them are drawn, not guessed.**
