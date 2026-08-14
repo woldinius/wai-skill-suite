@@ -4,7 +4,7 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
-## [Unreleased]
+## [0.2.0] — 2026-08-14
 
 ### Added
 
@@ -31,12 +31,32 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   `▶ Recommended next`, because self-recall under-reports ~3×. Empty lines name their derivation,
   absent artifact classes are skipped and named, a dead `gh` degrades per line.
 
+- **`wai-team` package mode** (#12): the mandate can group issues into ordered packages with one
+  branch/PR per package; worktree handling is honest about what exists, and a run that finds
+  nothing to fix has a name — "Verified — nothing to fix" — instead of inventing work.
+- **Counterproof as the rule** (#9): prove a test red before trusting it green, verify survivors,
+  count hits, snapshot before sabotage — in the testing skill, the audit playbook and the git
+  protocol's snapshot pattern.
+- **Evidence-chain repair** (#8, #10): ledger outcome tags match on a 2-char prefix and unmatched
+  tags are counted, never silently dropped; ledger why-cells put ✗/? reasons first; `gate-stats.sh
+  --report [--mark]` emits the dated report extract and plants the cadence marker; doctor carries
+  the report-cadence advisory (threshold 25, `REPORT_THRESHOLD` override).
+- **The installer's ledger guarantee** (#10): every `rm -rf` in `install.sh` stays inside
+  `.claude/skills/`, and `docs/` — above all the gate ledger and the run log — is never touched by
+  an update; held by a byte-identical fixture test. The three-week field-ledger report landed as
+  dated evidence beside it.
 - The suite is its own **plugin marketplace**: `/plugin marketplace add woldinius/wai-skill-suite`,
   then `/plugin install wai-suite@wai`. `install.sh` remains as the copy-into-repo path.
 - This changelog, and a README section stating exactly what the suite writes into a repo — and
   what it never touches.
 
 ### Changed
+
+- **Token-reduction pass** over the 13 SKILL.md bodies (−2,972 words, −7.7%): repeated rationale
+  and narrative padding removed, every normative rule, script contract, pinned format and counted
+  claim kept — the full battery holds it.
+- **`wai-learning-gap`**: the open-gap sweep sees every worktree of the repo (#13), and difficulty
+  now scales hint strength instead of answer visibility (#3).
 
 - **Provider-neutral deployment**: `wai-cicd`'s model is unchanged (GitHub Actions → GHCR →
   Docker Compose over SSH to your own Linux server) but no longer names a hosting provider;
@@ -47,6 +67,16 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 - **Skill prompts phrase script calls relative to the skill's own directory**, so the same
   sentence is true in a repo install and in the plugin cache.
 - Timestamps written by suite scripts carry normal UTC time again; the date-only rule is retired.
+
+### Fixed
+
+- **PR #19's gate row, lost to a merge-conflict resolution, restored verbatim** with provenance —
+  field evidence for the known class "append-only files are what merge tools silently truncate".
+- **doctor's hooksPath check canonicalizes both sides** (#18), so an absolute `core.hooksPath`
+  pointing at the repo's own `.githooks` no longer reads as drift.
+- Every inline rule in the skills is anchored to its catalog ID, and two contradictions between
+  skills were resolved.
+- Dead references to archived audit/proposal files unlinked.
 
 ## [0.1.0] — 2026-08-10
 

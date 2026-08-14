@@ -1,6 +1,6 @@
 {
   "name": "wai-suite",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A gated software lifecycle for Claude Code: 13 skills that plan, build, test and review on agent/** branches — and whether a PR may merge is decided by a script with an exit code and, above it, a human. Ships the merge gate, the quality-catalog system (one master, three generated variants), 27 enforcement scripts and 300+ tests founded on shipped bugs.",
   "author": {
     "name": "Benjamin Wolters",
