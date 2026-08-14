@@ -15,12 +15,10 @@ license: MIT
 
 # Requirements Planning
 
-Prepare a new requirement as a Senior Software Architect and DevOps expert
-ready for implementation. The goal is to **make the non-obvious cross-cutting concerns visible
-early** — before implementing — and to bring the requirement into a clear,
-workable form. That is exactly the value: scaling, GDPR,
-costs, API compatibility and resilience are thought through on the drawing board, not
-retrofitted afterwards.
+Prepare a new requirement as a Senior Software Architect and DevOps expert ready for
+implementation: **make the non-obvious cross-cutting concerns visible early** — scaling, GDPR,
+costs, API compatibility and resilience thought through on the drawing board, not retrofitted
+afterwards — and bring the requirement into a clear, workable form.
 
 ## Platform context
 
@@ -42,16 +40,14 @@ you start.
 
 **A GitHub issue, or a set of them** — `plan #42`, or `#42 #43 #44`.
 - Pull each with `gh issue view <N> --comments`; title, body and discussion are the source.
-- **Claim them first** (`references/issues-protocol.md` §*Claiming*). Planning **is** the start of
-  the work when it runs first, and two people planning the same issue for an hour is the exact cost
-  of not claiming. Assigned to someone else → **do not start**: report the collision.
-- **A set means ONE requirement, planned as one.** That is the whole point of passing several: they
-  are one feature cut into tasks, they share a contract, a blast radius, a branch.
-  **But verify it.** If they turn out to be *independent* — different capabilities, no shared
-  contract, no shared blast radius — **say so and hand them to `wai-team`**, which runs each
-  through its own lifecycle on its own branch. Do **not** quietly fuse unrelated work into one plan:
-  a plan spanning two unrelated changes cannot be reviewed as one unit, and neither can the PR that
-  follows it.
+- **Claim them first** (`references/issues-protocol.md` §*Claiming*) — planning **is** the start
+  of the work when it runs first. Assigned to someone else → **do not start**: report the
+  collision.
+- **A set means ONE requirement, planned as one** — one feature cut into tasks, sharing a
+  contract, a blast radius, a branch. **But verify it.** If they turn out to be *independent* —
+  different capabilities, no shared contract or blast radius — **say so and hand them to
+  `wai-team`**. Do **not** quietly fuse unrelated work into one plan: a plan spanning two
+  unrelated changes cannot be reviewed as one unit, and neither can the PR that follows it.
 - An issue is a starting point, **never a complete spec**. Interview anyway (step 1).
 
 **A plain description** — *"add a rate limiter to the upload endpoint"*. Same flow; nothing to claim.
@@ -62,21 +58,20 @@ If it turns out to deserve tracking, file it (§*Where a finding lands*).
 - *Depth:* "no ADR", "just the task list", "short plan".
 - *Mode:* "grill me" → `references/grilling-protocol.md`.
 
-**A directive is a request, not an override — and you say which you honoured and which you did not.**
-"Skip the interview" on a **contract-domain** or **token-economy** change is precisely the case the
-interview exists for: ask anyway, and say that you did and why. The human can overrule you a second
-time. They cannot overrule a question you never asked.
+**A directive is a request, not an override — say which you honoured and which you did not.**
+"Skip the interview" on a **contract-domain** or **token-economy** change is precisely the case
+the interview exists for: ask anyway, and say why. The human can overrule you a second time; they
+cannot overrule a question you never asked.
 
 If `gh` is unavailable or the issue does not resolve, don't invent it: say so, work from what the
 human gave you in chat, and note the gap in the plan.
 
 ## Process
 
-1. **Interview the requirement (first-class step)** — you have resolved what you were given
-   (above); now interrogate it, so that what gets built is genuinely what's needed. Ask the
-   human as many clarifying questions as the requirement warrants — grouped and concrete, using
-   the question UI — across these dimensions, **skipping any already answered** in the issue or
-   context:
+1. **Interview the requirement (first-class step)** — interrogate what you were given, so that
+   what gets built is genuinely what's needed. Ask as many clarifying questions as the
+   requirement warrants — grouped and concrete, using the question UI — across these dimensions,
+   **skipping any already answered** in the issue or context:
    - **Goal & users** — what outcome, for whom, which problem; what does success look like?
    - **Scope & boundaries** — explicitly in-scope vs. out-of-scope; the smallest valuable version.
    - **Acceptance criteria** — how will we know it is done and correct?
@@ -100,25 +95,24 @@ human gave you in chat, and note the gap in the plan.
    including a smaller/simpler variant, and let the human pick or combine before planning.
 
 2. **Determine affected surfaces & platform layer** — Which **surface(s)** does it touch —
-   backend, web, iOS, Android, or several? One app, several, or the shared core? New
-   app-specific function or platform capability that benefits everyone? In the hybrid topology
-   each client is its own repo, so a cross-surface feature becomes coordinated work in several
-   repos under one plan. This classification decides tenant isolation, reuse, versioning and
-   which repos get a branch.
+   backend, web, iOS, Android, or several? One app, several, or the shared core? App-specific
+   function or platform capability? In the hybrid topology each client is its own repo, so a
+   cross-surface feature becomes coordinated work in several repos under one plan. This
+   classification decides tenant isolation, reuse, versioning and which repos get a branch.
 
 3. **Decompose functionally & contract-first** — Decompose into components and concrete tasks
    per surface (backend, data model, AI orchestration; the **API/contract** change;
    web/iOS/Android client effects). When clients need new data, **define the contract change
-   first** (`references/contract-protocol.md` (in the `wai` skill)) so the clients can be built against it. Make
-   dependencies and a sensible order visible — typically the backward-compatible contract +
+   first** (`references/contract-protocol.md` (in the `wai` skill)) so the clients can be built
+   against it. Make dependencies and order visible — typically the backward-compatible contract +
    backend land before the clients adopt.
    The backend is the **initiator**: run its first version of the contract change through the
-   **Contract-Completeness Checklist** in `references/contract-protocol.md` (in the `wai`   skill) *before* handing it to the client repos, so avoidable cross-repo round-trips are removed
-   on the drawing board instead of mid-implementation. One round-trip stays **irreducible** — a
-   **cross-domain security binding** (client token storage/attestation vs. server verification) is a
-   deliberate joint review, not a spec gap — and **contract-domain hand-offs stay human-gated** for
-   merge on both sides. The mechanics of crossing the repo boundary (the gitignored mailboxes, the
-   pointer-not-payload message) are `references/cross-repo-handoff.md` (in the `wai` skill).
+   **Contract-Completeness Checklist** in `references/contract-protocol.md` *before* handing it
+   to the client repos, so avoidable cross-repo round-trips are removed on the drawing board. One
+   round-trip stays **irreducible** — a **cross-domain security binding** (client token
+   storage/attestation vs. server verification) is a deliberate joint review, not a spec gap —
+   and **contract-domain hand-offs stay human-gated** for merge on both sides. The mechanics of
+   crossing the repo boundary are `references/cross-repo-handoff.md` (in the `wai` skill).
 
 4. **Go through cross-cutting concerns** — Check the requirement against the dimensions from
    `docs/architecture/quality-attributes.md` and record **which of them apply and what
@@ -159,20 +153,19 @@ human gave you in chat, and note the gap in the plan.
 6. **Output the plan, then on approval open the branch** — Output the planning document
    (format below) including the **▶ Recommended next** hand-off, and get the human's approval.
    **Plan proportionally — docs over documents:** a **small, clearly-scoped change** needs no
-   planning document at all — clarify it in chat and capture it as a GitHub issue
-   (`issues-protocol.md`), then hand straight to `wai-implementation`. A **deep or novel
+   planning document at all — clarify it in chat, capture it as a GitHub issue
+   (`issues-protocol.md`), hand straight to `wai-implementation`. A **deep or novel
    requirement** gets the full treatment — and prefer **updating the existing `docs/`**
    (architecture docs, ADRs, contract) over piling up new planning files; write
    `docs/planning/<slug>/plan.md` only for what has no durable home yet. For **architecture
-   approaches and changes, lead with a visual diagram** (Mermaid — component/sequence/flow,
-   rendered in the output) and keep the prose short; a picture of the data flow beats a page
-   of text.
+   approaches, lead with a visual diagram** (Mermaid — component/sequence/flow) and keep the
+   prose short.
    **Once approved**, write the document to `docs/planning/<slug>/plan.md` (when one is
-   warranted) and, per the git protocol, create the requirement branch `agent/<handle>/<type>-<slug>`
-   off the latest `main`, commit the plan, and **push it to remote** (`git push -u`) so the
-   branch exists locally and remotely. Do **not** open the PR yet — `wai-implementation` opens it once there is an
-   implementation diff. **If the requirement came from an issue** (or the human wants one),
-   post a short plan summary + the `docs/planning/<slug>/plan.md` path back to the issue
+   warranted) and, per the git protocol, create the requirement branch
+   `agent/<handle>/<type>-<slug>` off the latest `main`, commit the plan, and **push it to
+   remote** (`git push -u`). Do **not** open the PR yet — `wai-implementation` opens it once
+   there is an implementation diff. **If the requirement came from an issue** (or the human
+   wants one), post a short plan summary + the plan path back to the issue
    (`gh issue comment <N>`) and carry the issue number forward so implementation can wire
    `Closes #N` into the PR. Optional — skip cleanly if there is no issue or `gh` is unavailable.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-requirements-planning"
@@ -286,29 +279,25 @@ consequences is made.
 
 ## Principles
 
-- **Cross-cutting first** — the main value is to make costs, GDPR, API compatibility and
-  resilience visible *before* implementation. Better an uncomfortable question early
-  than an expensive rebuild later.
-- **Plan proportionally** — a small requirement does not need a 5-page document: chat + a
-  GitHub issue suffice. Deep requirements get the full plan — preferring updates to the
-  existing `docs/` over new planning files, and diagrams over text walls. Scale depth and ADR
-  effort to the significance and irreversibility.
-- **Platform thinking** — always check whether the requirement makes sense as a reusable
-  platform capability (for future apps) instead of a one-off, app-specific solution —
-  without polluting the core with app-specific special logic.
+- **Cross-cutting first** — better an uncomfortable question early than an expensive rebuild
+  later.
+- **Plan proportionally** — a small requirement needs chat + a GitHub issue; deep requirements
+  get the full plan, preferring updates to the existing `docs/` over new planning files and
+  diagrams over text walls. Scale ADR effort to significance and irreversibility.
+- **Platform thinking** — check whether the requirement makes sense as a reusable platform
+  capability instead of a one-off — without polluting the core with app-specific special logic.
 - **Honest about the unknown** — mark assumptions and open questions clearly, instead of
   feigning certainty.
 
 ## Related Skills
 
 This skill is the **planning** stage in the lifecycle plan → implement → review:
-- **wai-implementation** — takes over the concrete code implementation of the task
-  decomposition planned here (each task is an implementation order there); calls back into
-  this skill's **delta-update mode** when its plan-delta check finds a material change.
+- **wai-implementation** — takes over the concrete implementation of the task decomposition
+  planned here; calls back into this skill's **delta-update mode** when its plan-delta check
+  finds a material change.
 - **wai-pr-review** — later evaluates the resulting PR against the same catalog.
-- **wai** — the suite router/overview, if you are unsure where to start or what to run next.
+- **wai** — the suite router/overview.
 - Shared source of truth for all three: `docs/architecture/quality-attributes.md`. Shared
-  protocols (in the `wai` skill): `references/grilling-protocol.md` (in the `wai` skill),
-  `references/issues-protocol.md` (in the `wai` skill), `references/contract-protocol.md` (in the `wai` skill),
-  `references/cross-repo-handoff.md` (in the `wai` skill),
-  `references/agent-git-protocol.md` (in the `wai` skill).
+  protocols (all in the `wai` skill): `references/grilling-protocol.md`,
+  `references/issues-protocol.md`, `references/contract-protocol.md`,
+  `references/cross-repo-handoff.md`, `references/agent-git-protocol.md`.

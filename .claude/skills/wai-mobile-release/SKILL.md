@@ -14,10 +14,9 @@ license: MIT
 
 Prepare a **native mobile repo one-time** for build, code signing and store delivery — iOS
 (Swift/SwiftUI → TestFlight / App Store Connect) or Android (Kotlin/Compose → Play Console
-tracks). The value: a deep scan of the real app and, from it, correct, tailored release
-artifacts and a **mobile merge gate** instead of generic boilerplate — as a visible proposal,
-nothing is committed. This is the mobile counterpart to `wai-cicd` (which covers
-backend+web).
+tracks). A deep scan of the real app yields correct, tailored release artifacts and a **mobile
+merge gate** instead of generic boilerplate — as a visible proposal, nothing is committed. The
+mobile counterpart to `wai-cicd` (backend+web).
 
 ## Platform context
 
@@ -65,9 +64,9 @@ Depending on platform (not everything is always needed):
   store-policy impact, test plan, risk).
 - A **branch-protection ruleset** for `main` (documented as a manual step): require a PR, the
   required checks above, no direct/force push. **Required approvals depend on the repo mode**: in
-  **`team`**, require **1 approving review** + Code-Owners review (and enable *Allow auto-merge*).
-  In **`solo`**, require **no approvals** — the only human is the PR author, and GitHub never
-  counts an author's own review, so a required approval would make every PR unmergeable.
+  **`team`**, require **1 approving review** + Code-Owners review (and enable *Allow
+  auto-merge*). In **`solo`**, require **no approvals** — GitHub never counts an author's own
+  review, so a required approval would make every PR unmergeable.
 - **`docs/release/<ios|android>-release.md`** — the release runbook (signing, store metadata,
   staged/phased rollout, rollback-by-not-promoting, the submission steps).
 - A **setup report** (format below) including the manual store-console steps.
@@ -84,8 +83,8 @@ Depending on platform (not everything is always needed):
   account go to Actions secrets / a private match repo / a secret store — never into the repo or
   the binary.
 - **Release ≠ merge.** The merge gate makes a PR mergeable; **submitting to store review and
-  releasing to users is a separate, human-gated step** (store review, phased rollout). This skill
-  wires the upload to a test track; promotion to production stays with the human.
+  releasing to users is a separate, human-gated step**. This skill wires the upload to a test
+  track; promotion to production stays with the human.
 - **Never commit or push.** Everything is a proposal; the human commits and sets up the
   store-console side.
 
@@ -120,11 +119,10 @@ non-contract-domain PR — but only if "green" is trustworthy. For mobile:
 - **Human-gated contract domains** — `CODEOWNERS` forces the human onto the generated API
   client, auth, and token/billing (StoreKit/Play Billing) code — matching the suite's escalation;
   a billing change is `PAY-*` and always human-merged.
-- **Team mode** (the `**Repo mode:**` line in the catalog header; missing = `solo`) — the ruleset
-  additionally requires **1 approving review**, `CODEOWNERS` names two or more owners (or a team),
-  and *Allow auto-merge* must be on: `wai-pr-review` then arms `gh pr merge --auto` instead
-  of merging itself, so a second human always sees the change (git protocol §*Identity & repo
-  mode*).
+- **Team mode** (the `**Repo mode:**` line in the catalog header; missing = `solo`) — the
+  ruleset additionally requires **1 approving review**, `CODEOWNERS` names two or more owners
+  (or a team), and *Allow auto-merge* must be on: `wai-pr-review` then arms
+  `gh pr merge --auto` instead of merging itself (git protocol §*Identity & repo mode*).
 - **Submission is human.** Merge → upload to TestFlight / Play internal track is automatic;
   **submit-for-review and release-to-users (incl. phased rollout %) stay manual.** Store review,
   signing secrets and policy declarations are not something to automate blindly.

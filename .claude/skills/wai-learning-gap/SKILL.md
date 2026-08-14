@@ -15,61 +15,55 @@ license: MIT
 
 The human learns the tech stack on the living project: after every implementation phase,
 **exactly one learning gap** is planted — 1–3 related lines they have to restore themselves so
-that build/tests go green again. Topics move through Leitner boxes. The goal is to make the learning
-stick without slowing implementation down.
+that build/tests go green again. Topics move through Leitner boxes; learning sticks without
+slowing implementation down.
 
 ## Learning mode is personal, not project-wide
 
-**A repo is shared; a learning state is not.** In a repo with several developers, maybe one of
-them is learning the stack — the others want no gaps in their working tree, no hook and no ledger.
-Therefore:
+**A repo is shared; a learning state is not.** Therefore:
 
 **The ledger IS the consent.** The skill is active exactly for the human who has a personal
 ledger. No ledger → the skill does **nothing**: it plants no gap, installs no hook, creates no
-ledger, and does not even ask. It is silently off for that person. Nothing in the repo may switch
-the mode on for anyone else — not a name, not a self-assessment, not a flag in a committed file.
+ledger, and does not even ask. Nothing in the repo may switch the mode on for anyone else — not a
+name, not a self-assessment, not a flag in a committed file.
 
 ### Ledger location (personal, outside git)
 
-1. **Primary:** `~/.claude/learning/<repo-slug>/ledger.md`. The learning state then belongs to
-   **the person**, not to the clone: it survives a second clone, a `git worktree` and a fresh
-   checkout — **but only if the slug reflects the repo identity, not the folder name.** So resolve
-   in this order:
+1. **Primary:** `~/.claude/learning/<repo-slug>/ledger.md`. The learning state belongs to **the
+   person**, not the clone — **but only if the slug reflects the repo identity, not the folder
+   name.** Resolve in this order:
    - `gh repo view --json nameWithOwner` → `<owner>-<repo>` (stable, whatever the folder is called);
    - otherwise derive the same from `git config remote.origin.url`;
    - only as a last resort the **repo root's** folder name — the *parent* of the common git dir:
      `basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"`.
-     Take the parent, not the basename of `--git-common-dir` itself, which is the literal string
-     `.git` in every repo — and would put every offline repo into one shared ledger. And **not**
-     `--show-toplevel`: in a linked worktree that returns the worktree path, so the learning state
-     would differ per worktree — exactly the mistake this location avoids.
+     Take the parent: `--git-common-dir` itself ends in the literal `.git`, which would put every
+     offline repo into one shared ledger. And **not** `--show-toplevel`, which in a linked
+     worktree returns the worktree path — learning state would differ per worktree.
 2. **Fallback:** `temp/learning/ledger.md` inside the repo — only when `~/.claude/` is not
    writable (CI, container, someone else's machine). Then add `temp/learning/` to
    **`.git/info/exclude`** (local, unshared), *not* to the shared `.gitignore`.
 
 ### The identity lives in the ledger, not only in the path
 
-A slug is derived, and derived things drift: the repo is transferred to an org, renamed, or forked;
-`gh` is authenticated in one session and not the next. When the slug changes, a path lookup finds
-nothing — and the opt-in gate then concludes "this human never opted in" and goes **silent**. The
-human's Leitner state is orphaned and, by the very design of the gate, nobody tells them. That is
-the one way this skill fails invisibly, so guard it:
+A slug is derived, and derived things drift (transfer, rename, fork, `gh` auth changing). When the
+slug changes, a path lookup finds nothing, the gate concludes "never opted in" and goes silent —
+the one way this skill fails invisibly. So:
 
 - **Record the identity when creating the ledger** — write `nameWithOwner` and the remote URL into
   its header. Identity then lives in the *content*, which does not drift.
 - **The gate is a lookup, not a path check.** No ledger at the resolved slug → before concluding
   "not opted in", glob `~/.claude/learning/*/ledger.md` and check whether any of them records
-  **this** repo (by remote URL, by a previous `nameWithOwner`, or by the repo name with a different
+  **this** repo (by remote URL, a previous `nameWithOwner`, or the repo name with a different
   owner). A match means the repo moved, not that the human left: say so in one line and offer to
   rename the folder to the new slug. Only "no ledger anywhere claims this repo" means not opted in.
-- **Migration (`temp/` → home):** if an old `temp/learning/ledger.md` exists but there is none in
-  the home directory (and home is writable), move it there once and say so in one sentence. Never
-  keep both — the home ledger wins.
+- **Migration (`temp/` → home):** if an old `temp/learning/ledger.md` exists but none in the home
+  directory (and home is writable), move it there once and say so in one sentence. Never keep both
+  — the home ledger wins.
 
-**An existing ledger belongs to the human, not to this skill.** If one is already there, follow
-**its** structure, section names and status vocabulary — including when they are in a language
-other than this file's. Never rewrite, reformat or translate someone's ledger to match the
-template in `references/templates.md`; the template is for creating a *new* one.
+**An existing ledger belongs to the human, not to this skill.** Follow **its** structure, section
+names and status vocabulary — including when they are in another language. Never rewrite, reformat
+or translate someone's ledger to match the template in `references/templates.md`; the template is
+for creating a *new* one.
 
 ### Opt-in / opt-out (by the human)
 
@@ -77,15 +71,14 @@ template in `references/templates.md`; the template is for creating a *new* one.
   learning gap"). Only then are ledger, stack profile and pre-commit hook created — for them alone.
 - **Opt-out — say "learning mode off".** Then: resolve the open gap (flow C), remove the hook,
   archive the ledger. After that the skill is silent for them again.
-- **Opting out by deleting the ledger must also be safe**, because people will do it. On its own,
-  deleting the file would leave two orphans behind: a deliberately red working tree that no skill
-  will ever resolve (learning mode is now off, so flow C can never run), and an executable hook
-  that keeps blocking commits with no ledger left to explain why. So the hook **carries its
-  ledger's path and disables itself when the ledger is gone** (see `references/templates.md`), and a deleted
-  ledger is therefore a clean opt-out. If you find a red tree with a `LEARN #` marker and no
-  ledger, resolve the gap once, explain it, remove the hook, and stay silent from then on.
-- In projects using the wAI suite, `wai-init` asks the question **for the human running
-  init** — and creates *their* ledger, not a repo-wide switch.
+- **Opting out by deleting the ledger must also be safe**, because people will do it. The hook
+  **carries its ledger's path and disables itself when the ledger is gone** (see
+  `references/templates.md`), so a deleted ledger is a clean opt-out — no orphaned red tree, no
+  hook blocking commits with nothing left to explain why. If you find a red tree with a `LEARN #`
+  marker and no ledger, resolve the gap once, explain it, remove the hook, and stay silent from
+  then on.
+- In projects using the wAI suite, `wai-init` asks the question **for the human running init** —
+  and creates *their* ledger, not a repo-wide switch.
 
 ### Optional CLAUDE.md anchor (neutral, activates nobody)
 
@@ -107,49 +100,42 @@ Protocol: `.claude/skills/wai-learning-gap/SKILL.md`.
 
 - **Opt-in gate first.** The lookup itself is `ledger-locate.sh`: exit **0** = a ledger claims this
   repo (opted in — the path is printed), **1** = none does (not opted in), **2** = could not resolve
-  (fail-closed → treat as not-opted-in and do nothing). It owns the identity-not-path match described
-  below, so nothing re-implements the ledger-is-consent check. **If it does not return 0 and the
-  human has not just consented → stop immediately, creating nothing.** This human did not opt in.
-  Ledger, hook and stack profile are created **only** out of one of the two consents: an **explicit
-  invocation** by the human ("learning mode on", "plant a gap") — or a **hand-off from
-  `wai-init`** after the human answered its learning-mode question with yes. An automatic call
-  from inside `wai-implementation` is **not** consent: without a ledger it is silently skipped
-  there. (Whether to *offer a folder rename* on a moved-repo match stays a judgment call — see *The
-  identity lives in the ledger*.)
+  (fail-closed → treat as not-opted-in and do nothing). It owns the identity-not-path match, so
+  nothing re-implements the ledger-is-consent check. **If it does not return 0 and the human has
+  not just consented → stop immediately, creating nothing.** Ledger, hook and stack profile are
+  created **only** out of one of the two consents: an **explicit invocation** by the human
+  ("learning mode on", "plant a gap") — or a **hand-off from `wai-init`** after the human answered
+  its learning-mode question with yes. An automatic call from inside `wai-implementation` is
+  **not** consent: without a ledger it is silently skipped there. (Whether to *offer a folder
+  rename* on a moved-repo match stays a judgment call.)
 - **At most ONE open gap at a time.** Check **both** sides before planting with `open-gap-check.sh`:
   exit **0** = none open, **1** = an open gap exists (it prints WHICH side — working tree and/or
   ledger — to stdout), **2** = could not read the tree or ledger (UNKNOWN, fail-closed → do not
-  plant). Checking both sides matters because the ledger alone is not enough — it is a single
-  unlocked file shared across every clone and worktree of the repo, so two concurrent sessions would
-  both read "none open" and both plant, while a `LEARN #` can sit in a working tree with no ledger
-  row yet. If either side says a gap is open → run flow B or C first. **Concurrent sessions on one
-  repo are not supported**; there is no lock, and the ledger's last writer wins.
+  plant). Both sides matter: the ledger is a single unlocked file shared across every clone and
+  worktree, and a `LEARN #` can sit in a working tree with no ledger row yet. If either side says a
+  gap is open → run flow B or C first. **Concurrent sessions on one repo are not supported**; there
+  is no lock, and the ledger's last writer wins.
 - **Gaps exist only in the working tree, never in commits.** Plant only AFTER the phase has been
-  committed. Because gaps are never committed, **no other developer** ever sees them — and gap
-  numbers (`LEARN #12`) are ledger-local, so they never collide across people.
+  committed. Because gaps are never committed, no other developer ever sees them — and gap numbers
+  (`LEARN #12`) are ledger-local, so they never collide across people.
 - **Record what you removed.** The gap log row stores the file, the line range and the original
   line(s) (or the `HEAD` blob hash). Flow B verifies the restoration **against that record** — not
   against "no marker and tests are green", which a `git restore` also satisfies.
 - **Never carry an open gap across a branch switch.** Before `git checkout`, `switch`, `rebase` or
   `stash` (e.g. when `wai-team` moves to the next issue): resolve the open gap — flow C. A gap
-  belongs to the branch it was planted on. Note that git will **not** protect you here: it only
-  refuses the switch when the dirty file differs between the branches; the common case is that it
-  silently carries the gap over, and flow B then diffs against the wrong `HEAD`.
+  belongs to the branch it was planted on. Git will **not** protect you here: it commonly carries
+  the dirty file over silently, and flow B then diffs against the wrong `HEAD`.
 - **Hook check (idempotent, participants only):** if this human has a ledger, run `install-hook.sh`
-  to make sure a pre-commit hook that blocks `LEARN #` actually **runs**. It encodes both common
-  traps as mechanics, and returns exit **0** installed/verified · **1** refused (the hooks dir is
-  committed to the repo) · **2** git config unreadable (fail-closed). On **exit 1**, fall back to
-  blocking-by-check at plant time — do not fight the refusal; it is the one judgment that must never
-  be prose, *a personal hook must never become repo state*. The two traps the script handles, so you
-  understand what a refusal means:
-  - **`core.hooksPath`.** When it is set — husky and lefthook both set it, and they are
-    near-ubiquitous in JS/TS repos — git ignores `.git/hooks/` entirely, and a hook written there is
-    a **silent no-op**. The script installs into the configured directory instead, chaining any
-    existing pre-commit rather than overwriting it. If that directory is committed to the repo
-    (husky's `.husky/` is), it **refuses** (exit 1) rather than commit a personal hook into repo
-    state.
-  - **Existence ≠ execution.** The file merely existing proves nothing; the script verifies it is
-    executable and is the file git will actually run.
+  to make sure a pre-commit hook that blocks `LEARN #` actually **runs**. It returns exit **0**
+  installed/verified · **1** refused (the hooks dir is committed to the repo) · **2** git config
+  unreadable (fail-closed). On **exit 1**, fall back to blocking-by-check at plant time — do not
+  fight the refusal; *a personal hook must never become repo state*. The two traps it handles:
+  - **`core.hooksPath`.** When set (husky, lefthook), git ignores `.git/hooks/` entirely — a hook
+    written there is a silent no-op. The script installs into the configured directory instead,
+    chaining any existing pre-commit; if that directory is committed to the repo (husky's `.husky/`
+    is), it **refuses** (exit 1).
+  - **Existence ≠ execution.** The script verifies the file is executable and is the one git will
+    actually run.
 
   **Without a ledger, install no hook** — it would burden a colleague who never consented.
 - **Ledger:** personal, see *Ledger location* above. If it is missing **and** the human wants to
@@ -159,30 +145,27 @@ Protocol: `.claude/skills/wai-learning-gap/SKILL.md`.
   them per platform (web · desktop · iOS · Android · server/tooling). No `docs/` scan: architecture
   docs teach no idioms. **A stack the list does not name is a normal case, not a failure** — say
   which files you did find, ask the human what the stack is and how the project builds and tests,
-  and record both in the ledger. You need that command for every gap anyway. Then ask the human **briefly** for a
-  self-assessment per technology (one question, options: solid / basics / new) and record the
-  result as topic starting points: known starts in box 3, basics in box 2, new in box 1. In the
-  same first-run step, elicit the **three learning axes** — tech-stack / architecture /
-  domain-implementation — each with its own level (`off` · `basics` · `focus`), and record them in a
-  `## Learning axes` ledger table (see *Learning axes*). The axis says *which kind* of line a gap
-  lands on, the box says *how hard* — they are orthogonal. All of this stays in the personal ledger;
-  it **never** goes into the repo.
+  and record both in the ledger. Then ask **briefly** for a self-assessment per technology
+  (solid / basics / new) and record it as topic starting points: solid starts in box 3, basics in
+  box 2, new in box 1. In the same step, elicit the **three learning axes** — tech-stack /
+  architecture / domain-implementation — each with its own level (`off` · `basics` · `focus`), and
+  record them in a `## Learning axes` ledger table (see *Learning axes*). All of this stays in the
+  personal ledger; it **never** goes into the repo.
 
-  **Split the idempotency gate.** The step also fires when a "Stack profile" section already exists
-  but the `## Learning axes` table is **absent**: for a template-shaped ledger, add **only** that
-  table and touch nothing else, so a ledger created before axes existed gains them without a rewrite.
-  A human-authored ledger whose shape differs is left exactly as it is — Flow A's axis filter then
-  degrades to "all axes eligible" for it (`ledger-lint.sh` reports, never rewrites). Once both
-  sections are present this step is skipped.
+  **Split the idempotency gate.** The step also fires when a "Stack profile" section exists but the
+  `## Learning axes` table is **absent**: for a template-shaped ledger, add **only** that table and
+  touch nothing else. A human-authored ledger whose shape differs is left exactly as it is — Flow
+  A's axis filter then degrades to "all axes eligible" for it (`ledger-lint.sh` reports, never
+  rewrites). Once both sections are present this step is skipped.
 - **No learning mode** when: the human says "skip", during urgent hotfixes, or for pure
   docs/comment changes with no runtime effect.
 
 ## Learning axes — which KIND of line, and how each fails visibly
 
-A **box** is *how hard* a gap is (the Leitner schedule); an **axis** is *which kind* of line it
-lands on. They are orthogonal — every topic carries both. The three axes live in the ledger's
-`## Learning axes` table, each with its own level (`off` · `basics` · `focus`; `off` plants nothing
-from that axis, `focus` outweighs `basics` in selection):
+A **box** is *how hard* (the Leitner schedule); an **axis** is *which kind* of line — orthogonal,
+every topic carries both. The three axes live in the ledger's `## Learning axes` table, each with
+its own level (`off` · `basics` · `focus`; `off` plants nothing from that axis, `focus` outweighs
+`basics` in selection):
 
 - **tech-stack** — language and framework idioms, syntax, library APIs, build/config semantics.
   Fails visibly as a **compile or type error**.
@@ -215,22 +198,20 @@ are in `references/axes.md`.
    `swift test`, `npm test`, `./gradlew test`) must pass BEFORE the gap is created. Commit the
    phase as usual. That way red afterwards = the exercise only.
 
-   **And the gap is the last action before handing back to the human.** An open gap makes the
-   working tree deliberately red. If another skill runs on the same branch afterwards
-   (`wai-testing`, `wai-pr-review`), it sees the red and quietly "repairs" the exercise
-   away, or reports the phase as failed. So **plant no gap** when something else is still meant to
-   run on this branch in the same turn, when a branch switch is coming — or when an **autopilot**
-   is running (`wai-team` working through a batch of issues): nobody is at the keyboard to
-   close the gap there, it would only block the run. The normal case is the interactive one:
-   commit the phase, plant the gap, hand control back to the human.
+   **And the gap is the last action before handing back to the human.** A skill running afterwards
+   on the same branch (`wai-testing`, `wai-pr-review`) would "repair" the deliberately red
+   exercise away or report the phase as failed. So **plant no gap** when something else is still
+   meant to run on this branch in the same turn, when a branch switch is coming — or when an
+   **autopilot** is running (`wai-team` working through a batch): nobody is at the keyboard to
+   close a gap there. The normal case is interactive: commit the phase, plant the gap, hand
+   control back.
 
-   **And the gap belongs in the tree the human actually uses.** A repo with linked worktrees has
-   many trees but one ledger; a marker planted in a worktree the human never opens is invisible to
-   them (the sweep in `open-gap-check.sh` later reports it as misplaced). A session working from a
-   worktree plants only on code that also exists in the main checkout — and plants it there; if the
-   code lives only on the unmerged branch, wait until it merges. Use **absolute paths** when writing
-   the marker: the field fix for exactly this case landed back in the wrong tree once, through a
-   lingering `cd`.
+   **And the gap belongs in the tree the human actually uses.** A marker in a worktree the human
+   never opens is invisible to them (the sweep in `open-gap-check.sh` later reports it as
+   misplaced). A session working from a worktree plants only on code that also exists in the
+   main checkout — and plants it there; if the code lives only on the unmerged branch, wait
+   until it merges. Use **absolute paths** when writing the marker: the field fix for exactly
+   this case once landed in the wrong tree through a lingering `cd`.
 
    Once planted, confirm the gap fails visibly with `verify-gap-breaks.sh` — **except against a
    Socratic architecture gap**, which stays green by design and would be wrongly rejected by the
@@ -239,14 +220,13 @@ are in `references/axes.md`.
    **Axis filter:** consider only topics whose axis is enabled in the `## Learning axes` table,
    weighting a `focus` axis above a `basics` one; which axis a line belongs to is model judgment
    (`ledger-lint.sh` checks only that the label is a valid enum, not that it is the *right* one).
-   **Backward-compatible default:** when the ledger has **no** `## Learning axes` table (a
-   human-authored or older ledger, or before the axes question is answered), axis-filtering degrades
-   to **all axes eligible / no filtering** — the skill plants exactly as it does today and never
-   rewrites the ledger to add the table.
+   **Backward-compatible default:** when the ledger has **no** `## Learning axes` table, axis
+   filtering degrades to **all axes eligible / no filtering** — the skill plants exactly as before
+   and never rewrites the ledger to add the table.
    **Interleaving:** if the diff offers a line for a due topic from a *different* area than the one
-   just implemented, prefer that over the freshly written code — spaced repetition teaches better
-   than "just saw it, immediately quizzed on it". If no due topic fits the current diff, take the
-   most instructive new concept from the code you just changed (→ new topic, box 1).
+   just implemented, prefer that over the freshly written code — spaced repetition beats "just saw
+   it, immediately quizzed on it". If no due topic fits the diff, take the most instructive new
+   concept from the code just changed (→ new topic, box 1).
 3. **Line choice:** 1–3 related lines carrying one concept (a language feature, a framework idiom,
    build/config semantics, …). Exclusions:
    - nothing security-critical (auth, secrets, keychain, consent, billing),
@@ -267,8 +247,7 @@ are in `references/axes.md`.
 
    **INVARIANT: the original line(s) never appear in plaintext in the working tree — at any box.**
    They live only in the gap log; the deliberate `solution` escalation is the only reveal, and flow
-   B prices it (box −1). An answer visible next to the gap reduces the exercise to transcription,
-   and the Leitner counter climbs on recall it never tested.
+   B prices it (box −1). An answer visible next to the gap reduces the exercise to transcription.
 
    All CODE-REMOVAL rungs still fail visibly — confirm with `verify-gap-breaks.sh`. The
    Socratic architecture gap is a separate, non-removal form (see *Learning axes*) and does not use
@@ -288,23 +267,22 @@ are in `references/axes.md`.
    is clean"? An equivalent-but-different solution is fine and counts as solved.
 
    **A clean tree is not a solve.** `git restore`, `git checkout -- <file>` and `git stash` all
-   produce exactly the "solved" state: marker gone, tree matches `HEAD`, tests green. So does an
-   agent obeying the git protocol's *clean the tree before you switch* rule. Never infer a solve
-   from state alone: a box promotion requires an explicit claim from the human ("solved", "check my
-   solution") **or** a recorded edit of their own. Marker gone with no claim → status `expired`,
-   box **unchanged**.
+   produce exactly the "solved" state — so does an agent obeying the git protocol's *clean the tree
+   before you switch* rule. Never infer a solve from state alone: a box promotion requires an
+   explicit claim from the human ("solved", "check my solution") **or** a recorded edit of their
+   own. Marker gone with no claim → status `expired`, box **unchanged**.
 
-   **Marker gone HERE is not marker gone everywhere.** `open-gap-check.sh` sweeps every worktree of
-   the repo; when it names the marker in **another** tree, the gap is neither solved nor expired —
-   it sits in a tree the human never looks at. Move it to the tree the human actually uses (or
-   resolve it right there); only when the move is impossible and the gap stays unresolved, book
-   status `misplaced`, box **unchanged**. Never book `expired` while the sweep reports another tree.
+   **Marker gone HERE is not marker gone everywhere.** `open-gap-check.sh` sweeps every worktree;
+   when it names the marker in **another** tree, the gap is neither solved nor expired. Move it to
+   the tree the human actually uses (or resolve it right there); only when the move is impossible
+   and the gap stays unresolved, book status `misplaced`, box **unchanged**. Never book `expired`
+   while the sweep reports another tree.
 
-   **Socratic gaps verify against the recorded answer.** A Socratic architecture gap leaves the tree
-   green, so there is no red-to-clean transition to read: assess the human's written explanation
-   against the **expected answer recorded in the gap log** (`Original` column, for a `socratic`
-   form). A solve is always an explicit claim *plus* that answer — never inferred from the green
-   tree; marker gone with no answer → `expired`, box unchanged.
+   **Socratic gaps verify against the recorded answer.** There is no red-to-clean transition to
+   read: assess the human's written explanation against the **expected answer recorded in the gap
+   log** (`Original` column, for a `socratic` form). A solve is always an explicit claim *plus*
+   that answer — never inferred from the green tree; marker gone with no answer → `expired`, box
+   unchanged.
 2. **Leitner update:** solved without a hint → box +1 (max 5) · solved with a hint → box stays ·
    solved wrong / solution requested → box −1 (min 1) · expired without a claim → box unchanged ·
    misplaced → box unchanged. **Promotion requires recall, not transcription:** where the marker
@@ -314,10 +292,9 @@ are in `references/axes.md`.
    correct concretely instead of just saying "wrong".
 4. **Ledger:** set the status (`solved` / `solved-with-hint` / `solved-with-solution` / `expired` /
    `misplaced`), record the date and the box movement.
-5. **Leave the tree in a defined state.** This is what keeps the whole mechanism honest: an
-   equivalent solution means `tree ≠ HEAD`, and an uncommitted improvement left lying around will
-   be stashed by the next skill that cleans the tree — or buried under the next gap. So finish the
-   job: **amend the solution onto the phase commit and update the PR** (it is the human's code and
+5. **Leave the tree in a defined state.** An equivalent solution means `tree ≠ HEAD`, and an
+   uncommitted improvement will be stashed or buried by whatever runs next. So finish the job:
+   **amend the solution onto the phase commit and update the PR** (it is the human's code and
    belongs in the change), or, if they'd rather not keep it, restore to `HEAD`. Say which you did.
    After flow B the working tree is clean again, and `git diff` once more means "an open gap".
 
@@ -330,29 +307,27 @@ Then carry on as normal.
 ## Flow D — post-autopilot offer (opt-in, one gap, off a merged commit)
 
 After a **clean** `wai-team` run, the most instructive change of the batch can seed exactly
-**one** learning gap — never a queue. This flow is strictly opt-in and has hard preconditions; when
-any one fails, it plants nothing and says nothing.
+**one** learning gap — never a queue. Strictly opt-in; when any precondition fails, it plants
+nothing and says nothing.
 
-1. **Interactive precondition (checked, not assumed).** There must be a human present at the
-   hand-back. On a headless, scheduled or otherwise non-interactive run, **skip silently and plant
-   nothing** — an autopilot has nobody to close a gap, so a gap there is pure obstruction. This is a
-   checked precondition, not an intention.
-2. **Opt-in gate.** Run `ledger-locate.sh`; only exit **0** (a ledger claims this repo) means this
-   human opted in. Exit 1 (none) or 2 (could not resolve → fail-closed) → do nothing, create
-   nothing. `wai-team` itself never checks a ledger.
-3. **One open gap.** Run `open-gap-check.sh`; if either side already has an open gap (exit 1), or it
-   cannot read (exit 2), do not plant.
-4. **Pick the change.** `rank-pr-candidates.sh` shortlists the run's PRs by cheap proxies with the
-   excluded-domain no-go zones already removed (it calls the shared classifier, not a private list);
-   you pick the single most instructive PR and the one line and axis worth learning. Only exit **0**
-   yields a shortlist; **1** (no eligible PR — all excluded) and **2** (the PR list could not be
-   read → fail-closed) both mean **plant nothing**.
-5. **Branch discipline.** Plant on a **fresh `agent/learn-*` branch cut from the merged commit** —
-   **never** on `main`'s working tree, and never on a still-open PR branch. The gap is the human's
-   to solve on their own branch, off code that already landed.
+1. **Interactive precondition (checked, not assumed).** A human must be present at the
+   hand-back. On a headless, scheduled or otherwise non-interactive run, **skip silently and
+   plant nothing**.
+2. **Opt-in gate.** Run `ledger-locate.sh`; only exit **0** (a ledger claims this repo) means
+   this human opted in. Exit 1 (none) or 2 (could not resolve → fail-closed) → do nothing,
+   create nothing. `wai-team` itself never checks a ledger.
+3. **One open gap.** Run `open-gap-check.sh`; if either side already has an open gap (exit 1),
+   or it cannot read (exit 2), do not plant.
+4. **Pick the change.** `rank-pr-candidates.sh` shortlists the run's PRs by cheap proxies with
+   the excluded-domain no-go zones already removed (it calls the shared classifier, not a
+   private list); you pick the single most instructive PR and the one line and axis worth
+   learning. Only exit **0** yields a shortlist; **1** (no eligible PR — all excluded) and **2**
+   (the PR list could not be read → fail-closed) both mean **plant nothing**.
+5. **Branch discipline.** Plant on a **fresh `agent/learn-*` branch cut from the merged
+   commit** — **never** on `main`'s working tree, and never on a still-open PR branch.
 6. **Plant via Flow A.** From here Flow D **hands to Flow A** (topic/axis/box choice, the
-   code-removal ladder or a Socratic gap, `verify-gap-breaks.sh`, the ledger row). Flow D adds only
-   the preconditions and the branch.
+   code-removal ladder or a Socratic gap, `verify-gap-breaks.sh`, the ledger row). Flow D adds
+   only the preconditions and the branch.
 
 ## Hint escalation
 
@@ -364,8 +339,8 @@ any one fails, it plants nothing and says nothing.
 ## Leitner due-dates
 
 A **phase** is **one hand-back to the human** — not one commit. A turn that produces three commits
-is still one phase and still gets at most one gap. (Read standalone, outside the wAI suite,
-this is the definition that matters: plant when you are done and handing control back.)
+is still one phase and still gets at most one gap. (Read standalone, outside the wAI suite, this is
+the definition that matters: plant when you are done and handing control back.)
 
 Box 1: always due · Box 2: after ≥2 phases · Box 3: after ≥5 · Box 4: after ≥10 ·
 Box 5: mastered, sprinkle in only occasionally.
@@ -385,8 +360,7 @@ line:**
 
 **Box 2** uses the same form without the `Scaffold:` line — the concept hint is all the help there
 is. The `//` is illustrative: **use whatever the file uses** — `#`, `--`, `%`, `<!-- -->`. The
-examples are stack-neutral on purpose — a worked example in one language reads as *the* template to
-a reader whose repo is another.
+examples are stack-neutral on purpose.
 
 **Box 3 (combine the building blocks) — line removed, ingredients listed unordered:**
 
@@ -409,9 +383,8 @@ it carries a question and a recorded expected answer, not code (see *Learning ax
 
 ## Templates: ledger and pre-commit hook
 
-Both live in `references/templates.md` — they are one-time artifacts (a ledger is created once per
-repo, the hook installed once per participant), so they load only when those flows run. Use the
-ledger template for a **new** ledger only; an existing one keeps its own shape (see *Ledger
+Both live in `references/templates.md` — one-time artifacts, loaded only when those flows run. Use
+the ledger template for a **new** ledger only; an existing one keeps its own shape (see *Ledger
 location*). For the hook, **prefer `scripts/install-hook.sh`**: it writes into the directory git
 actually runs (`core.hooksPath`-aware), chains a pre-existing hook, refuses a repo-committed hooks
 dir, and embeds the ledger path so the hook self-disables when the human opts out.
