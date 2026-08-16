@@ -66,3 +66,4 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-08-14T05:02Z | 26 | NO-GO | ✗ required check(s) not green: ci=IN_PROGRESS; ✗ touches an excluded domain — the human merges these, always: EX-PAY; ✓ quality catalog present; ✓ repo mode: solo | ok|
 | 2026-08-14T05:08Z | 26 | NO-GO | ✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd; ✗ touches an excluded domain — the human merges these, always: EX-PAY; ✓ quality catalog present; ✓ repo mode: solo |ok |
 | 2026-08-14T05:11Z | 26 | NO-GO | ✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd; ✗ touches an excluded domain — the human merges these, always: EX-PAY; ✓ quality catalog present; ✓ repo mode: solo | ok|
+<!-- report 2026-08-16 rows=26 -->
