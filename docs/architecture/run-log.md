@@ -20,4 +20,7 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-14T05:02Z | wai-pr-review | PR #26 | NO-GO |
 | 2026-08-14T05:08Z | wai-pr-review | PR #26 | NO-GO |
 | 2026-08-14T05:11Z | wai-pr-review | PR #26 | NO-GO |
-| 2026-08-14T16:45Z | wai-pr-review | PR #28 | NO-GO |
+| 2026-08-16T21:59Z | wai-retro | all rows -> 2026-08-16 (maiden) | report cut, marker planted |
+| 2026-08-16T22:00Z | wai-pr-review | PR #31 | NO-GO |
+| 2026-08-16T22:02Z | wai-pr-review | PR #31 | GO |
+| 2026-08-14T19:45Z | wai-pr-review | PR #28 | NO-GO |
