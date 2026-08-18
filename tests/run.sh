@@ -233,6 +233,21 @@ else bad "  · and NOTHING was planted inside .claude/skills/" "stray tree: $D/.
 # Outside any git repo the cwd stays the base — every other fixture in this file IS that case
 # (gfix dirs are plain directories), so the fallback is pinned by the whole suite around this.
 
+# ROWS BELONG ON MAIN (#35, decided 2026-08-18). The gate writes its row wherever it runs; that
+# row has been squash-deleted twice (#28, #31) when it rode a feature branch's stale ledger copy.
+# The decision: the ledger stays in-repo (numbers-lint re-measures its claims in CI), and the
+# script SAYS where the row belongs every time it lands one off the default branch.
+gfix
+( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
+out="$(gate)"; rc=$?
+assert "a gate run on a feature branch → verdict unchanged, and the row-belongs-on-main note prints" 0 "$rc" "$out" "landed on branch 'feature-x' — ledger rows belong on main"
+gfix
+( cd "$D" && git init -q -b main . ) 2>/dev/null
+out="$(gate)"; rc=$?
+assert "  · on the default branch itself, no note — a warning on every run is one nobody reads" 0 "$rc" "$out" 'VERDICT: GO' 'ledger rows belong on'
+# Outside a git repo (every other fixture here) there is no branch to name — the note stays off;
+# those fixtures all assert exact verdict output and double as the pin.
+
 # Post-merge = MOOT. A gate run on an already-merged PR must say so, not fake a GO/NO-GO — no
 # artefact watches ordering, and this is the one place the gate can. It must short-circuit BEFORE
 # the guardrail/contract checks (which are irrelevant once merged) and record a MOOT row, so an
