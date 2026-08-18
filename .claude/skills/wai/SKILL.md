@@ -128,6 +128,15 @@ PERIODIC (after a few features/refactors, or on security triggers)
   at all, so read nothing as clean. Both at once exits 1, and both summary lines print. It reports
   presence now; staleness of an already-generated artifact (an old `ci.yml`) still needs a
   `wai-cicd` re-run.
+- **Want the run log's missing denominator — how often skills actually START, not just hand back?**
+  → opt in, per developer, to the invocation hook: `sh scripts/invocation-log.sh --snippet` prints
+  the `PostToolUse` block for your **`.claude/settings.local.json`** (never `settings.json` — a
+  committed hook would switch it on repo-wide; personal state never becomes repo state). The hook
+  appends one mechanical row per wai-skill invocation to `docs/architecture/invocation-log.md` —
+  no outcome column, ever; the model-written numerator stays `run-log.md`, and
+  `retro-compliance.sh` reports the difference as per-skill compliance. Fail-open by design:
+  `exit 0` = row appended or input ignored (a hook must never break the harness) · `exit 2` =
+  misuse only (an unknown argument), so a typo in the hook config is visible.
 - **Did a script and the prompt that invokes it drift apart** — after changing a script's exit
   codes, renaming a skill, or before a release? → run
   `sh scripts/contract-lint.sh` (from this skill's directory). It reads both sides of the joint and fails

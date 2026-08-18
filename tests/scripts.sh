@@ -1318,6 +1318,50 @@ assert "no git repo AND no gh → exit 2: nothing could be derived, and it says 
 
 # =================================================================================================
 echo
+echo "invocation-log.sh"
+# The mechanical denominator (#29 pt.2, opt-in hook). Exit 0 on EVERYTHING except misuse — a hook
+# that breaks the harness is worse than a lost row — and the log carries NO outcome column, ever:
+# a row without an outcome merged into the run log would be a forgery of one.
+# =================================================================================================
+IVLOG="$ROOT/.claude/skills/wai/scripts/invocation-log.sh"
+ivfix() { N=$((N+1)); D="$TMP/iv$N"; mkdir -p "$D"; IV="$D/docs/architecture/invocation-log.md"; }
+iv() { ( cd "$D" && "$SH" "$IVLOG" 2>&1 ); }
+
+# THE PASS PATH: a Skill-tool PostToolUse payload for a wai skill → one row, header self-written.
+ivfix; out="$(printf '{"tool_name":"Skill","tool_input":{"skill":"wai-testing","args":"x"}}' | iv)"; rc=$?
+assert "a wai-skill invocation payload → exit 0, row appended" 0 "$rc" "$out" ''
+if grep -q '| wai-testing |' "$IV" 2>/dev/null && grep -q 'no outcome column' "$IV" 2>/dev/null; then
+  ok "  · the row landed and the self-written header carries the never-merge rule"
+else bad "  · the row landed and the self-written header carries the never-merge rule" "$(cat "$IV" 2>&1)"; fi
+
+# A FOREIGN skill is not our denominator; a non-Skill tool is not an invocation. Both: silence.
+ivfix; printf '{"tool_name":"Skill","tool_input":{"skill":"code-review"}}' | iv >/dev/null 2>&1
+printf '{"tool_name":"Bash","tool_input":{"command":"ls"}}' | iv >/dev/null 2>&1
+if [ ! -e "$IV" ]; then ok "a foreign skill and a non-Skill tool write NOTHING (no file, no row)"
+else bad "a foreign skill and a non-Skill tool write NOTHING" "$(cat "$IV" 2>&1)"; fi
+
+# FAIL-OPEN: garbage stdin, empty stdin — exit 0, no row, no noise. A hook must never break a turn.
+ivfix; out="$(printf 'not json at all {{{' | iv)"; rc=$?
+assert "garbage stdin → exit 0, silent (fail-open — the harness must never see a hook fail)" 0 "$rc" "$out" ''
+ivfix; out="$(: | iv)"; rc=$?
+assert "empty stdin → exit 0, silent" 0 "$rc" "$out" ''
+
+# The ONE defined negative: misuse. A typo'd hook config must be visible, not swallowed.
+ivfix; out="$( cd "$D" && "$SH" "$IVLOG" --bogus 2>&1 )"; rc=$?
+assert "an unknown argument → exit 2 (misuse is the one loud path)" 2 "$rc" "$out" 'unknown argument'
+out="$( "$SH" "$IVLOG" --snippet 2>&1 )"; rc=$?
+assert "--snippet prints the settings.local.json opt-in (and names local, not settings.json)" 0 "$rc" "$out" 'settings.local.json'
+
+# Repo-root resolution, same rule as every writer: from a subdir the row lands at the root.
+N=$((N+1)); D="$TMP/ivgit$N"; gitrepo "$D"; printf 'x\n' > "$D/f"; gitcommit "$D" 'chore: base'
+mkdir -p "$D/deep/sub"
+( cd "$D/deep/sub" && printf '{"tool_name":"Skill","tool_input":{"skill":"wai"}}' | "$SH" "$IVLOG" ) >/dev/null 2>&1
+if grep -q '| wai |' "$D/docs/architecture/invocation-log.md" 2>/dev/null; then
+  ok "from a subdir of a git repo the row lands at the repo root"
+else bad "from a subdir of a git repo the row lands at the repo root" "$(find "$D" -name invocation-log.md 2>&1)"; fi
+
+# =================================================================================================
+echo
 echo "retro-compliance.sh"
 # The retro's denominator (issue #14): cross the run log × the gate ledger × git merge history and
 # report the share of merged PRs that left a trace. 0 = emitted — including named-empty lines for
@@ -1420,6 +1464,24 @@ rcfix
 printf '1 2026-08-10T09:00:00Z\n2 2026-08-10T10:00:00Z\n' > "$D/merged-prs-gh"
 out="$(rcgh)"; rc_=$?
 assert "  · below the ceiling, no cap caveat is printed" 0 "$rc_" "$out" 'merged PRs: 2 in the period' 'limit ceiling'
+
+# THE DENOMINATOR CROSSING (#29 pt.2). With an invocation log present, the per-skill compliance
+# line states invoked-vs-logged; absent, the line NAMES the opt-in — "not installed" must never
+# read as "nothing ran". logged > invoked is printed as-is, never clamped.
+rcfix
+{ printf '| when (UTC) | skill |\n|---|---|\n'
+  printf '| 2026-08-10T09:00Z | wai-pr-review |\n'
+  printf '| 2026-08-10T10:00Z | wai-pr-review |\n'
+  printf '| 2026-08-11T09:00Z | wai-testing |\n'
+} > "$D/docs/architecture/invocation-log.md"
+out="$(rc)"; rc_=$?
+assert "invocation log present → per-skill invoked-vs-logged compliance is stated" 0 "$rc_" "$out" \
+  'compliance:.*wai-pr-review invoked 2 · logged 2'
+assert "  · a skill invoked but never logged shows logged 0, not absence" 0 "$rc_" "$out" \
+  'wai-testing invoked 1 · logged 0'
+rcfix; out="$(rc)"; rc_=$?
+assert "no invocation log → the opt-in is NAMED; absence never reads as nothing-ran" 0 "$rc_" "$out" \
+  'invocations \(hook\): not installed.*never that nothing ran'
 
 # gh PRESENT BUT FAILING — fail closed to the git path, and SAY the degradation happened. A gh that
 # errors must never silently become "nothing landed": that is the comfortable answer, and it is the

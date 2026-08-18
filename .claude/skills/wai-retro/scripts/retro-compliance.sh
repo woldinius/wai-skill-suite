@@ -110,6 +110,40 @@ else
   echo "    per skill: $PERSKILL"
 fi
 
+# ── the invocation denominator (opt-in hook, #29) ────────────────────────────────────────────────
+# invocation-log.md is written MECHANICALLY by the PostToolUse hook a developer opted into; the run
+# log above is the model-written numerator. The difference is per-skill prompt-contract compliance
+# — the number this section existed to imply and could never state. ABSENCE of the file is a
+# legitimate state (the hook is opt-in), so it is a named line, never an exit 2: "not installed"
+# must never read as "nothing ran".
+ILOG="${INVOCATION_LOG:-docs/architecture/invocation-log.md}"
+if [ -f "$ILOG" ] && [ -r "$ILOG" ]; then
+  IVRAW="$(awk -F'|' -v since="$SINCE" '
+    function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+    /^\| *[0-9][0-9][0-9][0-9]-/ {
+      if (since != "" && substr(trim($2), 1, 10) < since) next
+      n++; sk[trim($3)]++
+    }
+    END { print n + 0; for (s in sk) print sk[s] " " s }' "$ILOG")"
+  IVN="$(printf '%s\n' "$IVRAW" | head -1)"
+  if [ "$IVN" = 0 ]; then
+    echo "  invocations (hook): none — 0 rows in the period ($ILOG)"
+  else
+    # Cross per skill: invoked N (mechanical) vs logged M (model). logged > invoked is possible —
+    # a run on a machine without the hook — and is printed as-is, never clamped: a number that
+    # cannot exceed its denominator is a number someone normalised.
+    IVCROSS="$(printf '%s\n' "$IVRAW" | sed 1d | sort -rn | while IFS=' ' read -r _n _sk; do
+                 [ -n "$_sk" ] || continue
+                 _m="$(printf '%s\n' "$RLRAW" | sed 1d | grep -E " $_sk\$" | awk '{print $1; exit}')"
+                 printf '%s invoked %s · logged %s\n' "$_sk" "$_n" "${_m:-0}"
+               done | awk '{ s = s (s ? "  |  " : "") $0 } END { print s }')"
+    echo "  invocations (hook): $IVN in the period ($ILOG)"
+    echo "    compliance: $IVCROSS"
+  fi
+else
+  echo "  invocations (hook): not installed — the denominator is opt-in (sh .claude/skills/wai/scripts/invocation-log.sh --snippet); absence means the hook is off, never that nothing ran"
+fi
+
 # ── gate-ledger verdicts in the period ───────────────────────────────────────────────────────────
 # Same row anchor as gate-stats.sh — one parser convention for the ledger, everywhere. This block
 # counts rows and collects PR numbers; every RATE about the ledger belongs to gate-stats.sh.
