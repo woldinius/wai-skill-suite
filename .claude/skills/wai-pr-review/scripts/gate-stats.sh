@@ -40,7 +40,10 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-[ -n "$LEDGER" ] || LEDGER="docs/architecture/gate-ledger.md"
+# Default is REPO-relative (see merge-gate.sh — the writer this reads; resolving from the cwd
+# made a documented invocation report "no ledger" over a repo that had 28 rows, a false blank).
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+[ -n "$LEDGER" ] || LEDGER="${REPO_ROOT:-.}/docs/architecture/gate-ledger.md"
 
 # --mark exists to record that a REPORT was cut. Alone it would plant a marker for a report that
 # never happened — doctor would then count from a lie. Refuse, do not guess.

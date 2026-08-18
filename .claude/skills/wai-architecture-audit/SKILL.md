@@ -177,7 +177,7 @@ last audit — don't re-derive a full report when nothing meaningful changed.
    the trackable handles into it. Without `gh`, list the would-be issues with their
    `gh issue create` commands.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-architecture-audit"
-   "<subject>" "<half-sentence outcome>"` (from this skill's directory) — an audit that finds
+   "<subject>" "<half-sentence outcome>"` (from this skill's directory; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — an audit that finds
    nothing still writes its row, because that is the run that vanishes today; fail-open: exit 0
    even when the write fails, exit 2 only on misuse (missing arguments).
    **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (same directory), paste

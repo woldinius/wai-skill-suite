@@ -120,7 +120,7 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    **wai-pr-review** on the PR; or the next planned task — and note if
    **wai-architecture-audit** is due.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-implementation"
-   "<subject>" "<half-sentence outcome>"` (from this skill's directory) — a run without a row is
+   "<subject>" "<half-sentence outcome>"` (from this skill's directory; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — a run without a row is
    invisible work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing args).
    **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (same directory), paste
    its output verbatim beneath the ▶ Recommended next block, then give your recommendation — in that

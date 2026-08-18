@@ -43,7 +43,12 @@
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
-ROOT="${1:-.}"
+# The default root is the enclosing git worktree, not the cwd: run "from this skill's
+# directory" (as documented), a cwd default audited the SKILL FOLDER as if it were the repo and
+# printed "no drift" over a missing catalog — a false clean, with no cadence advisory at all.
+# An explicit argument still wins; outside a git repo the cwd stays the base.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+ROOT="${1:-${REPO_ROOT:-.}}"
 # Cannot enter the repo ⇒ nothing below was checked. That is state 2, and it is the ONE case where
 # saying "no drift" would be a lie of omission rather than a finding.
 cd "$ROOT" 2>/dev/null || { echo "doctor: cannot cd to '$ROOT'" >&2; exit 2; }

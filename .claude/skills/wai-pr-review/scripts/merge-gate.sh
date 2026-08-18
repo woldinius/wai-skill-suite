@@ -104,7 +104,17 @@ while [ $# -gt 0 ]; do
   [ $# -gt 0 ] && shift
 done
 
-CATALOG="docs/architecture/quality-attributes.md"
+# DEFAULT PATHS ARE REPO-RELATIVE, NOT CWD-RELATIVE. The documented invocations run the suite's
+# scripts "from this skill's directory"; resolved against the cwd, that produced a FALSE verdict
+# ("no quality catalog" — in a repo that has one) and planted a stray gate-ledger inside
+# .claude/skills/ — the very tree install.sh copies into every target repo (2026-08-18, live).
+# So the default base is the enclosing git worktree; an explicit argument or env override still
+# wins, and outside any repo the cwd stays the base (fixtures and bare dirs keep working).
+# Deliberately --show-toplevel, NOT the --git-common-dir parent: rows belong to the worktree that
+# produced them — consolidating across worktrees changes WHERE state lands, which is issue #35's
+# still-open human decision, not this fix's.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+CATALOG="${REPO_ROOT:-.}/docs/architecture/quality-attributes.md"
 
 REASONS=""
 VERDICT=0                       # 0 go · 1 no-go · 2 unknown
@@ -129,7 +139,7 @@ cap400() { awk '{ if (length($0) <= 400) print; else { s = substr($0, 1, 400); s
 # Losing a row is a data gap; blocking a correct merge because a file was read-only would be a real
 # cost. (ADR-0002; docs/learnings/empirical-test-plan.md §0–1.)
 emit_ledger() {
-  _led="${MERGE_GATE_LEDGER:-docs/architecture/gate-ledger.md}"
+  _led="${MERGE_GATE_LEDGER:-${REPO_ROOT:-.}/docs/architecture/gate-ledger.md}"
   if [ ! -f "$_led" ]; then
     mkdir -p "$(dirname "$_led")" 2>/dev/null || true
     # A quoted heredoc: every line literal — backticks, dashes and all — so nothing is a printf
@@ -440,7 +450,7 @@ fi
 # gate is UNKNOWN and the human merges. There is no path from "I could not classify" to GO — the
 # rule the whole gate lives by. pr-review inherits EX-GDPR for free: it obeys this exit code, it
 # does not re-derive the domain set.
-CONF="docs/architecture/merge-gate.conf"
+CONF="${REPO_ROOT:-.}/docs/architecture/merge-gate.conf"
 EXCL_SH="$(dirname "$0")/../../wai/scripts/excluded-domains.sh"
 if [ ! -f "$CONF" ]; then
   # The gate needs its config to know which paths are contract-domain. Absent conf = it cannot

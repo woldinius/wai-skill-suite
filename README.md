@@ -103,7 +103,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took nine repair commits in two days; the gate
 once failed *open* under zsh and later could never say GO at all. That is why
-[`tests/`](tests/) exists — 337 cases, **founded** on bugs that shipped and grown into the
+[`tests/`](tests/) exists — 347 cases, **founded** on bugs that shipped and grown into the
 regression guards around them, run on two shells because shellcheck passed a construct that is a
 syntax error in the `/bin/sh` of macOS. (The second shell runs locally on every branch, not in
 CI: macOS runners bill at 10× and exhausted the private repo's Actions minutes until no check
@@ -415,7 +415,7 @@ install.sh                                       # idempotent installer (inject/
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 337 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 347 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, audits, catalog, open questions
 ```
 

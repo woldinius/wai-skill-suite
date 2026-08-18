@@ -35,7 +35,7 @@ set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
 SINCE=""
-ROOT="."
+ROOT=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --since)   [ $# -ge 2 ] && [ -n "${2:-}" ] || { echo "retro-compliance: --since needs a date (YYYY-MM-DD)" >&2; exit 2; }
@@ -47,6 +47,12 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+# Default root = the enclosing git worktree (doctor.sh carries the incident); explicit arg wins
+# — including an explicit "." meaning "this directory, literally". Outside a repo, cwd.
+if [ -z "$ROOT" ]; then
+  REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  ROOT="${REPO_ROOT:-.}"
+fi
 case "$SINCE" in
   '') ;;
   [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
