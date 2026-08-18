@@ -37,11 +37,21 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      # fetch-tags, because numbers-lint (inside tests/run.sh) verifies version references against
-      # `git tag` — a shallow checkout has no tags, which once read as "this tag does not exist"
-      # and failed the job on tags that were real.
+      # fetch-depth: 0, because two checks here need tags — and `fetch-tags: true` alone did NOT
+      # deliver them. MEASURED, 2026-08-18, run 32186833930: with `fetch-tags: true` and the
+      # default depth, `git tag` in the checkout returned NOTHING. numbers-lint never noticed,
+      # because it falls back to `git ls-remote --tags origin` when the local list is empty — it
+      # only needs tag NAMES — so the version check has been running off the remote, not off this
+      # checkout, since the day that line was added. It took a second check to expose it:
+      # release-lint needs a tag as a REVISION (it diffs `<tag>..HEAD`) and cannot fall back to a
+      # name, so it reported "not measured (no tags)" and its standing guard went red — which is
+      # exactly what that guard was fixed to do (#38). A masked check is the thing this repo
+      # exists to argue against, and this one was masked by a fallback that looked like resilience.
+      # Full history costs nothing here (one small repo, ~40 commits) and makes both checks
+      # measure the tree that CI actually built.
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           fetch-tags: true
       # `-S warning` IS THE POINT, NOT A LOOSENING: without it this job was red for twelve days on
       # `info`-level opinions (SC2015 on a correct pattern) that a developer's newer shellcheck

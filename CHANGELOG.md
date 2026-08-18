@@ -4,6 +4,79 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
+## [0.3.0] — 2026-08-18
+
+### Changed
+
+- **The citation dial — READ THIS BEFORE UPGRADING** (#30). A catalog citation (`SEC-7`, `GDPR-1`)
+  now **decides** the excluded-domain verdict only where the family is *anchored*: the repo
+  declares paths whose shape classifies into it. Unanchored, the citation is **reported** on a
+  visible `ADVISORY-DOMAINS:` line — in the verdict and in the ledger row — and does **not** gate.
+  **A repo upgrading from 0.2.0 will see GO where it saw NO-GO**, on diffs whose only excluded-
+  domain contact was a citation to a family it declares no paths for. Paths and diff statements
+  stay authoritative everywhere, the widening rule stays widen-only, and under `--autonomy` an
+  advisory citation still **HOLDS** the drain — autonomy errs closed, always. Why: measured cost.
+  In one field repo (124 verdicts, 0 fn over 37 judged GOs) the citation false alarm stood alone
+  three times — once on an author's own *"SEC-7: unchanged"* self-review line — and the cheapest
+  route to a green gate became *"do not cite catalog IDs"*, the exact opposite of what every skill
+  instructs. Both field cases are pinned as fixtures.
+- **The gate ledger's home is decided: in-repo, and rows belong on `main`** (#35). The evidence
+  loop is the reason — `numbers-lint` re-measures the ledger's published claims in CI, and a
+  ledger under `~/.claude/` cannot be re-measured by anything. The cost of in-repo is the squash
+  race that has now deleted a row twice; the mitigation is a rule the gate prints itself, every
+  time it lands a row off the default branch, and that a fresh ledger's generated header teaches
+  from day one. Field repos may still choose the personal path; that door stays open in #35.
+
+### Added
+
+- **`tests/release-lint.sh`** — the tree must not silently disagree with its newest tag. Two
+  relations, both mechanical: work shipped since the newest tag under `.claude/skills/**` must be
+  declared in this changelog (an `## [Unreleased]` heading or a newer version's), and the plugin
+  manifests' version string must never be *behind* the newest tag — asymmetric, because *ahead* is
+  the normal state of a release PR. Written because the fix below sat on `main`, unreleased and
+  unrecorded, while both documented install paths pinned the release without it.
+- **The invocation denominator** (#29): `wai/scripts/invocation-log.sh` plus an opt-in `PostToolUse`
+  hook (`--snippet` prints the block for `.claude/settings.local.json`, never the committed
+  `settings.json` — a committed hook is a repo-wide switch). One row per skill *start*, with no
+  outcome column, ever: the denominator for "how often does a skill actually run", beside the
+  run log's model-written numerator.
+- **The installer's no-op answer** (field-reported): an update that changes nothing now *says so*
+  — `diff -rq` over exactly the set `install.sh` owns, rather than a hash over a tree it does not.
+  A version stamp that advances silently over zero delta reads as "something happened", and the
+  next audit inherits that misread.
+- **`numbers-lint` reaches the marketplace copy** — `.claude-plugin/*.json` joined the living set,
+  and the script-count pattern grew an adjective slot. "27 enforcement scripts and 300+ tests"
+  had evaded the lint twice over: outside its glob, and written vaguely enough that no pattern
+  could match. A "300+" is not a modest claim, it is an unfalsifiable one.
+- **`numbers-lint` re-measures Q3's judged-NO-GO count** — the open-questions agenda drifted from
+  5 to 26 judged rows without noticing that its own exit criterion (≥ 20 human-tagged rows) had
+  been met.
+
+### Fixed
+
+- **Default paths resolve against the repo, not the accident of the cwd** (#29 pt.1) — seven
+  scripts (`merge-gate`, `excluded-domains`, `run-log`, `gate-stats`, `doctor`, `open-items`,
+  `retro-compliance`). Run per the skills' own documented invocation — *"from this skill's
+  directory"* — `merge-gate.sh` produced a **false verdict** (*"no quality catalog"*, in the repo
+  that has one) and planted a stray gate-ledger **inside `.claude/skills/`**, the very tree
+  `install.sh` copies into every target repo. The same class made `gate-stats` report "no ledger"
+  over 28 rows and `doctor` audit the *skill folder* as if it were the repo, printing "no drift"
+  over a missing catalog. An explicit argument or env override still wins; outside any repo the
+  cwd stays the base.
+- **Squash-aware denominators** (#24, #27) — `open-items.sh` and `retro-compliance.sh` take the
+  merged-PR set from the authority `gh` answers from, instead of `git log --merges`, which sees
+  nothing at all in a squash-merge repo. `traced share` was "not derivable" for two consecutive
+  retrospectives because of it.
+- The `case … esac` inside `$( )` — a bash 3.2 syntax error that shellcheck passes — shipped for
+  the **fifth** time, in the advisory dedupe, and took out 27 cases at once. `merge-gate.sh`'s
+  header count of four is now five.
+
+### Evidence
+
+- Two retrospectives cut from artifacts and dated (#31, #32) — the second records a merge deleting
+  a row from an append-only ledger while the row count went *up*, and three cwd-wrong invocations
+  in the retro skill's own documentation, both fixed above.
+
 ## [0.2.0] — 2026-08-14
 
 ### Added
