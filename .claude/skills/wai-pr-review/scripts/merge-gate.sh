@@ -488,8 +488,16 @@ else
   # back to its flattened output so an UNKNOWN still carries its reason into the ledger.
   EXCL_SUM="$(printf '%s\n' "$EXCL_OUT" | grep '^EXCLUDED-DOMAINS:' | head -1 | sed 's/^EXCLUDED-DOMAINS:[[:space:]]*//' || true)"
   [ -n "$EXCL_SUM" ] || EXCL_SUM="$(printf '%s' "$EXCL_OUT" | tr '\n' ' ' | sed 's/[[:space:]]\{1,\}/ /g; s/^ *//; s/ *$//' | cap400)"
+  # An ADVISORY on exit 0 must survive INTO the verdict and the ledger row — the citation dial's
+  # whole bargain is "visible without deciding", and the first version of this branch swallowed it:
+  # the classifier printed ADVISORY-DOMAINS and the gate replaced it with a fixed all-clear line,
+  # so the one output the human actually reads lost the visibility the decision was made for.
+  # info(), not a veto — stated, never blocking. (Found by the adversarial re-review of the PR
+  # that introduced the dial.)
+  EXCL_ADV="$(printf '%s\n' "$EXCL_OUT" | grep '^ADVISORY-DOMAINS:' | head -1 | sed 's/^ADVISORY-DOMAINS:[[:space:]]*//' || true)"
   case "$EXCL_RC" in
-    0) ok "no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure)" ;;
+    0) ok "no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure)"
+       [ -z "$EXCL_ADV" ] || info "advisory (not gating, citation dial): $EXCL_ADV cited without declared paths — visible here so it reaches the ledger row" ;;
     1) no_go "touches an excluded domain — the human merges these, always: $EXCL_SUM" ;;
     *) unknown "the domain classifier could not verify this PR (fail closed): $EXCL_SUM" ;;
   esac

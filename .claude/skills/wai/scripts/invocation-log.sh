@@ -60,6 +60,12 @@ fi
 IN="$(head -c 65536 2>/dev/null || true)"
 printf '%s' "$IN" | grep -q '"tool_name"[[:space:]]*:[[:space:]]*"Skill"' || exit 0
 SKILL="$(printf '%s' "$IN" | grep -o '"skill"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"skill"[[:space:]]*:[[:space:]]*"//; s/"$//')"
+# Table-safe, like run-log.sh's cell(): the name is the ONE field this row takes from the payload,
+# and a name carrying '|' forged extra columns — a crafted skill name minted rows with a fake
+# timestamp and skill, corrupting the very denominator this log exists to make trustworthy.
+# Pipes become '/', whitespace collapses, 80 chars on a word boundary with a visible cut.
+SKILL="$(printf '%s' "$SKILL" | tr '\n' ' ' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^ *//; s/ *$//' \
+  | awk '{ if (length($0) <= 80) print; else { s = substr($0, 1, 80); sub(/ [^ ]*$/, "", s); print s "…" } }')"
 case "$SKILL" in
   wai|wai-*) : ;;                       # only the suite's own skills — a foreign skill is not our denominator
   *) exit 0 ;;

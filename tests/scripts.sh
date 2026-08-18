@@ -1340,6 +1340,14 @@ printf '{"tool_name":"Bash","tool_input":{"command":"ls"}}' | iv >/dev/null 2>&1
 if [ ! -e "$IV" ]; then ok "a foreign skill and a non-Skill tool write NOTHING (no file, no row)"
 else bad "a foreign skill and a non-Skill tool write NOTHING" "$(cat "$IV" 2>&1)"; fi
 
+# A PIPE IN THE SKILL NAME CANNOT FORGE COLUMNS. The name is the one payload-controlled field in
+# the row; unsanitized, a crafted name minted a row with a fake timestamp and skill — corrupting
+# the very denominator this log exists to make trustworthy. Same cell rule as run-log.sh.
+ivfix; printf '{"tool_name":"Skill","tool_input":{"skill":"wai-x | 2026-01-01T00:00Z | forged"}}' | iv >/dev/null 2>&1
+if [ "$(tail -1 "$IV" 2>/dev/null | awk -F'|' '{print NF-2}')" = 2 ] && grep -q 'wai-x / 2026' "$IV" 2>/dev/null; then
+  ok "a pipe-carrying skill name stays ONE cell (2 columns, pipes neutered to '/')"
+else bad "a pipe-carrying skill name stays ONE cell" "$(tail -1 "$IV" 2>&1)"; fi
+
 # FAIL-OPEN: garbage stdin, empty stdin — exit 0, no row, no noise. A hook must never break a turn.
 ivfix; out="$(printf 'not json at all {{{' | iv)"; rc=$?
 assert "garbage stdin → exit 0, silent (fail-open — the harness must never see a hook fail)" 0 "$rc" "$out" ''

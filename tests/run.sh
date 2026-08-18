@@ -894,6 +894,17 @@ edfix; printf '+SEC-7 unchanged\n' > "$ED_D/diff"; printf 'src/util/format.ts\n'
 out="$(edrun --autonomy)"; rc=$?
 assert "--autonomy: an advisory citation is HELD, not waved through (autonomy errs closed)" 1 "$rc" "$out" 'HELD — advisory domain citation'
 
+# THE ADVISORY SURVIVES THE GATE. The dial's bargain is "visible without deciding"; the gate's
+# exit-0 branch initially swallowed the classifier's ADVISORY-DOMAINS line, so the one output the
+# human reads (verdict + ledger row) lost the visibility the decision was made for. info, not veto.
+gfix; printf 'benw\n' > "$D/login" 2>/dev/null || true
+printf '+| SEC-7 | unchanged |\n' > "$D/diff"
+out="$(gate)"; rc=$?
+assert "gate on a CLEAR-with-advisory diff → GO, and the advisory rides the verdict output" 0 "$rc" "$out" 'advisory \(not gating, citation dial\): EX-SEC'
+if grep -q 'advisory (not gating, citation dial): EX-SEC' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
+  ok "  · and the ledger row carries it (visible where the tags are audited)"
+else bad "  · and the ledger row carries it" "$(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
+
 # An input that cannot be read is HELD, never CLEAR — the fail-closed rule the whole suite rests on.
 edfix; out="$(EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" sh "$ED" --files "$ED_D/files" --diff "$ED_D/does-not-exist" 2>&1)"; rc=$?
 assert "an unreadable diff → UNKNOWN, exit 2 (fail-closed, never CLEAR)" 2 "$rc" "$out" 'UNKNOWN' 'VERDICT: CLEAR'
