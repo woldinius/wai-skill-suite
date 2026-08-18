@@ -212,6 +212,27 @@ out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" MERGE_GATE_LEDGER="$MERGE_
 assert "an unwritable ledger does NOT change the verdict (fail-open logging)" 0 "$rc" "$out" 'VERDICT: GO'
 unset MERGE_GATE_LEDGER
 
+# CWD IS NOT THE REPO (issue #29 sub-fix 2, and the 2026-08-18 live incident). The documented
+# invocation runs this script "from this skill's directory". Resolved against the cwd, that
+# produced a FALSE UNKNOWN ("no quality catalog" — in a repo that has one) AND planted a stray
+# gate-ledger inside .claude/skills/wai-pr-review/ — inside the very tree install.sh copies into
+# every target repo. A cwd bug that seeds a foreign ledger into the install payload is why this
+# case exists. The fixture is a real git repo; the gate is run from the skill directory and must
+# behave EXACTLY as if run from the root: same verdict, ledger at the root, nothing in the payload.
+gfix
+( cd "$D" && git init -q . ) 2>/dev/null
+mkdir -p "$D/.claude/skills/wai-pr-review"
+out="$( cd "$D/.claude/skills/wai-pr-review" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 2>&1 )"; rc=$?
+assert "run from the skill dir of a git repo → same GO as from the root (no false UNKNOWN)" 0 "$rc" "$out" 'VERDICT: GO'
+if grep -qE '^\| .* \| 1 \| GO \|' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
+  ok "  · the ledger row landed at the REPO root"
+else bad "  · the ledger row landed at the REPO root" "no row in $D/docs/architecture/gate-ledger.md"; fi
+if [ ! -e "$D/.claude/skills/wai-pr-review/docs" ]; then
+  ok "  · and NOTHING was planted inside .claude/skills/ (the install payload stays clean)"
+else bad "  · and NOTHING was planted inside .claude/skills/" "stray tree: $D/.claude/skills/wai-pr-review/docs"; fi
+# Outside any git repo the cwd stays the base — every other fixture in this file IS that case
+# (gfix dirs are plain directories), so the fallback is pinned by the whole suite around this.
+
 # Post-merge = MOOT. A gate run on an already-merged PR must say so, not fake a GO/NO-GO — no
 # artefact watches ordering, and this is the one place the gate can. It must short-circuit BEFORE
 # the guardrail/contract checks (which are irrelevant once merged) and record a MOOT row, so an
@@ -285,6 +306,17 @@ N=$((N+1)); SD="$TMP/s$N"; mkdir -p "$SD"
 out="$(sh "$STATS" "$SD/led.md" 2>&1)"; rc=$?
 assert "gate-stats counts the false negative that makes the case" 0 "$rc" "$out" 'FALSE NEGATIVES[^0-9]*1'
 assert "gate-stats reports the 3 emitted verdicts as the denominator" 0 "$rc" "$out" '3 verdict'
+
+# THE FALSE BLANK (2026-08-18): run "from this skill's directory" per its own SKILL.md, the default
+# ledger path resolved against the cwd and gate-stats reported "no ledger" over a repo with 28
+# rows — which the retro's fail-closed rule then publishes as a false `not measured`. The default
+# now resolves against the enclosing worktree; an explicit path (every other case here) still wins.
+N=$((N+1)); SG="$TMP/sg$N"; mkdir -p "$SG/docs/architecture" "$SG/sub/dir"
+( cd "$SG" && git init -q . ) 2>/dev/null
+{ printf '| when | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-07-16T09:00Z | 1 | GO | x | ok |\n'; } > "$SG/docs/architecture/gate-ledger.md"
+out="$( cd "$SG/sub/dir" && sh "$STATS" 2>&1 )"; rc=$?
+assert "default ledger path resolves from a SUBDIR to the repo root (no false 'no ledger')" 0 "$rc" "$out" '1 verdict'
 
 # THE 0% THAT WAS 15%. A three-week field ledger (issue #10) tagged with a vocabulary finer than
 # two letters — `ok, besser GO`, `ok, manual fix`, `fp, bug` — and the literal-match parser
@@ -532,6 +564,17 @@ assert "catalog + a POPULATED merge-gate.conf → no drift, exit 0" 0 "$rc" "$ou
 printf 'CONTRACT_PATHS=""\n' > "$DD/docs/architecture/merge-gate.conf"
 out="$(sh "$DOCTOR" "$DD" 2>&1)"; rc=$?
 assert "an EMPTY CONTRACT_PATHS is drift — the gate would pass billing PRs" 1 "$rc" "$out" 'CONTRACT_PATHS'
+
+# THE FALSE CLEAN (2026-08-18): doctor run with no argument "from this skill's directory" audited
+# the SKILL FOLDER as if it were the repo — "no drift" over a missing catalog, and the report-
+# cadence advisory (the retro's trigger) silently absent. The no-arg default is now the enclosing
+# worktree; an explicit argument (every other case in this section) still wins.
+docdir; printf '# cat\n' > "$DD/docs/architecture/quality-attributes.md"
+printf 'CONTRACT_PATHS="src/billing/*"\n' > "$DD/docs/architecture/merge-gate.conf"
+mkdir -p "$DD/.claude/skills/wai"
+( cd "$DD" && git init -q . ) 2>/dev/null
+out="$( cd "$DD/.claude/skills/wai" && sh "$DOCTOR" 2>&1 )"; rc=$?
+assert "no-arg doctor from the skill dir audits the REPO, not the folder (no false clean)" 0 "$rc" "$out" 'merge gate is configured'
 
 # A repo not set up at all (no catalog) → not drift; nothing can drift before setup.
 docdir; out="$(sh "$DOCTOR" "$DD" 2>&1)"; rc=$?

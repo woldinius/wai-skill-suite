@@ -36,8 +36,14 @@
 #           deliberately no exit 1, because this script renders no verdict about anything.
 #
 # Usage: sh run-log.sh <skill> <subject> <outcome>
-#        Appends to docs/architecture/run-log.md (cwd-relative; $RUN_LOG overrides the path — the
-#        same pattern as $MERGE_GATE_LEDGER on the gate ledger).
+#        Appends to <repo-root>/docs/architecture/run-log.md ($RUN_LOG overrides the path — the
+#        same pattern as $MERGE_GATE_LEDGER on the gate ledger; outside a git repo, cwd-relative).
+#
+# WHAT COUNTS AS ONE RUN — defined here because undefined it was measured wrong (issue #29): rows
+# were written per HAND-BACK, so a turn that implemented three subjects logged one row and the
+# count undercounted by a factor nobody could reconstruct. The unit is one row per (skill, subject)
+# completed: a turn that hands back three subjects logs three rows; a re-run on the same subject
+# logs again (two rows for two runs is correct — the gate ledger already counts that way).
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
@@ -47,7 +53,11 @@ if [ $# -lt 3 ] || [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
   exit 2
 fi
 
-LOG="${RUN_LOG:-docs/architecture/run-log.md}"
+# Default paths are REPO-relative, not cwd-relative (merge-gate.sh carries the incident that
+# forced this; same rule here so the two halves of one gate read the same files). Overrides win;
+# outside a git repo the cwd stays the base. --show-toplevel on purpose — see merge-gate.sh.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+LOG="${RUN_LOG:-${REPO_ROOT:-.}/docs/architecture/run-log.md}"
 
 # One table-safe cell: newlines flattened, pipes escaped, whitespace collapsed — emit_ledger's sed
 # shape — then capped at 120 chars ON A WORD BOUNDARY with a visible '…', for emit_ledger's reason:

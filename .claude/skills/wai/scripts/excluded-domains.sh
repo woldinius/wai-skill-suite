@@ -84,8 +84,12 @@ set -u
 # were launched under zsh, re-exec under sh. (Same guard as merge-gate.sh, for the same reason.)
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
-MERGE_CONF="${EXCLUDED_DOMAINS_MERGE_CONF:-docs/architecture/merge-gate.conf}"
-COORD_CONF="${EXCLUDED_DOMAINS_COORD_CONF:-docs/architecture/coordination.conf}"
+# Default paths are REPO-relative, not cwd-relative (merge-gate.sh carries the incident that
+# forced this; same rule here so the two halves of one gate read the same files). Overrides win;
+# outside a git repo the cwd stays the base. --show-toplevel on purpose — see merge-gate.sh.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+MERGE_CONF="${EXCLUDED_DOMAINS_MERGE_CONF:-${REPO_ROOT:-.}/docs/architecture/merge-gate.conf}"
+COORD_CONF="${EXCLUDED_DOMAINS_COORD_CONF:-${REPO_ROOT:-.}/docs/architecture/coordination.conf}"
 
 # --- The guardrail FLOOR — hardcoded here, NOT configurable --------------------------------------
 # Byte-for-byte the same floor merge-gate.sh §5 carries, and for the same reason: if it lived in the

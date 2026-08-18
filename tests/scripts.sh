@@ -1114,6 +1114,33 @@ else
   bad "  · and the row landed at the override path" "no row in $D/custom/attendance.md"
 fi
 
+# CWD IS NOT THE REPO (issue #29 sub-fix 2). Nine SKILL.md files instruct running this script
+# "from this skill's directory"; with a cwd-relative default every one of those runs planted the
+# row in <skill-dir>/docs/architecture/ — scattered, uncommitted, and (for the suite's own repo)
+# inside the install payload. The default now resolves against the enclosing worktree. The plain
+# non-repo fixtures in every other case of this section pin the cwd fallback.
+N=$((N+1)); D="$TMP/rlgit$N"; gitrepo "$D"
+printf 'x\n' > "$D/f.txt"; gitcommit "$D" 'chore: base'
+mkdir -p "$D/.claude/skills/wai-testing"
+out="$( cd "$D/.claude/skills/wai-testing" && sh "$RUNLOG" wai-testing 'PR #9' 'green' 2>&1 )"; rc=$?
+assert "run from a skill dir inside a git repo → exit 0, row targets the REPO root" 0 "$rc" "$out" 'row appended'
+if grep -q '| wai-testing | PR #9 | green |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "  · the row is in <repo-root>/docs/architecture/run-log.md"
+else bad "  · the row is in <repo-root>/docs/architecture/run-log.md" "$(ls -R "$D/.claude" 2>&1)"; fi
+if [ ! -e "$D/.claude/skills/wai-testing/docs" ]; then
+  ok "  · and no stray docs/ tree was planted inside .claude/skills/"
+else bad "  · and no stray docs/ tree was planted inside .claude/skills/" "stray: $D/.claude/skills/wai-testing/docs"; fi
+
+# A PIPE IN THE SUBJECT STAYS ONE CELL (issue #29 sub-fix 3 — pinned, because it was field-reported
+# and the escaping already shipped at f6425f8: a report against an older tree becomes a regression
+# guard, not a re-fix). A raw '|' would split the markdown row and corrupt every parser downstream
+# while still looking like a log.
+rlfix; out="$(rl wai-implementation 'refactor a | b routing' 'done')"; rc=$?
+assert "a '|' in the subject → exit 0, escaped, the row stays one 4-cell line" 0 "$rc" "$out" 'row appended'
+if grep -q '| wai-implementation | refactor a / b routing | done |' "$RL" 2>/dev/null; then
+  ok "  · the pipe was escaped to '/' and the table shape survived"
+else bad "  · the pipe was escaped to '/' and the table shape survived" "$(tail -1 "$RL" 2>&1)"; fi
+
 # FAIL-OPEN PROVEN. An unwritable target still exits 0 — losing a row is a data gap; breaking a
 # finished run over a read-only file would be a real cost (emit_ledger's exact polarity).
 rlfix; out="$( cd "$D" && RUN_LOG=/proc/nonexistent/x/run-log.md sh "$RUNLOG" wai-team '8 issues' '2 PRs' 2>&1 )"; rc=$?

@@ -33,7 +33,10 @@
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
-ROOT="${1:-.}"
+# Default root = the enclosing git worktree, not the cwd (doctor.sh carries the false-clean
+# incident that forced this; same rule here). An explicit argument wins; outside a repo, cwd.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+ROOT="${1:-${REPO_ROOT:-.}}"
 case "$ROOT" in -*) echo "open-items: unknown option '$ROOT' (usage: sh open-items.sh [repo-root])" >&2; exit 2 ;; esac
 [ $# -le 1 ] || { echo "open-items: at most one argument (repo-root)" >&2; exit 2; }
 cd "$ROOT" 2>/dev/null || { echo "open-items: cannot cd to '$ROOT'" >&2; exit 2; }

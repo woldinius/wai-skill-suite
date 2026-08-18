@@ -134,7 +134,7 @@ sandbox/fakes.
    (§*Where a finding lands*): a gap you neither closed nor deliberately accepted is **filed**,
    not mentioned in passing. Close with **▶ Recommended next**.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-testing" "<subject>"
-   "<half-sentence outcome>"` (from this skill's directory) — a run without a row is invisible
+   "<half-sentence outcome>"` (from this skill's directory; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — a run without a row is invisible
    work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing arguments).
    **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (same directory), paste
    its output verbatim beneath the ▶ Recommended next block, then give your recommendation — in that
