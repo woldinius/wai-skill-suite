@@ -51,6 +51,60 @@ if [ "$GIT_OK" = no ] && [ "$GH_OK" = no ]; then
   exit 2
 fi
 
+# ── 0. WHICH remote is the base? ─────────────────────────────────────────────────────────────────
+# THE GH SIDE AND THE GIT SIDE MUST ANSWER ABOUT THE SAME REPOSITORY. `gh` follows
+# `gh repo set-default`; this script used to take the git side from a fixed candidate list
+# (origin/HEAD, origin/main, …). With ONE remote those agree, which is why it shipped. With TWO
+# they do not: a checkout whose work lives on a second remote while `origin` points elsewhere had
+# EVERY merged PR reported "MERGED BUT UNREACHABLE" — 18 false alarms in one field run, in capitals.
+# The PRs were not unreachable; they were in a different repo than the git side was asked about.
+#
+# That is not cosmetic. The sweep is a good check and it catches a real class (a stacked PR merged
+# into a dead base, never arriving on the default branch). An alarm that is wrong 18 times in a
+# LEGITIMATE setup is skipped by the third run — and then it is absent the day it is right. The
+# false-positive rate is what keeps a finding alive; the same argument the gate's own record makes.
+#
+# So: ask gh which repository is in play, find the remote whose URL points there, and prefer that
+# remote's refs. When it cannot be resolved, fall back to the old list and SAY SO — a base that
+# might be the wrong repository must never read like a verified one.
+BASE_REMOTE=""; GH_NWO=""; BASE_NOTE=""
+if [ "$GH_OK" = yes ] && [ "$GIT_OK" = yes ]; then
+  GH_NWO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+  if [ -n "$GH_NWO" ]; then
+    # Normalise every URL shape git accepts down to owner/name before comparing: scp-style
+    # (git@host:owner/name.git), ssh://, https://, with or without the .git suffix.
+    BASE_REMOTE="$(git remote -v 2>/dev/null | awk -v want="$GH_NWO" '
+        $3 == "(fetch)" {
+          u = $2
+          sub(/\.git$/, "", u)
+          sub(/^[a-z]+:\/\/[^\/]*\//, "", u)
+          sub(/^[^@]*@[^:]*:/, "", u)
+          if (u == want) { print $1; exit }
+        }' || true)"
+  fi
+  if [ -n "$BASE_REMOTE" ]; then
+    [ "$BASE_REMOTE" = origin ] || BASE_NOTE=" [base remote: $BASE_REMOTE — resolved from gh, which answers about $GH_NWO; NOT origin]"
+  elif [ "$(git remote 2>/dev/null | grep -c . || echo 0)" -gt 1 ]; then
+    # Only warn where the bug can actually bite. With zero or one remote the origin/* fallback
+    # CANNOT pick the wrong repository, and a warning there would be the noise this fix removes.
+    BASE_NOTE=" [base remote NOT resolved from gh and this checkout has several remotes — the refs below may belong to a different repository than gh reports on]"
+  fi
+fi
+
+# The ordered candidate list: the gh-resolved remote first, then the historical fallback.
+# $1 = "local-ok" to allow bare local main/master (branch comparison), anything else = remote refs
+# only (reachability must be tested against the REMOTE state, never a stale local branch).
+first_base_ref() {
+  _lo="${1:-}"; _cands=""
+  [ -n "$BASE_REMOTE" ] && _cands="$BASE_REMOTE/HEAD $BASE_REMOTE/main $BASE_REMOTE/master"
+  _cands="$_cands origin/HEAD origin/main origin/master"
+  [ "$_lo" = local-ok ] && _cands="$_cands main master"
+  for _c in $_cands; do
+    if git rev-parse --verify --quiet "$_c" >/dev/null 2>&1; then printf '%s\n' "$_c"; return 0; fi
+  done
+  return 1
+}
+
 DERIVED=0; SKIPPED=""; NOTCHECKED=""
 line()  { DERIVED=$((DERIVED+1)); printf '  · %s\n' "$1"; }
 nline() { NOTCHECKED="$NOTCHECKED $2"; printf '  · %s: not checked — %s\n' "$1" "$3"; }   # tool/ref unavailable
@@ -112,9 +166,7 @@ fi
 # ── 3. Local branches with unique commits and no PR ──────────────────────────────────────────────
 BASEREF=""
 if [ "$GIT_OK" = yes ]; then
-  for c in origin/HEAD origin/main origin/master main master; do
-    if git rev-parse --verify --quiet "$c" >/dev/null 2>&1; then BASEREF="$c"; break; fi
-  done
+  BASEREF="$(first_base_ref local-ok || true)"
 fi
 if [ "$GIT_OK" != yes ]; then
   nline "branches with unique commits and no PR" branches "not a git repository"
@@ -134,11 +186,11 @@ else
 "
   done
   if [ -z "$BRLIST" ]; then
-    line "branches with unique commits and no PR: none — 0 branches with commits not on $BASEREF (git cherry)"
+    line "branches with unique commits and no PR: none — 0 branches with commits not on $BASEREF (git cherry)$BASE_NOTE"
   else
     note=""
     [ "$oprc" -eq 0 ] || note=" — PR state NOT checked (gh unavailable): some of these may have PRs"
-    line "branches with unique commits and no PR (git cherry vs $BASEREF): $(printf '%s' "$BRLIST" | cap_join)$note"
+    line "branches with unique commits and no PR (git cherry vs $BASEREF): $(printf '%s' "$BRLIST" | cap_join)$note$BASE_NOTE"
   fi
 fi
 
@@ -154,10 +206,7 @@ if [ "$GH_OK" = yes ]; then
   elif [ "$GIT_OK" != yes ]; then
     nline "merged-but-unreachable sweep" merged-sweep "no git repository to test reachability in"
   else
-    TARGET=""
-    for c in origin/HEAD origin/main origin/master; do
-      if git rev-parse --verify --quiet "$c" >/dev/null 2>&1; then TARGET="$c"; break; fi
-    done
+    TARGET="$(first_base_ref || true)"
     if [ -z "$TARGET" ]; then
       nline "merged-but-unreachable sweep" merged-sweep "no origin ref (origin/HEAD) to test reachability against"
     else
@@ -173,9 +222,9 @@ if [ "$GH_OK" = yes ]; then
       unvnote=""
       [ -z "$UNVER" ] || unvnote=" —$UNVER not verifiable (merge commit not local; fetch first)"
       if [ -n "$UNREACH" ]; then
-        line "merged-but-unreachable: MERGED BUT UNREACHABLE —$UNREACH: GitHub says MERGED, but the merge commit is NOT an ancestor of $TARGET (last $nm merged PRs swept)$unvnote"
+        line "merged-but-unreachable: MERGED BUT UNREACHABLE —$UNREACH: GitHub says MERGED, but the merge commit is NOT an ancestor of $TARGET (last $nm merged PRs swept)$unvnote$BASE_NOTE"
       else
-        line "merged-but-unreachable sweep: none — all merge commits of the last $nm merged PRs are ancestors of $TARGET$unvnote"
+        line "merged-but-unreachable sweep: none — all merge commits of the last $nm merged PRs are ancestors of $TARGET$unvnote$BASE_NOTE"
       fi
     fi
   fi

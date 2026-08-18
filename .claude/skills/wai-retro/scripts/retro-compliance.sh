@@ -127,22 +127,63 @@ else
     echo "  gate-ledger verdicts: $_t — GO $_go · NO-GO $_nogo · UNKNOWN $_unk · MOOT $_moot ($LEDGER)"; }
 fi
 
-# ── merged PRs in the period, from git history ───────────────────────────────────────────────────
-# `git log --merges` reads merge COMMITS: a squash- or rebase-merged PR leaves none, and this line
-# says so instead of letting a 0 read as "nothing landed".
-if [ -n "$SINCE" ]; then
-  MERGELOG="$(git log --merges --since="$SINCE 00:00:00" --date=short --pretty=format:'%s' 2>/dev/null)" || MERGELOG=""
-else
-  MERGELOG="$(git log --merges --date=short --pretty=format:'%s' 2>/dev/null)" || MERGELOG=""
+# ── merged PRs in the period ─────────────────────────────────────────────────────────────────────
+# TWO ENUMERATORS, AND THEY ARE DIFFERENT MEASUREMENTS. `git log --merges` reads merge COMMITS: a
+# squash- or rebase-merged PR leaves none. That is offline and deterministic, and it was the only
+# source — which inverted the metric's purpose on any repo that squash-merges. On this repo PRs
+# #1–#6 were merge-committed and everything since #15 was squashed, so the live traced share (5/5 =
+# 100%) covered only the era that PREDATES the metric, and the very gap that motivated it (#15/#16
+# merged without gate verdicts) was invisible. A denominator that silently excludes the population
+# it was built to measure is worse than no denominator. (#24)
+#
+# So: prefer `gh pr list --state merged` when gh is available and authenticated — it counts a
+# squash merge exactly like a merge commit — and fall back to `git log --merges` otherwise, with
+# the caveat intact. WHICH ENUMERATOR PRODUCED THE NUMBER IS PRINTED ON EVERY LINE THAT USES IT:
+# the two count different things, and a reader who cannot tell them apart is reading one number as
+# if it were the other. Fail closed to the git path and NAME the degradation — a gh that errors
+# must never silently become "nothing landed".
+MERGE_SRC="git log --merges"
+MERGE_NOTE=""
+MPRS=""; MN=0; MPN=0; NONUM=0
+
+GH_OK=no
+command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 && GH_OK=yes
+
+if [ "$GH_OK" = yes ]; then
+  # --limit is generous but finite; a period longer than 200 merged PRs is not this script's case,
+  # and a silent cap would be exactly the failure this file exists to make visible.
+  GHRAW="$(gh pr list --state merged --limit 200 --json number,mergedAt \
+             --jq '.[] | [(.number|tostring), (.mergedAt // "")] | join(" ")' 2>/dev/null)" && ghrc=0 || ghrc=$?
+  if [ "$ghrc" -ne 0 ]; then
+    MERGE_NOTE=" [gh pr list FAILED — fell back to merge commits; squash merges are NOT counted here]"
+  else
+    MPRS="$(printf '%s\n' "$GHRAW" | awk -v since="$SINCE" '
+      NF { if (since == "" || substr($2, 1, 10) >= since) print $1 }' | sort -n | uniq)"
+    MPN="$(printf '%s\n' "$MPRS" | grep -c . || true)"
+    MN="$MPN"; NONUM=0
+    MERGE_SRC="gh pr list --state merged"
+  fi
 fi
-MN="$(printf '%s\n' "$MERGELOG" | grep -c . || true)"
-MPRS="$(printf '%s\n' "$MERGELOG" | sed -n 's/^Merge pull request #\([0-9][0-9]*\).*/\1/p' | sort -n | uniq)"
-MPN="$(printf '%s\n' "$MPRS" | grep -c . || true)"
-NONUM=$((MN - MPN))
-if [ "$MN" = 0 ]; then
-  echo "  merged PRs: none — 0 merge commits in the period (git log --merges; squash/rebase merges leave none)"
+
+if [ "$MERGE_SRC" = "git log --merges" ]; then
+  [ "$GH_OK" = yes ] || MERGE_NOTE=" [gh unavailable — squash/rebase merges leave no merge commit and are NOT counted]"
+  if [ -n "$SINCE" ]; then
+    MERGELOG="$(git log --merges --since="$SINCE 00:00:00" --date=short --pretty=format:'%s' 2>/dev/null)" || MERGELOG=""
+  else
+    MERGELOG="$(git log --merges --date=short --pretty=format:'%s' 2>/dev/null)" || MERGELOG=""
+  fi
+  MN="$(printf '%s\n' "$MERGELOG" | grep -c . || true)"
+  MPRS="$(printf '%s\n' "$MERGELOG" | sed -n 's/^Merge pull request #\([0-9][0-9]*\).*/\1/p' | sort -n | uniq)"
+  MPN="$(printf '%s\n' "$MPRS" | grep -c . || true)"
+  NONUM=$((MN - MPN))
+fi
+
+if [ "$MPN" = 0 ] && [ "$MN" = 0 ]; then
+  echo "  merged PRs: none — 0 in the period (enumerator: $MERGE_SRC)$MERGE_NOTE"
+elif [ "$MERGE_SRC" = "gh pr list --state merged" ]; then
+  echo "  merged PRs: $MPN in the period (enumerator: $MERGE_SRC — counts squash and rebase merges)$MERGE_NOTE"
 else
-  echo "  merged PRs: $MN merge commit(s), $MPN with a readable PR number (git log --merges)"
+  echo "  merged PRs: $MN merge commit(s), $MPN with a readable PR number (enumerator: $MERGE_SRC)$MERGE_NOTE"
 fi
 
 # ── the traced share ─────────────────────────────────────────────────────────────────────────────
@@ -150,7 +191,7 @@ fi
 # raw counts stand beside the rate (principle: every metric needs a counter-reader — a 0% that was
 # really 15% once shipped inside the very line meant to prove trustworthiness).
 if [ "$MPN" = 0 ]; then
-  echo "  traced share: not derivable — 0 merged PRs with a readable number is an empty denominator, not 100% compliance"
+  echo "  traced share: not derivable — 0 merged PRs with a readable number is an empty denominator, not 100% compliance (enumerator: $MERGE_SRC)$MERGE_NOTE"
 else
   MATCHED="$({ printf '%s\n' "$VPRS"; echo '=='; printf '%s\n' "$MPRS"; } | awk '
     /^==$/ { second = 1; next }
@@ -158,7 +199,7 @@ else
     NF && ($1 in a) { n++ }
     END { print n + 0 }')"
   PCT=$(((MATCHED * 200 + MPN) / (2 * MPN)))
-  echo "  traced share: $MATCHED of $MPN merged PRs carry a gate verdict in the period = $PCT% (raw: merge commits $MN · ledger rows $LN · run-log rows $RLN)"
+  echo "  traced share: $MATCHED of $MPN merged PRs carry a gate verdict in the period = $PCT% (enumerator: $MERGE_SRC · raw: merged $MN · ledger rows $LN · run-log rows $RLN)"
   [ "$NONUM" -gt 0 ] && echo "    $NONUM merge commit(s) without a PR number in the subject are in NO rate above — a share that drops rows must say so"
 fi
 
