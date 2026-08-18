@@ -1167,14 +1167,26 @@ assert "numbers-lint: tagless + dead remote → visible SKIP, no false STALE, ex
 out="$( MERGE_GATE_LEDGER="$TMP/led-nogo.md" sh "$ROOT/tests/numbers-lint.sh" 2>&1 )"; rc=$?
 assert "numbers-lint: a judged-NO-GO count the ledger no longer backs is STALE" 1 "$rc" "$out" 'STALE.*judged NO-GOs'
 
+# Git with the caller's environment held off: a global hooksPath, a signing key or a missing
+# identity are all ways a fixture commit fails on somebody else's machine and nowhere else.
+# Shared by the marketplace fixture below and by every release-lint fixture further down.
+rlgit() { _d="$1"; shift; git -C "$_d" -c core.hooksPath=/nonexistent -c commit.gpgsign=false \
+            -c user.name=wai-test -c user.email=test@example.invalid "$@"; }
+
 # The marketplace copy joined the living set. Proving that glob entry works needs the lint to run
 # against a tree whose plugin.json is wrong — and numbers-lint always resolves its OWN root (it
 # must; that is check 1's whole premise), so the fixture is a copy of this tree with exactly one
 # number changed. The claim it exercises is the real one: "<n> enforcement scripts", the phrasing
 # that read straight past a `[0-9]+ scripts` pattern for two releases.
+#
+# TRACKED FILES AT WORKING-TREE CONTENT, INTO A FRESH REPO — not `cp -R "$ROOT/."`. That first
+# version copied `.git` too, so the case inherited whatever the checkout happened to be doing
+# (mid-rebase, detached, a stale index) and paid a full repository copy on every run. What the
+# fixture actually needs is the FILES plus a git that can list them (#40).
 N=$((N+1)); PJD="$TMP/pj$N"; mkdir -p "$PJD"
-cp -R "$ROOT/." "$PJD/" 2>/dev/null
+( cd "$ROOT" && git ls-files -z | xargs -0 tar cf - ) | ( cd "$PJD" && tar xf - )
 sed 's/28 enforcement scripts/99 enforcement scripts/' "$ROOT/.claude-plugin/plugin.json" > "$PJD/.claude-plugin/plugin.json"
+git init -q -b main "$PJD" 2>/dev/null; rlgit "$PJD" add -A; rlgit "$PJD" commit -q -m fixture
 out="$( cd "$PJD" && sh tests/numbers-lint.sh 2>&1 )"; rc=$?
 assert "numbers-lint: the marketplace copy is IN the living set (a wrong script count is STALE)" 1 "$rc" "$out" \
   'STALE.*plugin\.json: claims 99 scripts'
@@ -1185,11 +1197,6 @@ assert "numbers-lint: the marketplace copy is IN the living set (a wrong script 
 # tag stops testing anything the moment a tag is cut — and the tag this file was written for was
 # cut minutes later. The one case that does use the real repo is the standing green guard, last.
 RLS="$ROOT/tests/release-lint.sh"
-
-# Git with the caller's environment held off: a global hooksPath, a signing key or a missing
-# identity are all ways a fixture commit fails on somebody else's machine and nowhere else.
-rlgit() { _d="$1"; shift; git -C "$_d" -c core.hooksPath=/nonexistent -c commit.gpgsign=false \
-            -c user.name=wai-test -c user.email=test@example.invalid "$@"; }
 
 # rlrepo DIR — one tagged release (v0.1.0), then one commit that moves the tree a user EXECUTES.
 rlrepo() {
@@ -1257,8 +1264,18 @@ assert "release-lint: no vX.Y.Z tag → visible SKIP, exit 0, no verdict invente
 
 # 8 · And this repo, right now: the standing guard. It is the case that goes red the day work
 #     lands in .claude/skills/ with no changelog entry, or a tag is cut past the plugin manifests.
+#
+#     IT MUST ALSO PROVE IT MEASURED. The first version of this case asserted only `exit 0` and
+#     "no STALE" — and case 7 above shows exactly how that reads green having checked nothing: a
+#     tagless checkout SKIPs and exits 0. The lint's own line is "a skipped check is not a pass",
+#     and the harness counted it as one (MAINT-3: a gate that scores green without running
+#     anything). Drop `fetch-tags` from ci.yml, run on a shallow clone or a fork, and the guard
+#     was silently disarmed. So the green message is a MUST-match and SKIP joins STALE as a
+#     must-NOT: this case now fails red when it cannot measure, which is what case 7 guarantees
+#     is reachable. Found by the review of the PR that added this file (#38).
 out="$( sh "$RLS" 2>&1 )"; rc=$?
-assert "release-lint: this repo agrees with its own newest tag" 0 "$rc" "$out" '' 'STALE'
+assert "release-lint: this repo agrees with its own newest tag — and says so, having measured" \
+  0 "$rc" "$out" 'agrees with its newest tag' 'STALE|SKIP'
 
 # ── catalog-variant.sh ──────────────────────────────────────────────────────────────────────────
 # The three variant seeds are GENERATED from the baseline master (ADR-0004). A variant edited by

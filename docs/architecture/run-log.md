@@ -34,4 +34,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-18T20:01Z | wai-implementation | installer no-op answer (D) | diff -rq over owned set; 2 cases |
 | 2026-08-18T20:08Z | wai-pr-review | PR #36 | NO-GO |
 | 2026-08-18T20:19Z | wai-pr-review | PR #36 | NO-GO |
-| 2026-08-18T20:59Z | wai-implementation | release-lint + numbers-lint reach (v0.3.0 prep) | 2 lints, 12 cases, 383 total |
+| 2026-08-18T20:59Z | wai-implementation | release-lint + numbers-lint reach (v0.3.0 prep) | 2 lints, 10 cases, 383 total |

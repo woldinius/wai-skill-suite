@@ -26,7 +26,8 @@
 #
 # THE MARKETPLACE COPY IS A LIVING DOCUMENT (added 2026-08-18). `.claude-plugin/*.json` describes
 # the suite to the channel where most readers meet it first, and it sat outside this file's reach
-# while claiming "27 enforcement scripts and 300+ tests" against a measured 28 and 373. Two ways
+# while claiming "27 enforcement scripts and 300+ tests" against a measured 28 and 373 on
+# the day it was found (dated deliberately: this line is a record, not a live claim). Two ways
 # to evade a lint, both fixed here: live outside its glob, and write the number vaguely enough
 # that no pattern matches. "300+" is not a modest claim, it is an unfalsifiable one.
 #
@@ -212,7 +213,7 @@ for cf in $CASE_FILES; do
   done
 done
 if [ "$CLAIMED_ANY" = yes ] && [ -z "$CASES" ]; then
-  echo "  SKIP  README case count not verified (no --cases given) — a skipped check is not a pass"
+  echo "  SKIP  case count not verified in README + plugin manifests (no --cases given) — a skipped check is not a pass"
 fi
 
 if [ "$FAIL" -gt 0 ]; then
