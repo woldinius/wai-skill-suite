@@ -175,6 +175,7 @@ case "${1:-}" in
         logcall "$@"
         [ -f "$F/pr-list-fail" ] && exit 1
         case "$*" in
+          *number,mergedAt*) emit merged-prs-gh ;; # retro-compliance: the merged-PR enumerator
           *headRefName*)   emit open-prs ;;     # open-items: open PRs (number FS headRef FS title)
           *mergeCommit*)   emit merged-prs ;;   # open-items: merged sweep (number FS oid FS mergedAt)
           *number,labels*) emit pr-labels ;;
@@ -199,7 +200,7 @@ ln -sf "$GITBIN" "$GITONLY/git"
 # (per-line degradation is its rule 3), so unlike the early-exit scripts it still needs awk, sed
 # and date after the gh check fails — a bare git-only PATH would crash the very lines under test.
 NOGHBIN="$TMP/noghbin"; mkdir -p "$NOGHBIN"
-for t in git date awk sed grep tr head tail sort ls cat mkdir dirname find; do
+for t in git date awk sed grep tr head tail sort uniq ls cat mkdir dirname find; do
   tp="$(command -v "$t" 2>/dev/null)" && ln -sf "$tp" "$NOGHBIN/$t"
 done
 
@@ -1239,6 +1240,47 @@ printf 'dirt\n' > "$TMP/oi-wt$N/dirt.txt"
 out="$(oi)"; rc=$?
 assert "another worktree is listed with its DIRTY state" 0 "$rc" "$out" 'oi-wt.*\(DIRTY\)'
 
+# TWO REMOTES — the 18-false-alarm case (#27). `gh` follows `gh repo set-default`; the git side
+# used a fixed origin/* list. With ONE remote they agree, which is why this shipped green for the
+# suite's own repo forever. With TWO, `origin` can be an ENTIRELY DIFFERENT repository, and every
+# merged PR is then reported "MERGED BUT UNREACHABLE" — 18 of them, in capitals, in a legitimate
+# setup. The PRs were never unreachable; the git side was asked about the wrong repo.
+#
+# This is the sweep's false-POSITIVE path, and it is the one that kills the check: an alarm that is
+# wrong 18 times is skipped by the third run, and then it is absent the day it is right. So both
+# directions are asserted here — it must go quiet where it was wrong, and it must STILL fire where
+# the commit is genuinely missing from the repo gh reports on.
+N=$((N+1)); D="$TMP/oi-2rem$N"; gitrepo "$D"
+printf 'a\n' > "$D/a.txt"; gitcommit "$D" 'chore: base'
+BASE2="$(git -C "$D" rev-parse HEAD)"
+printf 'b\n' > "$D/b.txt"; gitcommit "$D" 'feat: the work, on the remote that matters'
+WORK2="$(git -C "$D" rev-parse HEAD)"
+printf 'benw\n' > "$D/login"
+printf 'acme/work\n' > "$D/repo"                       # what `gh repo view` answers
+git -C "$D" update-ref refs/remotes/tmp/main    "$WORK2"    # tmp    -> acme/work        (gh agrees)
+git -C "$D" update-ref refs/remotes/origin/main "$BASE2"    # origin -> other/elsewhere  (a DIFFERENT repo)
+git -C "$D" remote add tmp    https://github.com/acme/work.git
+git -C "$D" remote add origin https://github.com/other/elsewhere.git
+printf '7~%s~2026-08-17T00:00:00Z\n' "$WORK2" | tr '~' '\034' > "$D/merged-prs"
+out="$(oi)"; rc=$?
+assert "two remotes: the base is taken from the repo GH answers about, not from 'origin'" 0 "$rc" "$out" 'ancestors of tmp/main' 'MERGED BUT UNREACHABLE'
+assert "  · and the resolution is NAMED, so a wrong base can never look verified" 0 "$rc" "$out" "base remote: tmp — resolved from gh, which answers about acme/work"
+assert "  · the branch comparison uses the same base (one question, one answer)" 0 "$rc" "$out" 'not on tmp/main'
+
+# …AND IT STILL FIRES. Same two remotes, but the merge commit is on NEITHER — a real loss.
+# Without this case the fix above would be indistinguishable from disabling the sweep.
+printf 'c\n' > "$D/c.txt"; gitcommit "$D" 'feat: never pushed anywhere'
+LOST2="$(git -C "$D" rev-parse HEAD)"
+git -C "$D" update-ref refs/remotes/tmp/main "$WORK2"
+printf '8~%s~2026-08-17T00:00:00Z\n' "$LOST2" | tr '~' '\034' > "$D/merged-prs"
+out="$(oi)"; rc=$?
+assert "  · a commit on NEITHER remote is still surfaced loudly (the fix is not a mute button)" 0 "$rc" "$out" 'MERGED BUT UNREACHABLE — #8'
+
+# A SINGLE remote must not gain a warning it cannot need: with 0 or 1 remote the origin/* fallback
+# cannot pick the wrong repository, so the note stays off. Noise is what this fix removes.
+oifix; out="$(oi)"; rc=$?
+assert "one remote (or none) → no multi-remote caveat is printed at all" 0 "$rc" "$out" 'branches with unique commits' 'several remotes'
+
 oifix; out="$(oi --bogus)"; rc=$?
 assert "an unknown option → exit 2, never a partial footer" 2 "$rc" "$out" 'unknown option'
 
@@ -1284,7 +1326,14 @@ rcfix() {   # a git repo with two PR-numbered merge commits, one plain merge, a 
     printf '| 2026-08-11T11:00Z | 4 | NO-GO | x | |\n'
   } > "$D/docs/architecture/gate-ledger.md"
 }
-rc() { ( cd "$D" && "$SH" "$RETRO" "$@" 2>&1 ); }
+# NO INHERITED gh. This script now PREFERS `gh pr list` as its merged-PR enumerator, so a bare
+# PATH would make the answer depend on whether the person running the suite happens to be
+# authenticated — and would hit the network from a test. Default to the gh-less PATH (the git
+# enumerator); rcgh() below opts into the stubbed one deliberately.
+rc()   { ( cd "$D" && PATH="$NOGHBIN" "$SH" "$RETRO" "$@" 2>&1 ); }
+# $GHBIN FIRST so the stub shadows any real gh; the full PATH behind it because the stub's own
+# `#!/usr/bin/env sh` needs a resolvable `sh` (the same shape oi() uses).
+rcgh() { ( cd "$D" && PATH="$GHBIN:$STUB:$PATH" GH_FIXTURE="$D" "$SH" "$RETRO" "$@" 2>&1 ); }
 
 # THE PASS PATH. Ledger verdicts exist for PRs 1, 3, 4; merge commits exist for PRs 1, 2 — so
 # exactly one of the two number-carrying merges is traced. An extractor nobody has watched emit
@@ -1293,13 +1342,70 @@ rcfix; out="$(rc)"; rc_=$?
 assert "the traced share crosses ledger PRs × merged PRs — 1 of 2 = 50%, exit 0" 0 "$rc_" "$out" \
   'traced share: 1 of 2 merged PRs carry a gate verdict in the period = 50%'
 assert "  · raw counts stand beside the rate (the counter-reader rule)" 0 "$rc_" "$out" \
-  'raw: merge commits 3 · ledger rows 3 · run-log rows 3'
+  'raw: merged 3 · ledger rows 3 · run-log rows 3'
 assert "  · per-skill run counts come from the run log" 0 "$rc_" "$out" \
   'per skill: wai-pr-review 2 · wai-implementation 1'
 assert "  · verdict totals are substring-proof (NO-GO never counts toward GO)" 0 "$rc_" "$out" \
   'gate-ledger verdicts: 3 — GO 2 · NO-GO 1 · UNKNOWN 0 · MOOT 0' 'GO 3'
 assert "  · a merge commit without a PR number is counted AND named as out of the rate" 0 "$rc_" "$out" \
   '1 merge commit\(s\) without a PR number in the subject are in NO rate'
+assert "  · the git enumerator is NAMED, and says what it cannot see" 0 "$rc_" "$out" \
+  'enumerator: git log --merges.*gh unavailable.*squash/rebase merges leave no merge commit'
+
+# ── THE SQUASH BLIND SPOT (#24) ──────────────────────────────────────────────────────────────────
+# `git log --merges` counts merge COMMITS. A squash-merged PR leaves none — so on a repo that
+# squash-merges, the denominator silently excluded the entire population the metric was built to
+# measure, and the share covered only the merge-commit era that PREDATES it. A 100% over the wrong
+# rows is worse than no number. Same fixture, same ledger; only the enumerator changes.
+rcfix
+printf '1 2026-08-10T09:00:00Z\n2 2026-08-10T10:00:00Z\n7 2026-08-12T09:00:00Z\n' > "$D/merged-prs-gh"
+out="$(rcgh)"; rc_=$?
+assert "gh present: squash-merged PRs enter the denominator (3, not the 2 with merge commits)" 0 "$rc_" "$out" \
+  'merged PRs: 3 in the period \(enumerator: gh pr list --state merged — counts squash and rebase merges\)'
+assert "  · and the share is computed over THAT population (PR 1 traced of 3)" 0 "$rc_" "$out" \
+  'traced share: 1 of 3 merged PRs carry a gate verdict in the period = 33%'
+assert "  · every line naming a count names the enumerator that produced it" 0 "$rc_" "$out" \
+  'traced share:.*enumerator: gh pr list --state merged'
+# The two enumerators must never read alike: whichever ran, the reader can tell which number this is.
+assert "  · the gh path does not claim merge commits it never counted" 0 "$rc_" "$out" \
+  'enumerator: gh pr list' 'without a PR number in the subject'
+
+# --since must bound the gh enumerator too, or the period is decorative.
+out="$(rcgh --since 2026-08-11)"; rc_=$?
+assert "  · --since bounds the gh enumerator (only the 2026-08-12 PR survives)" 0 "$rc_" "$out" \
+  'merged PRs: 1 in the period'
+
+# THE CEILING IS VISIBLE. `gh pr list --limit N` truncates silently; a truncated denominator makes
+# the traced share an UPPER bound, and it moves in the comfortable direction (fewer merged PRs,
+# same matches → a higher percentage). "No silent caps" is a stated rule of this suite, and the
+# first version of this very hunk shipped one while its own comment forbade it. Found by the
+# null-hypothesis review of the PR that introduced it.
+rcfix
+i=0; : > "$D/merged-prs-gh"
+while [ "$i" -lt 200 ]; do i=$((i+1)); printf '%s 2026-08-10T09:00:00Z\n' "$i" >> "$D/merged-prs-gh"; done
+out="$(rcgh)"; rc_=$?
+assert "gh returning exactly the --limit ceiling → the cap is NAMED, not silently applied" 0 "$rc_" "$out" \
+  'the --limit ceiling: older merged PRs in this period may be MISSING'
+assert "  · and the share is declared an UPPER bound, not a measurement" 0 "$rc_" "$out" \
+  'the denominator is a floor and the share below is an UPPER bound'
+# Below the ceiling the caveat must stay OFF — a warning on every run is a warning nobody reads.
+rcfix
+printf '1 2026-08-10T09:00:00Z\n2 2026-08-10T10:00:00Z\n' > "$D/merged-prs-gh"
+out="$(rcgh)"; rc_=$?
+assert "  · below the ceiling, no cap caveat is printed" 0 "$rc_" "$out" 'merged PRs: 2 in the period' 'limit ceiling'
+
+# gh PRESENT BUT FAILING — fail closed to the git path, and SAY the degradation happened. A gh that
+# errors must never silently become "nothing landed": that is the comfortable answer, and it is the
+# one this whole file exists to refuse.
+rcfix
+printf '1 2026-08-10T09:00:00Z\n' > "$D/merged-prs-gh"
+: > "$D/pr-list-fail"
+out="$(rcgh)"; rc_=$?
+assert "gh present but FAILING → falls back to merge commits, exit 0, degradation NAMED" 0 "$rc_" "$out" \
+  'enumerator: git log --merges.*gh pr list FAILED'
+assert "  · and the fallback is not silently reported as an empty period" 0 "$rc_" "$out" \
+  'merged PRs: 3 merge commit\(s\), 2 with a readable PR number'
+
 # THE BOUNDARY: counts, never a verdict — and no self-log row (extractor, not a run).
 assert "  · it emits counts and renders NO verdict (ADR-0002)" 0 "$rc_" "$out" \
   'COUNTS ONLY \(ADR-0002\)' 'VERDICT'
@@ -1328,7 +1434,7 @@ assert "an empty period → exit 0, run-log line names its emptiness" 0 "$rc_" "
 assert "  · the ledger line names its emptiness too" 0 "$rc_" "$out" \
   'gate-ledger verdicts: none — 0 rows in the period'
 assert "  · and the merge line names squash/rebase merges as a possible cause of its zero" 0 "$rc_" "$out" \
-  'merged PRs: none — 0 merge commits in the period \(git log --merges; squash'
+  'merged PRs: none — 0 in the period \(enumerator: git log --merges\).*squash/rebase merges leave no merge commit'
 assert "  · the share over an empty denominator is NOT derivable, and says why" 0 "$rc_" "$out" \
   'traced share: not derivable.*empty denominator, not 100% compliance'
 
