@@ -11,7 +11,7 @@
 # Usage (run in your project root) — from a checkout you have read:
 #   sh install.sh [target-project-dir]
 # or, pinned to a release (tests/numbers-lint.sh checks this tag exists):
-#   curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.2.0/install.sh | SKILLS_REF=v0.2.0 sh
+#   curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.3.0/install.sh | SKILLS_REF=v0.3.0 sh
 # or, unpinned (latest main):
 #   curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/main/install.sh | sh
 #
