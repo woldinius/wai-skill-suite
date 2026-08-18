@@ -74,7 +74,7 @@ model cooperating:
 |---|---|---|
 | **Server-side** | branch protection on `main`, required checks, CODEOWNERS | No — the model does not run there |
 | **Local hooks** | [`pre-commit`](.githooks/pre-commit) (no commits on the default branch), [`pre-push`](.githooks/pre-push) (no pushes to a branch whose PR is merged) — **wire them once: `git config core.hooksPath .githooks`** | Only visibly, via `--no-verify` |
-| **Scripts a skill invokes** | `merge-gate.sh`, `catalog-lint.sh`, the audit and protocol lints — 27 scripts across the suite | In principle yes — which is why this was **measured**, not assumed ([Test 0](docs/empirics.md)) |
+| **Scripts a skill invokes** | `merge-gate.sh`, `catalog-lint.sh`, the audit and protocol lints — 28 scripts across the suite | In principle yes — which is why this was **measured**, not assumed ([Test 0](docs/empirics.md)) |
 
 The merge policy itself is **policy-as-code**: the guardrail floor is hardcoded in the scripts,
 the repo-specific half lives in `docs/architecture/merge-gate.conf` — and config can only ever
@@ -103,7 +103,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took nine repair commits in two days; the gate
 once failed *open* under zsh and later could never say GO at all. That is why
-[`tests/`](tests/) exists — 347 cases, **founded** on bugs that shipped and grown into the
+[`tests/`](tests/) exists — 373 cases, **founded** on bugs that shipped and grown into the
 regression guards around them, run on two shells because shellcheck passed a construct that is a
 syntax error in the `/bin/sh` of macOS. (The second shell runs locally on every branch, not in
 CI: macOS runners bill at 10× and exhausted the private repo's Actions minutes until no check
@@ -415,7 +415,7 @@ install.sh                                       # idempotent installer (inject/
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 347 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 373 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, audits, catalog, open questions
 ```
 

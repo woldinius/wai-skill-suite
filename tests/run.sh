@@ -233,6 +233,21 @@ else bad "  · and NOTHING was planted inside .claude/skills/" "stray tree: $D/.
 # Outside any git repo the cwd stays the base — every other fixture in this file IS that case
 # (gfix dirs are plain directories), so the fallback is pinned by the whole suite around this.
 
+# ROWS BELONG ON MAIN (the ledger-home decision, 2026-08-18). The gate writes its row wherever it runs; that
+# row has been squash-deleted twice (#28, #31) when it rode a feature branch's stale ledger copy.
+# The decision: the ledger stays in-repo (numbers-lint re-measures its claims in CI), and the
+# script SAYS where the row belongs every time it lands one off the default branch.
+gfix
+( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
+out="$(gate)"; rc=$?
+assert "a gate run on a feature branch → verdict unchanged, and the row-belongs-on-main note prints" 0 "$rc" "$out" "landed on branch 'feature-x' — ledger rows belong on main"
+gfix
+( cd "$D" && git init -q -b main . ) 2>/dev/null
+out="$(gate)"; rc=$?
+assert "  · on the default branch itself, no note — a warning on every run is one nobody reads" 0 "$rc" "$out" 'VERDICT: GO' 'ledger rows belong on'
+# Outside a git repo (every other fixture here) there is no branch to name — the note stays off;
+# those fixtures all assert exact verdict output and double as the pin.
+
 # Post-merge = MOOT. A gate run on an already-merged PR must say so, not fake a GO/NO-GO — no
 # artefact watches ordering, and this is the one place the gate can. It must short-circuit BEFORE
 # the guardrail/contract checks (which are irrelevant once merged) and record a MOOT row, so an
@@ -647,6 +662,19 @@ assert "install.sh stamps the suite version and runs doctor" 0 "$rc" "$out" 'doc
 if [ -f "$IDIR/.claude/.wai-suite-version" ]; then ok "install.sh writes .wai-suite-version (Phase B foundation)"
 else bad "install.sh writes .wai-suite-version" "no version file at $IDIR/.claude/"; fi
 
+# THE NO-OP ANSWER (field-reported: a repo hand-hashed its tree to ask "does this update change
+# anything?" and got the scope wrong — its hash included its OWN skills, comparing against nothing).
+# The installer now answers it itself, over exactly the set it owns. Re-install into the SAME
+# target from the SAME source → byte-identical suite skills → the line prints; touch one owned
+# skill → it must NOT print (a no-op claim over a real delta would be the worse bug).
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "a second install from the same source says so: no behavioral change, stamp-only" 0 "$rc" "$out" 'no behavioral change: the installed suite skills are byte-identical'
+printf 'locally modified\n' >> "$IDIR/.claude/skills/wai/SKILL.md"
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "  · a modified owned skill → the no-op line must NOT print (delta is restored + reported)" 0 "$rc" "$out" 'installed: wai' 'no behavioral change'
+# A first install (no manifest) never claims no-op — ownership, not name-guessing, scopes the check;
+# the first IDIR install above is that case and printed no such line (asserted by its own matcher).
+
 # install.sh × the platform→wai rename.
 #
 # Every repo that already runs this suite carries a `.platform-suite-manifest`. If the installer
@@ -820,6 +848,62 @@ edfix; printf 'src/billing/charge.ts\n' > "$ED_D/files"
 printf '+// refactor: rename an internal helper, no behaviour change\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
 assert "a missing/renamed label cannot SUPPRESS a path match (advisory widens only)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+
+# ── THE CITATION DIAL (#30, decided 2026-08-18: option b) ───────────────────────────────────────
+# The widening rule was safe and measurably expensive: in a repo declaring no paths for a family,
+# the citation false alarm stood ALONE three times, and the cheapest route to a green gate became
+# "don't cite catalog IDs" — the exact opposite of what the suite instructs. The dial: a citation
+# DECIDES only where the family is ANCHORED (declared paths whose shape classifies into it;
+# EX-GDPR anchors on ERASURE_PATHS). Unanchored, it is REPORTED as advisory — visible, not gating.
+# Paths and diff statements stay authoritative everywhere; --autonomy still holds on advisory.
+
+# Field case 1 (PR #186 class): an author's own self-review line "SEC-7: unchanged" — the fixture
+# conf declares billing/auth/erasure paths but nothing SEC-shaped, so EX-SEC is unanchored.
+edfix; printf '+| SEC-7 | unchanged - the server still checks for itself |\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "an unanchored SEC citation → CLEAR with an ADVISORY line, not a NO-GO (field case, 3x alone)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-SEC' 'VERDICT: EXCLUDED'
+assert "  · and the advisory is VISIBLE, never silently dropped" 0 "$rc" "$out" 'advisory only \(EX-SEC not anchored'
+
+# The same citation with a security-shaped glob declared → anchored → decides, exactly as before.
+edfix; printf 'CONTRACT_PATHS="src/security/* src/billing/*"\nMIGRATION_PATHS="migrations/*"\nERASURE_PATHS="apps/api/src/erasure/*"\n' > "$ED_D/merge-gate.conf"
+printf '+| SEC-7 | unchanged |\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "the SAME citation with a security-shaped glob declared → anchored, still EXCLUDED" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-SEC'
+
+# Field case 2 (PR #191 class): GDPR prose in a docs diff, with NO erasure surface declared.
+edfix; printf 'CONTRACT_PATHS="src/billing/*"\nMIGRATION_PATHS="migrations/*"\n' > "$ED_D/merge-gate.conf"
+printf '+since #119 there is a delete path (GDPR-3)\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a GDPR citation with no ERASURE_PATHS declared → advisory, not gating (docs-addendum case)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-GDPR' 'VERDICT: EXCLUDED'
+
+# Mixed: an anchored PAY citation decides while the unanchored SEC one reports — no cross-talk.
+edfix; printf '+PAY-2 applies here\n+SEC-7 unchanged\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "anchored PAY decides, unanchored SEC reports — one verdict, both visible" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+assert "  · the advisory tag never leaks into the deciding EXCLUDED-DOMAINS line" 1 "$rc" "$out" 'advisory only \(EX-SEC' 'EXCLUDED-DOMAINS:.*EX-SEC'
+
+# A real erasure STATEMENT is diff-authoritative and is NOT downgraded by the dial — the dial
+# scopes the CITATION channel only. (The self-merge hole stays closed with no erasure conf at all.)
+edfix; printf 'CONTRACT_PATHS="src/billing/*"\nMIGRATION_PATHS="migrations/*"\n' > "$ED_D/merge-gate.conf"
+printf '+  DELETE FROM users WHERE id = $1\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a real DELETE FROM users stays EXCLUDED with no erasure conf — statements are authoritative" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# Under --autonomy the nuance disappears: an advisory citation HOLDS the unattended drain.
+edfix; printf '+SEC-7 unchanged\n' > "$ED_D/diff"; printf 'src/util/format.ts\n' > "$ED_D/files"
+out="$(edrun --autonomy)"; rc=$?
+assert "--autonomy: an advisory citation is HELD, not waved through (autonomy errs closed)" 1 "$rc" "$out" 'HELD — advisory domain citation'
+
+# THE ADVISORY SURVIVES THE GATE. The dial's bargain is "visible without deciding"; the gate's
+# exit-0 branch initially swallowed the classifier's ADVISORY-DOMAINS line, so the one output the
+# human reads (verdict + ledger row) lost the visibility the decision was made for. info, not veto.
+gfix; printf 'benw\n' > "$D/login" 2>/dev/null || true
+printf '+| SEC-7 | unchanged |\n' > "$D/diff"
+out="$(gate)"; rc=$?
+assert "gate on a CLEAR-with-advisory diff → GO, and the advisory rides the verdict output" 0 "$rc" "$out" 'advisory \(not gating, citation dial\): EX-SEC'
+if grep -q 'advisory (not gating, citation dial): EX-SEC' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
+  ok "  · and the ledger row carries it (visible where the tags are audited)"
+else bad "  · and the ledger row carries it" "$(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
 
 # An input that cannot be read is HELD, never CLEAR — the fail-closed rule the whole suite rests on.
 edfix; out="$(EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" sh "$ED" --files "$ED_D/files" --diff "$ED_D/does-not-exist" 2>&1)"; rc=$?

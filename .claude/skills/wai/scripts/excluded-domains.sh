@@ -284,7 +284,44 @@ acquire_inputs() {
 # =================================================================================================
 TAGS=""
 DETAIL=""
+ADVISORY=""
 add_tag()    { TAGS="$TAGS $1"; }
+add_advisory() { ADVISORY="$ADVISORY $1"; }
+
+# Is a family ANCHORED — does this repo declare paths that belong to it? (#30, decided 2026-08-18.)
+# EX-GDPR anchors on a non-empty ERASURE_PATHS. EX-PAY/AUTH/API/SEC anchor on a CONTRACT_PATHS glob
+# whose SHAPE classifies into that family (the same contract_subtags read used for tagging); a glob
+# whose shape is indeterminate (EX-CONTRACT) anchors nothing — the paths themselves stay fully
+# protected by the path check regardless, this only scopes the advisory citation channel.
+#
+# WHY: the widening rule ("a citation may only widen") was safe and it was measured expensive — in
+# a repo declaring no paths for a family, the false alarm stood ALONE three times, and the cheapest
+# route to a green gate became "don't cite catalog IDs": the exact opposite of what the suite asks
+# for. Where a family has no declared surface, a citation is documentation, not contact — it is
+# still REPORTED (an advisory line, visible in the verdict) but no longer DECIDES. Where the family
+# IS anchored, nothing changes. Paths and diff statements remain authoritative everywhere; under
+# --autonomy the advisory set still HOLDS the drain (autonomy errs closed, always).
+ANCHORED=""
+compute_anchored() {
+  _cp="$(conf_val CONTRACT_PATHS "$MERGE_CONF")"
+  _ep="$(conf_val ERASURE_PATHS  "$MERGE_CONF")"
+  [ -n "$_ep" ] && ANCHORED="$ANCHORED EX-GDPR"
+  if [ -n "$_cp" ]; then
+    _fams="$(printf '%s\n' "$_cp" | tr -s ' \t' '\n' | while IFS= read -r _g; do
+               [ -n "$_g" ] || continue; contract_subtags "$_g"
+             done | sort -u | tr '\n' ' ')"
+    case "$_fams" in *EX-PAY*)  ANCHORED="$ANCHORED EX-PAY"  ;; esac
+    case "$_fams" in *EX-AUTH*) ANCHORED="$ANCHORED EX-AUTH" ;; esac
+    case "$_fams" in *EX-API*)  ANCHORED="$ANCHORED EX-API"  ;; esac
+    case "$_fams" in *EX-SEC*)  ANCHORED="$ANCHORED EX-SEC"  ;; esac
+  fi
+}
+anchored() { case " $ANCHORED " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+# Widen into the deciding set only where anchored; elsewhere the citation stays visible as advisory.
+widen() {   # $1 = tag, $2 = detail
+  if anchored "$1"; then add_tag "$1"; add_detail "$2"
+  else add_advisory "$1"; add_detail "advisory only ($1 not anchored — no declared paths for this family): $2"; fi
+}
 add_detail() { DETAIL="$DETAIL  x $1
 "; }
 
@@ -355,25 +392,33 @@ classify() {
   [ -n "$META_FILE" ] && [ -f "$META_FILE" ] && cat "$META_FILE" >> "$_scan" 2>/dev/null
   PREFIXES="$(grep -oiE '(PAY|AUTH|API|SEC|GDPR)-[0-9]+' "$_scan" 2>/dev/null \
               | sed 's/-[0-9].*//' | tr '[:lower:]' '[:upper:]' | sort -u)"
+  compute_anchored
   for _pf in $PREFIXES; do
     case "$_pf" in
-      PAY)  add_tag EX-PAY;  add_detail "widened by a cited PAY- family id (family only, number not resolved)" ;;
-      AUTH) add_tag EX-AUTH; add_detail "widened by a cited AUTH- family id (family only)" ;;
-      API)  add_tag EX-API;  add_detail "widened by a cited API- family id (family only)" ;;
-      SEC)  add_tag EX-SEC;  add_detail "widened by a cited SEC- family id (family only)" ;;
-      GDPR) add_tag EX-GDPR; add_detail "widened by a cited GDPR- family id (family only)" ;;
+      PAY)  widen EX-PAY  "widened by a cited PAY- family id (family only, number not resolved)" ;;
+      AUTH) widen EX-AUTH "widened by a cited AUTH- family id (family only)" ;;
+      API)  widen EX-API  "widened by a cited API- family id (family only)" ;;
+      SEC)  widen EX-SEC  "widened by a cited SEC- family id (family only)" ;;
+      GDPR) widen EX-GDPR "widened by a cited GDPR- family id (family only)" ;;
     esac
   done
   if [ -n "$META_FILE" ] && [ -f "$META_FILE" ]; then
     LB="$(tr '[:upper:]' '[:lower:]' < "$META_FILE" 2>/dev/null)"
-    case "$LB" in *billing*|*payment*|*token*) add_tag EX-PAY;  add_detail "widened by a payment/billing label" ;; esac
-    case "$LB" in *auth*|*login*|*'user management'*) add_tag EX-AUTH; add_detail "widened by an auth/user label" ;; esac
-    case "$LB" in *gdpr*|*erasure*|*deletion*|*'right to be forgotten'*) add_tag EX-GDPR; add_detail "widened by a gdpr/erasure label" ;; esac
+    case "$LB" in *billing*|*payment*|*token*) widen EX-PAY  "widened by a payment/billing label" ;; esac
+    case "$LB" in *auth*|*login*|*'user management'*) widen EX-AUTH "widened by an auth/user label" ;; esac
+    case "$LB" in *gdpr*|*erasure*|*deletion*|*'right to be forgotten'*) widen EX-GDPR "widened by a gdpr/erasure label" ;; esac
   fi
 
-  # Dedupe.
+  # Dedupe — and an advisory tag that is ALSO a real tag collapses into the real one.
   # shellcheck disable=SC2086  # TAGS must word-split
   TAGS="$(printf '%s\n' $TAGS | grep -v '^$' | sort -u | tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//')"
+  # grep, NOT `case … esac` — a case inside $( ) is a syntax error in bash 3.2, which is what
+  # /bin/sh IS on macOS. shellcheck passes it; the shell does not. This suite has now relearned
+  # that FIVE times (merge-gate.sh's comment counted four), and this line was the fifth.
+  # shellcheck disable=SC2086
+  ADVISORY="$(printf '%s\n' $ADVISORY | grep -v '^$' | sort -u | while IFS= read -r _a; do
+                printf '%s\n' "$TAGS" | tr ' ' '\n' | grep -qxF "$_a" || printf '%s ' "$_a"
+              done | sed 's/ $//')"
 }
 
 # =================================================================================================
@@ -424,7 +469,14 @@ if [ "$AUTONOMY" -eq 1 ]; then
     echo "VERDICT: UNKNOWN — AUTONOMY_AFFIRMED is absent; no human affirmed this surface. Held."; exit 2
   fi
 
-  # Defense-in-depth: the blocklist must be CLEAR.
+  # Defense-in-depth: the blocklist must be CLEAR — including the ADVISORY set. The everyday gate
+  # lets an unanchored citation report without deciding; the unattended drain does not get that
+  # nuance. Autonomy errs closed, always.
+  if [ -n "$ADVISORY" ]; then
+    printf '%s' "$DETAIL"
+    echo "VERDICT: HELD — advisory domain citation(s) ($ADVISORY) are not clear enough for an unattended merge; held for the human."
+    exit 1
+  fi
   if [ -n "$TAGS" ]; then
     printf '%s' "$DETAIL"
     echo "EXCLUDED-DOMAINS: $TAGS"
@@ -447,7 +499,13 @@ fi
 
 # --- Default mode -------------------------------------------------------------------------------
 if [ -z "$TAGS" ]; then
-  echo "VERDICT: CLEAR — no excluded domain touched."
+  if [ -n "$ADVISORY" ]; then
+    printf '%s' "$DETAIL"
+    echo "ADVISORY-DOMAINS: $ADVISORY"
+    echo "VERDICT: CLEAR — no excluded domain touched (advisory citations reported above; not gating, per #30)."
+  else
+    echo "VERDICT: CLEAR — no excluded domain touched."
+  fi
   exit 0
 else
   printf '%s' "$DETAIL"
