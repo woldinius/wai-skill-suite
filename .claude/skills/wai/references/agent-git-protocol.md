@@ -180,7 +180,7 @@ matched as such, and erasure granularity comes from `ERASURE_PATHS` and the grep
 Labels and family prefixes may only **ADD** a domain, never subtract one — a missing or renamed
 label can never *suppress* a path or diff match.
 
-**The citation dial (#30, decided 2026-08-18).** A citation or label *decides* the verdict only
+**The citation dial (the citation-dial decision, 2026-08-18 — issue #30).** A citation or label *decides* the verdict only
 where its family is **anchored** — the repo declares paths whose shape classifies into it
 (`EX-GDPR` anchors on a non-empty `ERASURE_PATHS`). Unanchored, the citation is **reported as
 advisory** (`ADVISORY-DOMAINS:` in the classifier's output) but does not gate: where a repo

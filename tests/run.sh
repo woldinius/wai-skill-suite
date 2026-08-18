@@ -233,7 +233,7 @@ else bad "  · and NOTHING was planted inside .claude/skills/" "stray tree: $D/.
 # Outside any git repo the cwd stays the base — every other fixture in this file IS that case
 # (gfix dirs are plain directories), so the fallback is pinned by the whole suite around this.
 
-# ROWS BELONG ON MAIN (#35, decided 2026-08-18). The gate writes its row wherever it runs; that
+# ROWS BELONG ON MAIN (the ledger-home decision, 2026-08-18). The gate writes its row wherever it runs; that
 # row has been squash-deleted twice (#28, #31) when it rode a feature branch's stale ledger copy.
 # The decision: the ledger stays in-repo (numbers-lint re-measures its claims in CI), and the
 # script SAYS where the row belongs every time it lands one off the default branch.

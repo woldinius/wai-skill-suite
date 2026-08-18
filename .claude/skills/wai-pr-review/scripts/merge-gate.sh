@@ -111,8 +111,8 @@ done
 # So the default base is the enclosing git worktree; an explicit argument or env override still
 # wins, and outside any repo the cwd stays the base (fixtures and bare dirs keep working).
 # Deliberately --show-toplevel, NOT the --git-common-dir parent: rows belong to the worktree that
-# produced them — consolidating across worktrees changes WHERE state lands, which is issue #35's
-# still-open human decision, not this fix's.
+# produced them — consolidating across worktrees changes WHERE state lands, which was the ledger-home
+# question's contested half (decided 2026-08-18: rows stay per-worktree, collected to main), not this fix's.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 CATALOG="${REPO_ROOT:-.}/docs/architecture/quality-attributes.md"
 
@@ -176,7 +176,7 @@ A `MOOT` row is a review that ran AFTER the PR was merged — the gate could pre
 not a decision; leave its outcome blank and do not count it in fp/fn. Its value is the opposite of
 a missing row: it records that the gate *ran and was too late*, rather than reading as never-checked.
 
-**Rows belong on the default branch (#35).** The gate writes its row wherever it runs; a row left
+**Rows belong on the default branch (ledger-home decision, 2026-08-18).** The gate writes its row wherever it runs; a row left
 on a feature branch rides that branch's stale copy of this file, and a later squash-merge has
 deleted such rows twice. Collect loose rows into a small chore PR promptly.
 
@@ -210,7 +210,7 @@ LEDGER_HDR
   # depend on that); only the cell got wider, and a cut is now marked as one.
   _lw=$(printf '%s\n' "$_srt" | tr '\n' ';' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^[ ;]*//; s/[ ;]*$//' | cap400)
   printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
-  # THE ROW BELONGS ON MAIN (#35, decided 2026-08-18). The ledger stays IN-REPO — numbers-lint
+  # THE ROW BELONGS ON MAIN (the ledger-home decision, 2026-08-18). The ledger stays IN-REPO — numbers-lint
   # re-measures the repo's published ledger claims in CI, and a ledger in ~/.claude would break
   # that loop — but an append-only file written on whatever branch is checked out has LOST a row
   # twice in squash races (#28, #31), and one field repo invented this rule by hand in its
@@ -220,7 +220,7 @@ LEDGER_HDR
   _def="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')" || true
   [ -n "$_def" ] || _def=main
   if [ -n "$_cur" ] && [ "$_cur" != "$_def" ]; then
-    echo "note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (#35). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
+    echo "note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (ledger-home decision). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
   fi
 }
 
