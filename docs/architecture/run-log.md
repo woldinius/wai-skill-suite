@@ -31,3 +31,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-18T19:50Z | wai-implementation | #35 ledger home codified | in-repo + row-belongs-on-main note; 2 cases |
 | 2026-08-18T19:55Z | wai-implementation | #30 citation dial (option b) | anchored-family advisory channel; 8 cases |
 | 2026-08-18T19:57Z | wai-implementation | #29 pt.2 invocation denominator | hook script + retro crossing; 11 cases |
+| 2026-08-18T20:01Z | wai-implementation | installer no-op answer (D) | diff -rq over owned set; 2 cases |

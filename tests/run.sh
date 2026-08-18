@@ -662,6 +662,19 @@ assert "install.sh stamps the suite version and runs doctor" 0 "$rc" "$out" 'doc
 if [ -f "$IDIR/.claude/.wai-suite-version" ]; then ok "install.sh writes .wai-suite-version (Phase B foundation)"
 else bad "install.sh writes .wai-suite-version" "no version file at $IDIR/.claude/"; fi
 
+# THE NO-OP ANSWER (field-reported: a repo hand-hashed its tree to ask "does this update change
+# anything?" and got the scope wrong — its hash included its OWN skills, comparing against nothing).
+# The installer now answers it itself, over exactly the set it owns. Re-install into the SAME
+# target from the SAME source → byte-identical suite skills → the line prints; touch one owned
+# skill → it must NOT print (a no-op claim over a real delta would be the worse bug).
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "a second install from the same source says so: no behavioral change, stamp-only" 0 "$rc" "$out" 'no behavioral change: the installed suite skills are byte-identical'
+printf 'locally modified\n' >> "$IDIR/.claude/skills/wai/SKILL.md"
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "  · a modified owned skill → the no-op line must NOT print (delta is restored + reported)" 0 "$rc" "$out" 'installed: wai' 'no behavioral change'
+# A first install (no manifest) never claims no-op — ownership, not name-guessing, scopes the check;
+# the first IDIR install above is that case and printed no such line (asserted by its own matcher).
+
 # install.sh × the platform→wai rename.
 #
 # Every repo that already runs this suite carries a `.platform-suite-manifest`. If the installer

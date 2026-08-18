@@ -144,6 +144,36 @@ fi
 # tests/run.sh holds this as a test: an update into a repo with a populated ledger and run log
 # must leave both byte-identical. Whoever teaches this script to "clean up" docs/ goes red there.
 
+# 3b. THE NO-OP ANSWER (field-reported, 2026-08-17): "does this update change anything for me?"
+# A field repo computed this by hand — hashed its installed tree against the suite's — and got it
+# subtly wrong: the hash covered ALL of .claude/skills, including the repo's own skills the
+# installer never touches, so the number compared against nothing upstream. The honest comparison
+# is exactly the set this script owns: the manifest's skills, content vs the source. When they are
+# byte-identical the install still proceeds (the stamp advances — doctor's staleness checks want
+# the newest commit), but the run SAYS the truth: zero behavioral change. A version stamp that
+# advances silently over zero delta reads as "something happened", and the next audit inherits
+# that misread.
+if [ -n "$OWNED" ]; then
+  NOOP=yes
+  for s in $NEW_SET; do
+    if ! printf '%s
+' "$OWNED" | grep -qx "$s"; then NOOP=no; break; fi     # a new skill = change
+    if [ ! -d "$SKILLS_DIR/$s" ] || ! diff -rq "$SRC/$s" "$SKILLS_DIR/$s" >/dev/null 2>&1; then
+      NOOP=no; break
+    fi
+  done
+  # a skill we own that upstream dropped is also a change (it is about to be pruned)
+  if [ "$NOOP" = yes ]; then
+    for old in $OWNED; do
+      printf '%s
+' "$NEW_SET" | grep -qx "$old" || { NOOP=no; break; }
+    done
+  fi
+  if [ "$NOOP" = yes ]; then
+    echo "no behavioral change: the installed suite skills are byte-identical to this source — only the version stamp advances."
+  fi
+fi
+
 # 4. Prune skills WE installed that no longer exist upstream (renamed or removed).
 for old in $OWNED; do
   if ! printf '%s\n' "$NEW_SET" | grep -qx "$old"; then
