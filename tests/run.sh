@@ -1161,6 +1161,105 @@ out="$( cd "$NLD" && sh tests/numbers-lint.sh 2>&1 )"; rc=$?
 assert "numbers-lint: tagless + dead remote → visible SKIP, no false STALE, exit 0" 0 "$rc" "$out" \
   'SKIP.*version references' 'STALE.*references v'
 
+# The judged-NO-GO denominator (Q3) is a LIVE number like the row count beside it: it drifted from
+# 5 to 26 unnoticed, past its own exit criterion. Same fixture technique — a ledger that no longer
+# backs the claim must make the claim stale, not quietly re-baseline it.
+out="$( MERGE_GATE_LEDGER="$TMP/led-nogo.md" sh "$ROOT/tests/numbers-lint.sh" 2>&1 )"; rc=$?
+assert "numbers-lint: a judged-NO-GO count the ledger no longer backs is STALE" 1 "$rc" "$out" 'STALE.*judged NO-GOs'
+
+# The marketplace copy joined the living set. Proving that glob entry works needs the lint to run
+# against a tree whose plugin.json is wrong — and numbers-lint always resolves its OWN root (it
+# must; that is check 1's whole premise), so the fixture is a copy of this tree with exactly one
+# number changed. The claim it exercises is the real one: "<n> enforcement scripts", the phrasing
+# that read straight past a `[0-9]+ scripts` pattern for two releases.
+N=$((N+1)); PJD="$TMP/pj$N"; mkdir -p "$PJD"
+cp -R "$ROOT/." "$PJD/" 2>/dev/null
+sed 's/28 enforcement scripts/99 enforcement scripts/' "$ROOT/.claude-plugin/plugin.json" > "$PJD/.claude-plugin/plugin.json"
+out="$( cd "$PJD" && sh tests/numbers-lint.sh 2>&1 )"; rc=$?
+assert "numbers-lint: the marketplace copy is IN the living set (a wrong script count is STALE)" 1 "$rc" "$out" \
+  'STALE.*plugin\.json: claims 99 scripts'
+
+# ── release-lint.sh ─────────────────────────────────────────────────────────────────────────────
+# The tree against its newest tag. Every fixture below is a SYNTHETIC repo, never a clone of this
+# one, on purpose: a fixture that depends on where THIS repo currently sits relative to ITS newest
+# tag stops testing anything the moment a tag is cut — and the tag this file was written for was
+# cut minutes later. The one case that does use the real repo is the standing green guard, last.
+RLS="$ROOT/tests/release-lint.sh"
+
+# Git with the caller's environment held off: a global hooksPath, a signing key or a missing
+# identity are all ways a fixture commit fails on somebody else's machine and nowhere else.
+rlgit() { _d="$1"; shift; git -C "$_d" -c core.hooksPath=/nonexistent -c commit.gpgsign=false \
+            -c user.name=wai-test -c user.email=test@example.invalid "$@"; }
+
+# rlrepo DIR — one tagged release (v0.1.0), then one commit that moves the tree a user EXECUTES.
+rlrepo() {
+  _r="$1"; mkdir -p "$_r/.claude/skills/x" "$_r/.claude-plugin"
+  git init -q -b main "$_r" 2>/dev/null
+  printf '# Changelog\n\n## [0.1.0] — 2026-01-01\n\n- the first one\n' > "$_r/CHANGELOG.md"
+  printf '{\n  "name": "x",\n  "version": "0.1.0"\n}\n' > "$_r/.claude-plugin/plugin.json"
+  printf 'before\n' > "$_r/.claude/skills/x/SKILL.md"
+  rlgit "$_r" add -A; rlgit "$_r" commit -q -m release; rlgit "$_r" tag v0.1.0
+  printf 'after\n' > "$_r/.claude/skills/x/SKILL.md"
+  rlgit "$_r" add -A; rlgit "$_r" commit -q -m 'move the executed tree'
+}
+
+echo
+echo "release-lint.sh"
+
+# 1 · THE INCIDENT ITSELF: a fix to the executed tree, merged, and no artefact saying it is
+#     unreleased. This is the case that would have caught 171ae9c sitting outside every tag.
+R1="$TMP/rl-undeclared"; rlrepo "$R1"
+out="$( sh "$RLS" "$R1" 2>&1 )"; rc=$?
+assert "release-lint: skills changed since the tag with nothing declared → STALE" 1 "$rc" "$out" \
+  'STALE 1 file\(s\) under \.claude/skills/ changed since v0\.1\.0'
+
+# 2 · The Keep-a-Changelog form.
+R2="$TMP/rl-unreleased"; rlrepo "$R2"
+printf '# Changelog\n\n## [Unreleased]\n\n- the fix\n\n## [0.1.0] — 2026-01-01\n' > "$R2/CHANGELOG.md"
+out="$( sh "$RLS" "$R2" 2>&1 )"; rc=$?
+assert "release-lint: an '## [Unreleased]' heading satisfies the declaration" 0 "$rc" "$out" 'agrees with its newest tag'
+
+# 3 · The release-PR form — the version written directly, minutes before its tag exists. THIS
+#     release uses exactly this shape, so it is a case and not an assumption.
+R3="$TMP/rl-nextver"; rlrepo "$R3"
+printf '# Changelog\n\n## [0.2.0] — 2026-02-02\n\n- the fix\n\n## [0.1.0] — 2026-01-01\n' > "$R3/CHANGELOG.md"
+out="$( sh "$RLS" "$R3" 2>&1 )"; rc=$?
+assert "release-lint: a version heading NEWER than the tag satisfies it too" 0 "$rc" "$out" 'agrees with its newest tag'
+
+# 4 · An OLDER version heading is not a declaration of newer work — the branch that would make
+#     check 1 decorative if it merely looked for any '## [' line.
+R4="$TMP/rl-oldver"; rlrepo "$R4"
+printf '# Changelog\n\n## [0.0.9] — 2025-12-31\n\n- ancient\n\n## [0.1.0] — 2026-01-01\n' > "$R4/CHANGELOG.md"
+out="$( sh "$RLS" "$R4" 2>&1 )"; rc=$?
+assert "release-lint: an OLDER version heading declares nothing → still STALE" 1 "$rc" "$out" 'declares nothing newer'
+
+# 5 · The version string behind its own tag: the state where two installs both call themselves
+#     0.1.0 over two different gates, because the plugin channel serves the default branch.
+R5="$TMP/rl-behind"; rlrepo "$R5"; rlgit "$R5" tag v0.2.0
+out="$( sh "$RLS" "$R5" 2>&1 )"; rc=$?
+assert "release-lint: a plugin version BEHIND the newest tag is STALE" 1 "$rc" "$out" \
+  'plugin\.json declares 0\.1\.0 while the newest tag is v0\.2\.0'
+
+# 6 · …and AHEAD is the normal state of a release PR. The asymmetry is the design; a symmetric
+#     check would go red between the merge and the tag push, which is where the human is working.
+R6="$TMP/rl-ahead"; rlrepo "$R6"; rlgit "$R6" tag v0.2.0
+printf '{\n  "name": "x",\n  "version": "0.3.0"\n}\n' > "$R6/.claude-plugin/plugin.json"
+out="$( sh "$RLS" "$R6" 2>&1 )"; rc=$?
+assert "release-lint: a plugin version AHEAD of the tag is the release PR, never stale" 0 "$rc" "$out" \
+  'agrees with its newest tag' 'STALE'
+
+# 7 · No tag to compare against is a SKIP, not a pass and not a failure (the tagless-checkout
+#     lesson numbers-lint learned the hard way, applied before it can be learned again).
+R7="$TMP/rl-notag"; rlrepo "$R7"; rlgit "$R7" tag -d v0.1.0 >/dev/null 2>&1
+out="$( sh "$RLS" "$R7" 2>&1 )"; rc=$?
+assert "release-lint: no vX.Y.Z tag → visible SKIP, exit 0, no verdict invented" 0 "$rc" "$out" \
+  'SKIP.*no vX\.Y\.Z tag' 'STALE'
+
+# 8 · And this repo, right now: the standing guard. It is the case that goes red the day work
+#     lands in .claude/skills/ with no changelog entry, or a tag is cut past the plugin manifests.
+out="$( sh "$RLS" 2>&1 )"; rc=$?
+assert "release-lint: this repo agrees with its own newest tag" 0 "$rc" "$out" '' 'STALE'
+
 # ── catalog-variant.sh ──────────────────────────────────────────────────────────────────────────
 # The three variant seeds are GENERATED from the baseline master (ADR-0004). A variant edited by
 # hand — or a master edited without regenerating — is the exact drift class this repo documents

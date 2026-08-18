@@ -10,7 +10,7 @@
       "name": "wai-suite",
       "source": "./",
       "description": "The wAI gated-lifecycle suite for sustainable software engineering: 13 skills (router, init, planning, implementation, testing, PR review with a mechanical merge gate, architecture & security audits, an artifact-derived retrospective, CI/CD and mobile-release setup, team orchestrator, personal learning mode) that keep architecture maintainable and security audited while agents build. Evidence-first: every enforcement claim in the repo has a check behind it.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": {
         "name": "Benjamin Wolters"
       },

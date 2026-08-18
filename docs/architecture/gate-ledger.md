@@ -72,3 +72,5 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-08-18T17:23Z | 33 | MOOT | PR already merged before the gate ran |ok |
 | 2026-08-18T19:13Z | 34 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | ok|
 <!-- report 2026-08-18 rows=30 -->
+| 2026-08-18T20:08Z | 36 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-AUTH EX-CONTRACT EX-GDPR EX-GUARD EX-PAY EX-SEC; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS |ok |
+| 2026-08-18T20:19Z | 36 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-AUTH EX-CONTRACT EX-GDPR EX-GUARD EX-PAY EX-SEC; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | ok|

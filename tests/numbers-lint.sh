@@ -15,13 +15,20 @@
 #      (IDs exact — counted by catalog-lint itself, the single authority; lines within 10%)
 #   3. every "<word> skills read/load …" matches the counted catalog readers
 #   4. every "<word> field runs" matches the counted runs in docs/empirics.md
-#   5. every "<n> scripts" in README/publication matches the counted suite scripts
-#   6. "<n> cases" in the README matches the suites' pass count — ONLY when the caller passes
-#      `--cases <n>` (CI does, from the suites it just ran). Without it the check prints SKIP,
-#      because a check that did not run is not a check that passed.
-#   7. gate-ledger claims ("<n> gate verdicts on record", "<n> GO row(s)", "<n> untagged") match
-#      the ledger — counted by gate-stats.sh, the one ledger authority; docs/open-questions.md
-#      carries these numbers as a LIVE eval agenda, and live numbers must be re-measured.
+#   5. every "<n> scripts" in README/publication/the plugin manifests matches the counted scripts
+#   6. "<n> cases" in the README and the plugin manifests matches the suites' pass count — ONLY
+#      when the caller passes `--cases <n>` (CI does, from the suites it just ran). Without it the
+#      check prints SKIP, because a check that did not run is not a check that passed.
+#   7. gate-ledger claims ("<n> gate verdicts on record", "<n> GO row(s)", "<n> untagged", and
+#      "This repo: <n> judged NO-GOs") match the ledger — counted by gate-stats.sh, the one ledger
+#      authority; docs/open-questions.md carries these numbers as a LIVE eval agenda, and live
+#      numbers must be re-measured.
+#
+# THE MARKETPLACE COPY IS A LIVING DOCUMENT (added 2026-08-18). `.claude-plugin/*.json` describes
+# the suite to the channel where most readers meet it first, and it sat outside this file's reach
+# while claiming "27 enforcement scripts and 300+ tests" against a measured 28 and 373. Two ways
+# to evade a lint, both fixed here: live outside its glob, and write the number vaguely enough
+# that no pattern matches. "300+" is not a modest claim, it is an unfalsifiable one.
 #
 # Dated evidence is exempt (field reports, audits, empirics, retrospective, history, ADRs,
 # proposals): a report is only true as of the moment it ran, and its numbers age WITH it.
@@ -81,6 +88,13 @@ LGO="$(printf '%s\n' "$GSTATS" | sed -n 's/^ *GO \([0-9]\{1,\}\) .*/\1/p' | head
 [ -n "$LGO" ] || LGO=0
 LUNTAGGED="$(printf '%s\n' "$GSTATS" | sed -n 's/^ *\([0-9]\{1,\}\) still untagged.*/\1/p' | head -1)"
 [ -n "$LUNTAGGED" ] || LUNTAGGED=0
+# The judged-NO-GO denominator, off the false-positive line ("0 of 26 judged NO-GOs"). Q3 of
+# open-questions.md carries it as a live number and it drifted by 21 rows unnoticed: the row read
+# "5 judged NO-GOs" while the ledger held 26 — and Q3's own exit criterion, "≥ 20 human-tagged
+# rows here", had been MET without the file noticing. An agenda that cannot see its own answer is
+# the failure this file was written for, one document further in.
+LJUDGED="$(printf '%s\n' "$GSTATS" | grep -oE '[0-9]+ judged NO-GOs' | awk '{print $1; exit}')"
+[ -n "$LJUDGED" ] || LJUDGED=0
 
 word_for() {  # small on purpose: outside this range, print the digit and let the mismatch show
   case "$1" in
@@ -95,6 +109,7 @@ WORD_RE='six|seven|eight|nine|ten|eleven|twelve'
 LIVING="$(git ls-files 'README.md' 'install.sh' '.claude/skills/**' 'docs/publication/**' \
                        'docs/learnings/README.md' 'docs/architecture/quality-attributes.md' \
                        'docs/architecture/testing-strategy.md' 'docs/open-questions.md' \
+                       '.claude-plugin/*.json' \
              | grep -vE '/tests/')"
 
 for f in $LIVING; do
@@ -139,10 +154,15 @@ for f in $LIVING; do
       || stale "$f: says '$w field runs', docs/empirics.md has $RUNS"
   done
 
-  # 5 · suite script count (README + publication only; a skill talking about ITS scripts is fine)
+  # 5 · suite script count (README + publication + the plugin manifests; a skill talking about ITS
+  #     own scripts is fine)
   case "$f" in
-    README.md|docs/publication/*)
-      for n in $(printf '%s' "$FLAT" | grep -oE '[0-9]+ scripts' | grep -oE '[0-9]+'); do
+    README.md|docs/publication/*|.claude-plugin/*.json)
+      # One adjective slot between the number and the noun, because the claim that evaded this
+      # check was "27 enforcement scripts" — a `[0-9]+ scripts` pattern reads straight past it.
+      # The lint bends to how a writer writes; making the prose bend to the lint is how you get
+      # claims phrased to be unmatchable.
+      for n in $(printf '%s' "$FLAT" | grep -oE '[0-9]+( [a-z-]+)? scripts' | grep -oE '^[0-9]+'); do
         [ "$n" = "$SCRIPTS" ] || stale "$f: claims $n scripts, counted $SCRIPTS"
       done ;;
   esac
@@ -160,6 +180,16 @@ for f in $LIVING; do
     for n in $(printf '%s' "$FLAT" | grep -oE '[0-9]+ untagged' | grep -oE '^[0-9]+'); do
       [ "$n" = "$LUNTAGGED" ] || stale "$f: claims $n untagged row(s), the ledger has $LUNTAGGED"
     done
+    # Anchored on "This repo:" ON PURPOSE. The same Q3 cell cites two FIELD ledgers in the same
+    # words ("12 judged NO-GOs", "8 of 52 judged NO-GOs") — dated evidence that ages with its
+    # report and must NOT be re-measured against this ledger. An unanchored pattern would call
+    # both stale and teach the author to delete the citations, which is the opposite of the point.
+    # THE COST, NAMED: rephrase the cell and this check silently stops matching — the "check that
+    # quietly stopped running" class. The fixture in tests/run.sh is what holds it: it proves the
+    # branch still fires, so the day the phrase changes, a case goes red rather than green.
+    for n in $(printf '%s' "$FLAT" | grep -oE 'This repo: \*{0,2}[0-9]+ judged NO-GOs' | grep -oE '[0-9]+'); do
+      [ "$n" = "$LJUDGED" ] || stale "$f: claims $n judged NO-GOs in this repo, the ledger has $LJUDGED"
+    done
   fi
 done
 
@@ -168,13 +198,20 @@ done
 [ "$LEDGER_KNOWN" = yes ] \
   || echo "  SKIP  gate-ledger claims not verified (no readable ledger at $GLEDGER) — a skipped check is not a pass"
 
-# 6 · the README's test-case count, against the run the caller just made
-CLAIMED_CASES="$(tr '\n' ' ' < README.md | grep -oE '[0-9]+ cases' | grep -oE '[0-9]+' | sort -u)"
-if [ -n "$CASES" ]; then
-  for n in $CLAIMED_CASES; do
-    [ "$n" = "$CASES" ] || stale "README.md: claims $n cases, the suites just passed $CASES"
+# 6 · the test-case count in every reader-facing surface, against the run the caller just made —
+#     the README and the plugin manifests, which are the two places a stranger reads a number
+#     about this suite before they read any code.
+CASE_FILES="README.md $(git ls-files '.claude-plugin/*.json')"
+CLAIMED_ANY=no
+for cf in $CASE_FILES; do
+  [ -f "$cf" ] || continue
+  for n in $(tr '\n' ' ' < "$cf" | grep -oE '[0-9]+ cases' | grep -oE '[0-9]+' | sort -u); do
+    CLAIMED_ANY=yes
+    [ -n "$CASES" ] || continue
+    [ "$n" = "$CASES" ] || stale "$cf: claims $n cases, the suites just passed $CASES"
   done
-elif [ -n "$CLAIMED_CASES" ]; then
+done
+if [ "$CLAIMED_ANY" = yes ] && [ -z "$CASES" ]; then
   echo "  SKIP  README case count not verified (no --cases given) — a skipped check is not a pass"
 fi
 

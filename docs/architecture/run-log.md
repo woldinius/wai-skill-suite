@@ -32,3 +32,6 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-18T19:55Z | wai-implementation | #30 citation dial (option b) | anchored-family advisory channel; 8 cases |
 | 2026-08-18T19:57Z | wai-implementation | #29 pt.2 invocation denominator | hook script + retro crossing; 11 cases |
 | 2026-08-18T20:01Z | wai-implementation | installer no-op answer (D) | diff -rq over owned set; 2 cases |
+| 2026-08-18T20:08Z | wai-pr-review | PR #36 | NO-GO |
+| 2026-08-18T20:19Z | wai-pr-review | PR #36 | NO-GO |
+| 2026-08-18T20:59Z | wai-implementation | release-lint + numbers-lint reach (v0.3.0 prep) | 2 lints, 12 cases, 383 total |

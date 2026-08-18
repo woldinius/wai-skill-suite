@@ -34,8 +34,13 @@ Not the gate alone — merge gates with exit codes exist elsewhere. What this su
   the line they crossed: mechanics in scripts, judgment in prompts. The boundary is a position
   that has cost features — not packaging.
 - **The prose is linted against its measurements.** [`tests/numbers-lint.sh`](tests/numbers-lint.sh)
-  fails CI when a count in this README stops matching what a script can measure — including
-  whether a referenced release tag actually exists.
+  fails CI when a count in this README, the open-questions agenda or the plugin manifests stops
+  matching what a script can measure — including whether a referenced release tag actually exists.
+  [`tests/release-lint.sh`](tests/release-lint.sh) fails it when the tree disagrees with that tag:
+  work landing in the skills a user *executes* with nothing declared in the changelog, or a plugin
+  version string fallen behind the newest tag. It exists because a fix for a verdict-corrupting
+  bug once sat on `main`, unreleased, under install instructions that pinned the release without
+  it — and every check in this repo read green.
 - **Every unmeasured claim was wrong — 9 of 9.** The
   [July retrospective](docs/retrospective-2026-07.md) counts the author's own error rate, by
   name, from the repo — not from memory.
@@ -103,7 +108,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took nine repair commits in two days; the gate
 once failed *open* under zsh and later could never say GO at all. That is why
-[`tests/`](tests/) exists — 373 cases, **founded** on bugs that shipped and grown into the
+[`tests/`](tests/) exists — 383 cases, **founded** on bugs that shipped and grown into the
 regression guards around them, run on two shells because shellcheck passed a construct that is a
 syntax error in the `/bin/sh` of macOS. (The second shell runs locally on every branch, not in
 CI: macOS runners bill at 10× and exhausted the private repo's Actions minutes until no check
@@ -415,7 +420,7 @@ install.sh                                       # idempotent installer (inject/
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 373 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 383 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, audits, catalog, open questions
 ```
 
