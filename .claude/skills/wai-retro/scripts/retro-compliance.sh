@@ -150,10 +150,18 @@ GH_OK=no
 command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 && GH_OK=yes
 
 if [ "$GH_OK" = yes ]; then
-  # --limit is generous but finite; a period longer than 200 merged PRs is not this script's case,
-  # and a silent cap would be exactly the failure this file exists to make visible.
-  GHRAW="$(gh pr list --state merged --limit 200 --json number,mergedAt \
+  # --limit is generous but FINITE, and a cap you cannot see is the failure this file exists to
+  # make visible — so the ceiling is detected and reported rather than asserted away. Hitting it
+  # does not invalidate the run: it makes the denominator a FLOOR, and the line says so, because a
+  # truncated denominator inflates the traced share (fewer merged PRs, same matches) in the
+  # comfortable direction.
+  GHLIMIT=200
+  GHRAW="$(gh pr list --state merged --limit "$GHLIMIT" --json number,mergedAt \
              --jq '.[] | [(.number|tostring), (.mergedAt // "")] | join(" ")' 2>/dev/null)" && ghrc=0 || ghrc=$?
+  GHN="$(printf '%s\n' "$GHRAW" | grep -c . || true)"
+  if [ "$ghrc" -eq 0 ] && [ "${GHN:-0}" -ge "$GHLIMIT" ]; then
+    MERGE_NOTE=" [gh returned $GHN = the --limit ceiling: older merged PRs in this period may be MISSING, so the denominator is a floor and the share below is an UPPER bound]"
+  fi
   if [ "$ghrc" -ne 0 ]; then
     MERGE_NOTE=" [gh pr list FAILED — fell back to merge commits; squash merges are NOT counted here]"
   else

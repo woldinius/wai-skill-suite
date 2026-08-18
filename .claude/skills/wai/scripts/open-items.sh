@@ -20,7 +20,8 @@
 #      was derived and what was skipped — absence of a check must never read as absence of findings.
 #   3. Per-line degradation: a dead `gh` kills the gh-derived lines, never the local git lines.
 #
-# Every list caps visibly (`+N more`); no silent truncation. Cost: ~4 batched gh calls + local git.
+# Every list caps visibly (`+N more`); no silent truncation. Cost: ~5 batched gh calls + local git
+# (the fifth is `gh repo view`, which resolves WHICH repository the git side must be asked about).
 #
 #   exit 0  the footer was emitted — including with skipped or not-checked lines (they are named)
 #   exit 2  NOTHING could be derived at all (no git repository here and no usable gh), or misuse.

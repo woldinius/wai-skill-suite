@@ -1375,6 +1375,25 @@ out="$(rcgh --since 2026-08-11)"; rc_=$?
 assert "  · --since bounds the gh enumerator (only the 2026-08-12 PR survives)" 0 "$rc_" "$out" \
   'merged PRs: 1 in the period'
 
+# THE CEILING IS VISIBLE. `gh pr list --limit N` truncates silently; a truncated denominator makes
+# the traced share an UPPER bound, and it moves in the comfortable direction (fewer merged PRs,
+# same matches → a higher percentage). "No silent caps" is a stated rule of this suite, and the
+# first version of this very hunk shipped one while its own comment forbade it. Found by the
+# null-hypothesis review of the PR that introduced it.
+rcfix
+i=0; : > "$D/merged-prs-gh"
+while [ "$i" -lt 200 ]; do i=$((i+1)); printf '%s 2026-08-10T09:00:00Z\n' "$i" >> "$D/merged-prs-gh"; done
+out="$(rcgh)"; rc_=$?
+assert "gh returning exactly the --limit ceiling → the cap is NAMED, not silently applied" 0 "$rc_" "$out" \
+  'the --limit ceiling: older merged PRs in this period may be MISSING'
+assert "  · and the share is declared an UPPER bound, not a measurement" 0 "$rc_" "$out" \
+  'the denominator is a floor and the share below is an UPPER bound'
+# Below the ceiling the caveat must stay OFF — a warning on every run is a warning nobody reads.
+rcfix
+printf '1 2026-08-10T09:00:00Z\n2 2026-08-10T10:00:00Z\n' > "$D/merged-prs-gh"
+out="$(rcgh)"; rc_=$?
+assert "  · below the ceiling, no cap caveat is printed" 0 "$rc_" "$out" 'merged PRs: 2 in the period' 'limit ceiling'
+
 # gh PRESENT BUT FAILING — fail closed to the git path, and SAY the degradation happened. A gh that
 # errors must never silently become "nothing landed": that is the comfortable answer, and it is the
 # one this whole file exists to refuse.
