@@ -836,6 +836,51 @@ printf '+// refactor: rename an internal helper, no behaviour change\n' > "$ED_D
 out="$(edrun)"; rc=$?
 assert "a missing/renamed label cannot SUPPRESS a path match (advisory widens only)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
 
+# ── THE CITATION DIAL (#30, decided 2026-08-18: option b) ───────────────────────────────────────
+# The widening rule was safe and measurably expensive: in a repo declaring no paths for a family,
+# the citation false alarm stood ALONE three times, and the cheapest route to a green gate became
+# "don't cite catalog IDs" — the exact opposite of what the suite instructs. The dial: a citation
+# DECIDES only where the family is ANCHORED (declared paths whose shape classifies into it;
+# EX-GDPR anchors on ERASURE_PATHS). Unanchored, it is REPORTED as advisory — visible, not gating.
+# Paths and diff statements stay authoritative everywhere; --autonomy still holds on advisory.
+
+# Field case 1 (PR #186 class): an author's own self-review line "SEC-7: unchanged" — the fixture
+# conf declares billing/auth/erasure paths but nothing SEC-shaped, so EX-SEC is unanchored.
+edfix; printf '+| SEC-7 | unchanged - the server still checks for itself |\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "an unanchored SEC citation → CLEAR with an ADVISORY line, not a NO-GO (field case, 3x alone)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-SEC' 'VERDICT: EXCLUDED'
+assert "  · and the advisory is VISIBLE, never silently dropped" 0 "$rc" "$out" 'advisory only \(EX-SEC not anchored'
+
+# The same citation with a security-shaped glob declared → anchored → decides, exactly as before.
+edfix; printf 'CONTRACT_PATHS="src/security/* src/billing/*"\nMIGRATION_PATHS="migrations/*"\nERASURE_PATHS="apps/api/src/erasure/*"\n' > "$ED_D/merge-gate.conf"
+printf '+| SEC-7 | unchanged |\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "the SAME citation with a security-shaped glob declared → anchored, still EXCLUDED" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-SEC'
+
+# Field case 2 (PR #191 class): GDPR prose in a docs diff, with NO erasure surface declared.
+edfix; printf 'CONTRACT_PATHS="src/billing/*"\nMIGRATION_PATHS="migrations/*"\n' > "$ED_D/merge-gate.conf"
+printf '+since #119 there is a delete path (GDPR-3)\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a GDPR citation with no ERASURE_PATHS declared → advisory, not gating (docs-addendum case)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-GDPR' 'VERDICT: EXCLUDED'
+
+# Mixed: an anchored PAY citation decides while the unanchored SEC one reports — no cross-talk.
+edfix; printf '+PAY-2 applies here\n+SEC-7 unchanged\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "anchored PAY decides, unanchored SEC reports — one verdict, both visible" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+assert "  · the advisory tag never leaks into the deciding EXCLUDED-DOMAINS line" 1 "$rc" "$out" 'advisory only \(EX-SEC' 'EXCLUDED-DOMAINS:.*EX-SEC'
+
+# A real erasure STATEMENT is diff-authoritative and is NOT downgraded by the dial — the dial
+# scopes the CITATION channel only. (The self-merge hole stays closed with no erasure conf at all.)
+edfix; printf 'CONTRACT_PATHS="src/billing/*"\nMIGRATION_PATHS="migrations/*"\n' > "$ED_D/merge-gate.conf"
+printf '+  DELETE FROM users WHERE id = $1\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a real DELETE FROM users stays EXCLUDED with no erasure conf — statements are authoritative" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# Under --autonomy the nuance disappears: an advisory citation HOLDS the unattended drain.
+edfix; printf '+SEC-7 unchanged\n' > "$ED_D/diff"; printf 'src/util/format.ts\n' > "$ED_D/files"
+out="$(edrun --autonomy)"; rc=$?
+assert "--autonomy: an advisory citation is HELD, not waved through (autonomy errs closed)" 1 "$rc" "$out" 'HELD — advisory domain citation'
+
 # An input that cannot be read is HELD, never CLEAR — the fail-closed rule the whole suite rests on.
 edfix; out="$(EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" sh "$ED" --files "$ED_D/files" --diff "$ED_D/does-not-exist" 2>&1)"; rc=$?
 assert "an unreadable diff → UNKNOWN, exit 2 (fail-closed, never CLEAR)" 2 "$rc" "$out" 'UNKNOWN' 'VERDICT: CLEAR'

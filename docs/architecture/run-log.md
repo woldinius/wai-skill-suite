@@ -29,3 +29,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-18T19:13Z | wai-pr-review | PR #34 | NO-GO |
 | 2026-08-18T19:43Z | wai-implementation | ledger landing chore | 4 rows landed, 3 tags, marker planted |
 | 2026-08-18T19:50Z | wai-implementation | #35 ledger home codified | in-repo + row-belongs-on-main note; 2 cases |
+| 2026-08-18T19:55Z | wai-implementation | #30 citation dial (option b) | anchored-family advisory channel; 8 cases |
