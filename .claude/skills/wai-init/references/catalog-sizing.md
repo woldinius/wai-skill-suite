@@ -8,7 +8,7 @@
 
 ## Sizing — the catalog is the suite's token budget
 
-The bundled baseline is the **full** tier: **91 IDs, ~530 lines**. Both numbers are mechanically
+The bundled baseline is the **full** tier: **87 IDs, ~510 lines**. Both numbers are mechanically
 checkable (`grep -c`, `wc -l`) — which is why they are the ones stated, and why no token count is.
 A token figure is a guess that nobody re-measures, so it quietly becomes a false claim on the first
 edit; a line count goes stale loudly.

@@ -201,7 +201,7 @@ printf '%s  (ref %s)\n' "$SRC_SHA" "$REF" > "$DEST/.claude/.wai-suite-version"
 # 7. Deliberately NO seeding of docs/architecture/.
 #    The catalog and testing strategy are wai-init's job: it scans the repo, scopes the
 #    catalog to the surface it actually is, sizes it (tier), and asks for the language and the
-#    repo mode. Copying this repo's LIVE catalog here would drop a 91-ID multi-surface document
+#    repo mode. Copying this repo's LIVE catalog here would drop an 87-ID multi-surface document
 #    with a pre-answered header into a foreign project — and wai-init, seeing a catalog that
 #    already exists, would keep it and never ask any of those questions. The suite would silently
 #    run on someone else's tailoring. wai-init carries the baseline it needs.

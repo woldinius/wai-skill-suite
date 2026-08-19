@@ -41,7 +41,7 @@ Depending on platform (not everything is always needed):
 - **Code signing** via `match` (certificates/profiles in a private repo/secret), or documented
   manual signing — reproducible, no manual certificate juggling (`IOS-5`).
 - **`PrivacyInfo.xcprivacy`** reminder + App Privacy / nutrition-label checklist (`IOS-4`),
-  in-app account deletion check (`IOS-6`/`GDPR-6`).
+  in-app account deletion check (`GDPR-6`).
 
 **Android**
 - **Gradle release config** — signing config via **Play App Signing**, `bundle`/AAB build,
@@ -133,7 +133,7 @@ non-contract-domain PR — but only if "green" is trustworthy. For mobile:
 ## Relation to the quality catalog
 
 Align artifacts to the surface-scoped catalog and cite IDs: signing/secrets `IOS-5`/`AND-5`/
-`SEC-3`/`CLIENT-1`, attestation `IOS-2`/`AND-2`, store-policy `IOS-3`/`AND-3`, privacy
+`SEC-3`/`CLIENT-1`, attestation `SEC-2`/`CLIENT-2`, store-policy `IOS-3`/`AND-3`, privacy
 `IOS-4`/`AND-3`/`GDPR-6`, target-API currency `AND-4`, purchase verification/testing `PAY-2..6`,
 contract-consumer test `API-4`/`CLIENT-3`. If the catalog is missing, note it once (run
 `wai-init` in this repo to generate the surface-scoped catalog) and continue with these

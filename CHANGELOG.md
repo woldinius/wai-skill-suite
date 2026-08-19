@@ -8,6 +8,20 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ### Changed
 
+- **The catalog QA pass — 91 → 87 IDs, and a gap in a family now means "retired".** A
+  four-question review (benefit / SMART bar / red-flag logic / word count) of all 91 IDs, landed
+  in the master baseline, the live catalog and the three regenerated variants. Four IDs retired,
+  never renumbered — the gap is the signal, and `## Retired IDs` names each successor:
+  `IOS-2` → `CLIENT-2` and `AND-2` → `CLIENT-2` (their red flags described server-side behavior
+  invisible in a client repo; `CLIENT-2` now names the concrete mechanisms and the degradation
+  path), `IOS-6` → `GDPR-6` and `AND-6` → `GDPR-6` (in-app deletion is part of `GDPR-6`'s rule).
+  Eleven rows rewritten so the rule is decidable and the flag observable (`SEC-13`, `AI-4`,
+  `AI-7`, `RES-6`, `OBS-3`, `PERF-1`, `PERF-4`, `PERF-5`, `MAINT-9`, `PAY-11`, `WEB-4` — the
+  last gaining the CWV "good" thresholds LCP ≤ 2.5 s / CLS ≤ 0.1 / INP ≤ 200 ms), plus `WEB-1`'s
+  flag repointed at the observable symptom (crediting in the redirect instead of the verified
+  webhook). Twenty rows trimmed without changing their rule. `PAY-12`'s cross-reference fixed:
+  distinct from `GDPR-*` (consumer/tax law, not data protection), and `CLIENT-5` now names its
+  bar (WCAG 2.1 AA).
 - **The rules stay in the script, the incidents move to `docs/rationale/`.** Measured on
   2026-08-19: the shipped scripts carried **29,180 words of comment against 27,440 words of code**
   — more prose than all thirteen `SKILL.md` files put together — with 60 % of it in 68 blocks of
