@@ -4,7 +4,7 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
-## [Unreleased]
+## [0.3.1] — 2026-08-19
 
 ### Changed
 
@@ -33,7 +33,10 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   **No behaviour changed and nothing was deleted** — `Usage:`, every `exit N`, the fail-open /
   fail-closed declarations and the editor warnings stayed put; 5,732 words of narrative are now
   under `docs/rationale/`, read as dated evidence like a field report and deliberately outside
-  `numbers-lint`'s living set.
+  `numbers-lint`'s living set. A second pass finished the job across the remaining tree:
+  **seventeen more scripts** moved their narrative the same way (seven others were confirmed
+  all-operative and left alone), so every shipped script now carries its rules at the line and
+  its incidents in `docs/rationale/`.
 
 ### Fixed
 
