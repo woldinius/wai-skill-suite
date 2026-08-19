@@ -41,3 +41,5 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-19T19:34Z | wai-pr-review | PR #44 | NO-GO |
 | 2026-08-19T19:36Z | wai-pr-review | PR #45 | NO-GO |
 | 2026-08-19T19:37Z | wai-pr-review | PR #45 | GO |
+| 2026-08-19T20:14Z | wai-pr-review | PR #44 | NO-GO |
+| 2026-08-19T20:14Z | wai-pr-review | PR #45 | GO |
