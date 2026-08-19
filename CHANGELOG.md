@@ -4,6 +4,32 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
+## [Unreleased]
+
+### Changed
+
+- **The rules stay in the script, the incidents move to `docs/rationale/`.** Measured on
+  2026-08-19: the shipped scripts carried **29,180 words of comment against 27,440 words of code**
+  — more prose than all thirteen `SKILL.md` files put together — with 60 % of it in 68 blocks of
+  eight lines or more. That prose is free on disk and expensive in a context window, and these
+  files *do* get opened. So each of the five biggest now keeps its rule at the line an editor would
+  break, and the incident that bought the rule moved one directory over: `merge-gate.sh`
+  3,699 → 2,496 comment words, `excluded-domains.sh` 2,430 → 2,236, `catalog-lint.sh` 2,078 →
+  1,193, `doctor.sh` 2,064 → 1,508, `contract-lint.sh` 1,399 → 851 (**−3,386, −29 %**).
+  **No behaviour changed and nothing was deleted** — `Usage:`, every `exit N`, the fail-open /
+  fail-closed declarations and the editor warnings stayed put; 5,732 words of narrative are now
+  under `docs/rationale/`, read as dated evidence like a field report and deliberately outside
+  `numbers-lint`'s living set.
+
+### Fixed
+
+- A **dead link in `merge-gate.sh`'s header** pointed at `docs/learnings/field-reports/` with a
+  German filename — a path that never existed in this repo, hiding in a comment where neither the
+  link test nor `lang-guard` looks.
+- Three example IDs became real citations the moment they landed under `docs/`: `catalog-lint`
+  failed on "AI-503", "API-5" and "MAINT-10". They are foreign or invented IDs and now carry plain
+  quotes — the repo's own convention, and the rule one of the moved blocks explains.
+
 ## [0.3.0] — 2026-08-18
 
 ### Changed
