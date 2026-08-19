@@ -45,3 +45,5 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-19T20:14Z | wai-pr-review | PR #45 | GO |
 | 2026-08-19T19:41Z | wai-implementation | rationale split pass 2 (PR #46) | 17 scripts thinned into docs/rationale/, 7 confirmed all-operative; suite 181/0 |
 | 2026-08-19T20:02Z | wai-pr-review | PR #46 | NO-GO |
+| 2026-08-19T20:31Z | wai-pr-review | PR #47 | NO-GO |
+| 2026-08-19T20:32Z | wai-pr-review | PR #47 | GO |

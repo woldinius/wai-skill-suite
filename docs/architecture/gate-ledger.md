@@ -82,3 +82,5 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-08-19T20:14Z | 44 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
 | 2026-08-19T20:14Z | 45 | GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | |
 | 2026-08-19T20:02Z | 46 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
+| 2026-08-19T20:31Z | 47 | NO-GO | ✗ required check(s) not green: ci=IN_PROGRESS; ✓ quality catalog present; ✓ repo mode: solo; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | |
+| 2026-08-19T20:32Z | 47 | GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | |
