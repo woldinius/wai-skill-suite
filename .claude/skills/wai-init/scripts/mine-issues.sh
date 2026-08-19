@@ -1,12 +1,9 @@
 #!/usr/bin/env sh
 # mine-issues.sh — the read-only signal an existing backlog already carries about THIS repo.
 #
-# wai-init writes a quality catalog. Left to a cold read of the code, it proposes the dimensions
-# the code SHAPE suggests — and misses the ones the team has been feeling for months but that leave no
-# structural trace: the label people keep reaching for, the word that recurs across a dozen bug
-# titles, the theme half the closed PRs share. That history is evidence, and evidence a catalog author
-# never sees is a catalog dimension never written. This script surfaces it — as COUNTS the model then
-# judges, never as a verdict.
+# The backlog carries quality signal a cold read of the code cannot see; this script surfaces it —
+# as COUNTS the model then judges, never as a verdict.
+# Why: docs/rationale/mine-issues.md § The backlog is evidence a cold read of the code misses
 #
 # WHAT IT EMITS (and nothing more):
 #   LABEL_FREQ         — how often each issue label is used, with up to 3 example issue NUMBERS.
@@ -16,11 +13,10 @@
 #   CLOSED_PR_THEMES   — the labels and title terms that recur across CLOSED PRs — what the team has
 #                        actually been merging fixes FOR.
 #
-# WHAT IT REFUSES TO DO — and why the refusal is the point:
-#   * It prints NUMBERS, never bodies. An issue body is the most PII-dense text in a repo (stack traces
-#     with usernames, customer emails, tokens pasted in a hurry). Mining it wholesale into a catalog
-#     proposal would launder that PII into a committed doc. Bodies are read ONLY behind --bodies, ONLY
-#     to widen the TERM_DF corpus, and every email-shaped token is redacted before it is ever tokenised.
+# WHAT IT REFUSES TO DO:
+#   * It prints NUMBERS, never bodies. Bodies are read ONLY behind --bodies, ONLY to widen the
+#     TERM_DF corpus, and every email-shaped token is redacted before it is ever tokenised.
+#     Why: docs/rationale/mine-issues.md § An issue body is the most PII-dense text in a repo
 #   * It does NOT decide whether a signal is a real quality concern, nor whether to extend a dimension,
 #     mint a new local ID (>=100), propose it upstream, or drop it. That is model judgment on LOCAL
 #     ID space (ADR-0003: an ID inside an issue resolves against THIS repo's catalog, never a baseline).
@@ -29,11 +25,9 @@
 #   exit 2  UNKNOWN: gh missing / unauthenticated / the origin is not a GitHub repo gh can resolve.
 #           Not a failure of THIS repo — a failure to reach the signal. The caller degrades to
 #           code-only mining and records the gap. (2 is the suite's UNKNOWN across the gh emitters.)
-#   (There is deliberately no exit 3. "You ran me in the wrong place" and "I could not reach
-#   GitHub" are different FACTS, but they are the same DECISION for the caller: do not trust the
-#   mining, fall back to code-only. The distinction belongs in the message, not the exit code —
-#   and the suite's precedent is settled: excluded-domains.sh and merge-gate.sh both map misuse
-#   to 2. A private fourth code makes every caller learn a per-script dialect.)
+#   (There is deliberately no exit 3: misuse maps to 2, the same as excluded-domains.sh and
+#   merge-gate.sh — do not add a private fourth code. The distinction lives in the message.)
+#   Why: docs/rationale/mine-issues.md § Why there is no exit 3
 #
 # Usage: sh mine-issues.sh [--since YYYY-MM-DD] [--limit N] [--bodies]
 #        (default: --limit 200, all dates, titles+labels only)

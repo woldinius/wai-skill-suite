@@ -1,10 +1,8 @@
 #!/usr/bin/env sh
-# invocation-log.sh — the mechanical DENOMINATOR of skill runs (#29, decided 2026-08-18).
+# invocation-log.sh — the mechanical DENOMINATOR of skill runs.
 #
-# The run log's two tiers were measured in the field: the script-written tier logged 9 of 9; every
-# prompt-written tier had gaps (architecture-audit 0 rows with a committed report, learning-gap 0
-# with a ledger entry, implementation 4 of 5). Self-logging that depends on the model is not a
-# measurement. The fix is two artifacts, NEVER merged:
+# Self-logging that depends on the model is not a measurement, so there are two artifacts, NEVER
+# merged:
 #
 #   invocations (THIS file's output)  — every wai-* skill invocation, written MECHANICALLY by a
 #                                        harness hook. No outcome column, ever: it counts starts,
@@ -14,6 +12,7 @@
 # The difference between the two is per-skill prompt-contract compliance, and retro-compliance.sh
 # reports it. A merged artifact would be worse than either: a row without an outcome is not a
 # subset of the run log, it is a forgery of one.
+# Why: docs/rationale/invocation-log.md § The prompt-written tier was measured and had gaps (#29)
 #
 # OPT-IN, PER DEVELOPER (the learning-gap precedent): this script only runs if YOU wire it as a
 # Claude Code PostToolUse hook in your **.claude/settings.local.json** — never settings.json,
@@ -60,10 +59,9 @@ fi
 IN="$(head -c 65536 2>/dev/null || true)"
 printf '%s' "$IN" | grep -q '"tool_name"[[:space:]]*:[[:space:]]*"Skill"' || exit 0
 SKILL="$(printf '%s' "$IN" | grep -o '"skill"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"skill"[[:space:]]*:[[:space:]]*"//; s/"$//')"
-# Table-safe, like run-log.sh's cell(): the name is the ONE field this row takes from the payload,
-# and a name carrying '|' forged extra columns — a crafted skill name minted rows with a fake
-# timestamp and skill, corrupting the very denominator this log exists to make trustworthy.
+# Table-safe, like run-log.sh's cell(): the name is the ONE field this row takes from the payload.
 # Pipes become '/', whitespace collapses, 80 chars on a word boundary with a visible cut.
+# Why: docs/rationale/invocation-log.md § A crafted skill name forged denominator rows
 SKILL="$(printf '%s' "$SKILL" | tr '\n' ' ' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^ *//; s/ *$//' \
   | awk '{ if (length($0) <= 80) print; else { s = substr($0, 1, 80); sub(/ [^ ]*$/, "", s); print s "…" } }')"
 case "$SKILL" in

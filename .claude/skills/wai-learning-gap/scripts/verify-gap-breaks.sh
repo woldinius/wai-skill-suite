@@ -4,9 +4,9 @@
 # The whole mechanism rests on one promise: after a gap is planted, build/tests go RED, so the
 # human KNOWS a line is missing and has something concrete to restore. A gap that leaves the tree
 # green is worse than no gap — the human never notices it, the marker rides along into the next
-# commit unseen, and the Leitner box gets promoted for an exercise nobody did. The skill used to
-# assert "the gap must fail visibly" in prose and hope the model checked. "The model checked" is
-# not auditable. This is: it RUNS the project's own test command and reads the exit code.
+# commit unseen, and the Leitner box gets promoted for an exercise nobody did. So the check is
+# mechanical and auditable: this script RUNS the project's own test command and reads the exit code.
+# Why: docs/rationale/verify-gap-breaks.md § The red-probe replaced a prose promise
 #
 # The one subtlety, and the reason this is not just `! test`: the Socratic architecture gap
 # (see references/axes.md) is a NON-removal form. It asks the human to explain a structural choice;

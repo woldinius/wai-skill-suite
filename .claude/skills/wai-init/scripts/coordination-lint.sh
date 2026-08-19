@@ -1,12 +1,10 @@
 #!/usr/bin/env sh
 # coordination-lint.sh — is this repo's autonomy + comms config safe to act on?
 #
-# `coordination.conf` decides what an agent may do WITHOUT a human: arm an autonomous drain, post to a
-# channel. A config that is wrong in the SAFE direction (autonomy off) costs nothing. A config that is
-# wrong in the UNSAFE direction — a narrowed exclusion floor, an allowlist that authorises too much, a
-# webhook SECRET committed in the clear — costs everything, silently, and looks identical to a working
-# one. So the config gets the same treatment as the merge gate: a script owns the mechanical checks,
-# because "the model read the config and it looked fine" is not something anyone can audit.
+# `coordination.conf` decides what an agent may do WITHOUT a human: arm an autonomous drain, post to
+# a channel. A script owns the mechanical checks — "the model read the config and it looked fine" is
+# not something anyone can audit.
+# Why: docs/rationale/coordination-lint.md § Wrong in the unsafe direction looks identical to working
 #
 # THE ONE INVARIANT THIS FILE PROTECTS: the six policy domains that stay the human's in EVERY mode may
 # only ever be WIDENED, never narrowed. And the floor is NOT typed here — a second copy of a security

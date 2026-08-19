@@ -1,14 +1,10 @@
 #!/usr/bin/env sh
 # run-log.sh — one appended row per skill run: the suite's attendance record.
 #
-# Issue #11, measured in the field: a skill leaves a trace today ONLY if it files something — a gate
-# verdict, an issue. A security audit that finds nothing, a team run over eight issues and three
-# hours, a planning pass that comments on an existing issue: all ran, all vanished. THE RECORD
-# MEASURES SIDE EFFECTS, NOT WORK — and it is confident enough to be misread: counting issues by
-# skill showed 3 planning findings against 58 from pr-review, and a report concluded from that that
-# almost every PR was planned. The number was right; it measured issue creation, not value produced.
-# This file is the missing denominator. One row per run, written at hand-back, append-only like the
-# gate ledger: a run without a row is invisible work.
+# Without this file the record measures SIDE EFFECTS, not work: a skill leaves a trace only if it
+# files something. This file is the missing denominator. One row per run, written at hand-back,
+# append-only like the gate ledger: a run without a row is invisible work.
+# Why: docs/rationale/run-log.md § The record measured side effects, not work (issue #11)
 #
 # Deliberately NOT a second ledger to tag: the gate ledger's value comes from the human judging each
 # row, and asking for that twice would kill both. This is pure attendance — who ran, on what, with
@@ -39,11 +35,10 @@
 #        Appends to <repo-root>/docs/architecture/run-log.md ($RUN_LOG overrides the path — the
 #        same pattern as $MERGE_GATE_LEDGER on the gate ledger; outside a git repo, cwd-relative).
 #
-# WHAT COUNTS AS ONE RUN — defined here because undefined it was measured wrong (issue #29): rows
-# were written per HAND-BACK, so a turn that implemented three subjects logged one row and the
-# count undercounted by a factor nobody could reconstruct. The unit is one row per (skill, subject)
-# completed: a turn that hands back three subjects logs three rows; a re-run on the same subject
-# logs again (two rows for two runs is correct — the gate ledger already counts that way).
+# WHAT COUNTS AS ONE RUN: the unit is one row per (skill, subject) completed. A turn that hands
+# back three subjects logs three rows; a re-run on the same subject logs again (two rows for two
+# runs is correct — the gate ledger already counts that way).
+# Why: docs/rationale/run-log.md § Rows per hand-back undercounted runs (issue #29)
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi

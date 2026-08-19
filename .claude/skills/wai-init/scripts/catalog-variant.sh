@@ -1,13 +1,11 @@
 #!/usr/bin/env sh
 # catalog-variant.sh — derive a catalog VARIANT from the one master baseline.
 #
-# The suite offers the quality catalog in three sizes, and the obvious way to ship that — three
-# hand-maintained files — is the failure mode this repo documents everywhere else: a SEC fix that
-# lands in two copies out of three is a silent drift nobody notices, because a stale catalog reads
-# exactly like a current one. So there is ONE master (`quality-attributes.baseline.md`) and this
-# script derives the variants from it. The checked-in variant files exist so a reader can read
-# them and `wai-init` can copy them; tests/run.sh regenerates and diffs them, so they cannot
-# drift from the master without CI going red.
+# There is ONE master (`quality-attributes.baseline.md`) and this script derives the three
+# variants from it — never three hand-maintained files. The checked-in variant files exist so a
+# reader can read them and `wai-init` can copy them; tests/run.sh regenerates and diffs them, so
+# they cannot drift from the master without CI going red.
+# Why: docs/rationale/catalog-variant.md § One master, derived variants
 #
 #   platform  — today's full build: backend + web + iOS + Android, AI model integrations,
 #               token economy. The master, verbatim, behind a variant banner.

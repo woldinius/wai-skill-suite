@@ -1,16 +1,17 @@
 #!/usr/bin/env sh
 # tests/run.sh — the wai-learning-gap scripts, tested on TWO shells.
 #
-# These scripts are the ADR-0002 mechanics of a skill that had none: the opt-in gate, the one-open-
-# gap invariant, the "a gap must go red" probe, the ledger lint, the hook installer, the order-
-# neutraliser, and the post-run PR shortlist. Each is a gate or an emitter, and the suite has
-# already paid, twice, for the two ways a shell gate ships broken:
+# Under test: the opt-in gate, the one-open-gap invariant, the "a gap must go red" probe, the
+# ledger lint, the hook installer, the order-neutraliser, and the post-run PR shortlist. Each is a
+# gate or an emitter, and two rules govern every case:
 #
 #   · A `case … esac` inside `$( )` is a syntax error in bash 3.2 — which is what /bin/sh IS on
 #     macOS — and shellcheck passes it. So every case here runs under BOTH dash and bash 3.2.
 #   · A gate you have only ever seen FAIL is not a validated gate. So every script is exercised on
 #     its GO path (exit 0) as deliberately as on its NO path — an open-gap check that has never
 #     said "safe to plant" is an untested branch that happens to be failing closed.
+#
+# Why: docs/rationale/learning-gap-tests.md § The suite paid twice for shell gates before these rules existed
 #
 # Self-contained: no network, gh is stubbed, git repos are built in a temp dir, the classifier is
 # stubbed via EXCLUDED_DOMAINS_SH. Run:  sh tests/run.sh
@@ -222,8 +223,8 @@ for SH in $SHELLS; do
   assert "$SH open-gap: a named ledger it cannot read → 2 (UNKNOWN)" 2 "$rc" "$out" 'could not read'
 
   # THE WORKTREE SWEEP (issue #13): the ledger is shared across every worktree, the trees are not —
-  # a check that greps only its own tree compares two sides with different reach, and a marker
-  # planted from a linked worktree sat invisible for two days while flow B booked it `expired`.
+  # a check that greps only its own tree compares two sides with different reach.
+  # Why: docs/rationale/learning-gap-tests.md § The marker that sat invisible in a linked worktree
   Rwt="$TMP/ogwt-$SH"; gitrepo "$Rwt"
   Wsec="$TMP/ogwt-second-$SH"
   git -C "$Rwt" worktree add -q "$Wsec" -b "wt-$SH" >/dev/null 2>&1

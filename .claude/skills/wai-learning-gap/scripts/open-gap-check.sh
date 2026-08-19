@@ -1,19 +1,15 @@
 #!/usr/bin/env sh
 # open-gap-check.sh — at most ONE open gap, checked on BOTH sides in one call.
 #
-# The invariant is "never plant a second gap while one is open". It has to be checked on two sides,
-# and the skill's prose says why the ledger alone is not enough:
+# The invariant is "never plant a second gap while one is open", checked on two sides in one call:
+# the working TREE (git grep for the gap marker) is the side that catches a concurrent second
+# plant, and the ledger is the side that catches a marker a human deleted without solving. Neither
+# side alone is enough.
+# Why: docs/rationale/open-gap-check.md § Two sides, because the ledger has no lock
 #
-#   The ledger is a single unlocked file shared across every clone and worktree of a repo. Two
-#   concurrent sessions both read "no open row" and both plant — so the working TREE (`git grep`
-#   for the gap marker) is the side that actually catches a second gap, and the ledger is the
-#   side that catches a marker a human deleted without solving. You need both.
-#
-# WHY THE EXIT CODE IS 0/1/2 AND NOT A BITMASK. A tempting design folds "which side" into the exit
-# code (2 = ledger-side open). That is exactly the bug the merge gate exists to warn about: it
-# steals the UNKNOWN code — the suite's universal "could not verify, fail closed" — and makes the
-# gate misreport which of its own states it is in. So the SIDE goes in stdout, where it is data,
-# and 2 keeps its one meaning: something could not be read.
+# The SIDE that is open goes to stdout, where it is data — never into the exit code. Exit 2 keeps
+# its one suite-wide meaning: something could not be read.
+# Why: docs/rationale/open-gap-check.md § The exit code is not a bitmask
 #
 #   exit 0  no gap is open on either side — it is safe to plant
 #   exit 1  a gap IS open — stdout names WHICH side (this tree, ANOTHER worktree, and/or ledger);
@@ -22,33 +18,23 @@
 #
 # What this does NOT decide: anything judgmental — only whether an open gap exists, and where.
 #
-# A MARKER DETECTOR MUST NOT CONTAIN ITS OWN MARKER. This script used to grep for the literal
-# string, which meant the literal was IN this file — so it matched itself, and it matched every
-# other file that handles the marker as data (the hook installer, the test fixtures). Since
-# `.claude/skills/**` is committed in every repo install.sh has touched, the result was that
-# learning mode could NEVER plant a gap in a repo that vendors the suite: exit 1, "resolve the open
-# gap first", and nothing to resolve. Assembling the pattern at run time is the fix that needs no
-# path exclusions — and a blanket `:!.claude/skills/*` would have been wrong anyway, because this
-# repo is itself a project someone may legitimately be learning on.
+# A MARKER DETECTOR MUST NOT CONTAIN ITS OWN MARKER: the pattern is assembled at run time on the
+# next two lines, so the literal never appears in this file. Do NOT join them into one string.
+# Why: docs/rationale/open-gap-check.md § The detector used to contain its own marker
 MARKER_WORD='LEARN'
 MARKER="$MARKER_WORD #"
 #
 # THE TREE SIDE SWEEPS EVERY WORKTREE, NOT JUST ITS OWN. The ledger hangs off the repo and is
-# shared across all worktrees; a working tree is not. This script used to grep only the tree it ran
-# in, so the two sides it compares had different reach — and in the field (issue #13) that cost two
-# days: a gap planted from a linked worktree was invisible in the main checkout, the check reported
-# only the ledger row, and flow B's "no marker + no claim = expired" booked an exercise the human
-# had never seen. "No marker HERE" and "no marker ANYWHERE" are different facts. So the sweep walks
-# `git worktree list --porcelain`; a marker found in ANOTHER tree is reported as misplaced (exit 1,
-# its own line), and a listed tree that cannot be read makes the verdict UNKNOWN (exit 2) — an
-# unswept tree is never silently counted as clear.
+# shared across all worktrees; a working tree is not — the two sides must have the same reach. So
+# the sweep walks `git worktree list --porcelain`; a marker found in ANOTHER tree is reported as
+# misplaced (exit 1, its own line), and a listed tree that cannot be read makes the verdict
+# UNKNOWN (exit 2) — an unswept tree is never silently counted as clear.
+# Why: docs/rationale/open-gap-check.md § The sweep used to stop at its own worktree
 #
 # Usage:  sh open-gap-check.sh [ledger-path]
 #   With no argument the ledger is located the same way the skill locates it — via
-#   ledger-locate.sh — NOT by guessing one path. Guessing the `temp/` fallback meant that for a
-#   normal participant (whose ledger is under ~/.claude/learning/) the ledger side was skipped
-#   entirely while the output still announced "tree and ledger both clear". A green that names a
-#   side it never read is the exact thing ADR-0002 forbids.
+#   ledger-locate.sh — NOT by guessing one path.
+# Why: docs/rationale/open-gap-check.md § A green that named a side it never read
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
@@ -170,8 +156,8 @@ if [ -n "$UNKNOWN" ]; then
   exit 2
 fi
 
-# Say exactly which sides were read. "Both clear" when one side was never located is the claim this
-# script was caught making.
+# Say exactly which sides were read — never claim "both clear" for a side that was never located.
+# Why: docs/rationale/open-gap-check.md § A green that named a side it never read
 case "$LEDGER_SOURCE" in
   none) echo "open-gap-check: tree clear; no ledger claims this repo (nobody opted in) — safe to plant." ;;
   *)    echo "open-gap-check: no open gap on either side (tree clear, ledger $LEDGER clear) — safe to plant." ;;
