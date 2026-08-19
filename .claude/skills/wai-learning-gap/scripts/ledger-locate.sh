@@ -3,15 +3,10 @@
 #
 # THE LEDGER IS THE CONSENT. Learning mode is active for exactly one person: the one who has a
 # personal ledger for this repo. No ledger anywhere → the skill must do NOTHING (plant no gap,
-# install no hook, create nothing) so a colleague who never opted in stays untouched. That gate is
-# load-bearing, and it has one invisible failure mode the skill's own prose warns about:
-#
-#   A slug is DERIVED (from the remote, or the folder), and derived things drift — the repo is
-#   transferred to an org, renamed, forked; the folder is moved. A naive path check then finds no
-#   ledger at the new slug and concludes "this human never opted in" — going silent, orphaning
-#   their Leitner state, and by the very design of the gate NOBODY is told. So the gate is a
-#   LOOKUP, not a path check: it also reads what each ledger RECORDS about the repo it belongs to
-#   (its remote URL, its owner/repo) and matches on THAT, which does not drift.
+# install no hook, create nothing) so a colleague who never opted in stays untouched. And the gate
+# is a LOOKUP, not a path check: it also reads what each ledger RECORDS about the repo it belongs
+# to (its remote URL, its owner/repo) and matches on THAT, which does not drift when the slug does.
+# Why: docs/rationale/ledger-locate.md § A derived slug drifts, and the gate goes silent
 #
 # This is the single owner of that lookup. wai-team's post-run learning hand-off routes
 # through it; it does not re-implement the consent check.

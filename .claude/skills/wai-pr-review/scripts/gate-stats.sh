@@ -5,16 +5,10 @@
 # HUMAN tagged (the outcomes). That split is the whole design: a number no one can forge, and a
 # judgment no script can fake. See docs/learnings/empirical-test-plan.md §0–1.
 #
-# ── TAGS ARE MATCHED ON THEIR FIRST TWO CHARACTERS, AND THE ZERO THAT TAUGHT US WHY ──────────────
-#
-# The first parser compared outcome tags LITERALLY: `outcome["NO-GO/ok"]`. Then a three-week field
-# ledger arrived (issue #10) in which the human's vocabulary was finer than two letters — `fp, bug`,
-# `ok, besser GO`, `ok, manual fix` — and none of it was `ok` or `fp` to a string comparison. Twenty
-# of fifty-two judged NO-GO rows fell out of the statistic, unannounced, and the output read
-# "false-positive rate: 0%". The true value was 15%. The zero was not a measurement; it was a parser
-# artifact, sitting in the very line meant to prove the gate trustworthy. So: the tag is the first
-# two characters, the free text after a comma is the human's and is preserved — and any tag this
-# parser cannot place is COUNTED AND PRINTED. A statistic that drops rows must say so.
+# Tags are matched on their FIRST TWO characters, never compared literally. The free text after a
+# comma is the human's and is preserved — and any tag this parser cannot place is COUNTED AND
+# PRINTED. A statistic that drops rows must say so.
+# Why: docs/rationale/gate-stats.md § The 0% that was 15%
 #
 #   exit 0  printed the numbers (or the report)
 #   exit 2  no ledger to read — also under --report: never 0 with empty output
@@ -40,8 +34,8 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-# Default is REPO-relative (see merge-gate.sh — the writer this reads; resolving from the cwd
-# made a documented invocation report "no ledger" over a repo that had 28 rows, a false blank).
+# Default is REPO-relative, never cwd-relative (see merge-gate.sh — the writer this reads).
+# Why: docs/rationale/gate-stats.md § The cwd default that reported a false blank
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 [ -n "$LEDGER" ] || LEDGER="${REPO_ROOT:-.}/docs/architecture/gate-ledger.md"
 
@@ -76,9 +70,9 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
     while (match(s, /EX-[A-Z]+/)) { ex[substr(s, RSTART, RLENGTH)]++; s = substr(s, RSTART + RLENGTH) }
 
     # Mechanical cause classification of every NO-GO why cell. index(), not regex — these are
-    # literal phrases the gate itself prints, parens and all. Precedence setup > checks > domain,
-    # matching how the field report counted (a row failing on environment AND domain is an
-    # environment problem first — the remedy the gate prints 55 times is "declare required checks").
+    # literal phrases the gate itself prints, parens and all. Precedence setup > checks > domain:
+    # a row failing on environment AND domain is an environment problem first.
+    # Why: docs/rationale/gate-stats.md § Why setup outranks checks outranks domain
     if (v == "NO-GO") {
       if (index(w, "declares no required status checks") || index(w, "no enforced approval") || \
           index(w, "no CI checks report") || index(w, "run wai-init before"))
@@ -94,8 +88,8 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
     if (p == "ok") {
       okc[v]++
       # `ok, besser GO` is the calibration signal: the block was correct by the rules, but the
-      # human says GO would have been fine. Eleven of these sat unread in the field ledger while
-      # the gate went unchanged for three weeks — the most precise feedback a gate can get.
+      # human says GO would have been fine.
+      # Why: docs/rationale/gate-stats.md § Eleven besser-GO rows sat unread for three weeks
       if (v == "NO-GO" && index(o, "ok, besser GO") == 1) besser++
     }
     else if (p == "fp") fpc[v]++

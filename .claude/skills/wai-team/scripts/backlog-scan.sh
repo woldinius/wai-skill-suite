@@ -3,19 +3,17 @@
 #
 # wai-team must never self-mandate. Invoked without a named issue set, it does not claim,
 # branch, or work anything — it runs THIS, presents the overview as a proposal, and stops until the
-# human confirms the set, the decision handling, the budget and the integration mode. The reason it
-# is a script and not "the model reads the backlog": the frontier and the default order are a
-# dependency computation, and a model re-deriving a topo order by eye on every run is exactly the
-# brittle-prompt failure ADR-0002 exists to remove. Compute it once, here, and let step 2 refine a
-# single source instead of inventing its own.
+# human confirms the set, the decision handling, the budget and the integration mode. The frontier
+# and the default order are computed ONCE, here; step 2 refines this single source and never
+# re-derives its own order.
+# Why: docs/rationale/backlog-scan.md § Why a script and not the model reading the backlog
 #
 # THE ONE THING THIS SCRIPT MUST NOT DO IS RENDER A VERDICT IT CANNOT JUSTIFY.
 # `has_ac_checkboxes` is a MECHANICAL FACT — the issue body contains a `- [ ]` / `- [x]` line, or it
-# does not. It is NOT a judgment that the issue is "actionable": a checklist-free issue can be
-# perfectly workable and a checklist-heavy one can be noise. The drop/keep call stays with the model
-# (comment what's missing, label needs-info, move on — or keep it). Emitting an "actionable: no"
-# verdict from a checkbox count is the same category error as a lint that fails a repo for tailoring:
-# a mechanical signal wearing a semantic verdict's clothes. So it emits the fact and names it a fact.
+# does not. It is NOT a judgment that the issue is "actionable": the drop/keep call stays with the
+# model (comment what's missing, label needs-info, move on — or keep it). So it emits the fact and
+# names it a fact.
+# Why: docs/rationale/backlog-scan.md § A mechanical fact must not wear a verdict's clothes
 #
 # The exclusion-domain column is likewise a HINT, and says so: an issue carries no diff yet, so the
 # authoritative excluded-domain classification (wai/scripts/excluded-domains.sh, obeyed by its
@@ -37,10 +35,10 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX word/glo
 command -v gh >/dev/null 2>&1 || { echo "backlog-scan: gh is not installed — cannot read the backlog (UNKNOWN)." >&2; exit 2; }
 gh auth status >/dev/null 2>&1 || { echo "backlog-scan: gh is not authenticated — cannot read the backlog (UNKNOWN)." >&2; exit 2; }
 
-# Attendance (issue #11: the record measures side effects, not work — a team run that files nothing
-# vanishes). This scan opens every wai-team run and maps 1:1 to that skill, so it self-logs the row.
+# Attendance: this scan opens every wai-team run and maps 1:1 to that skill, so it self-logs the row.
 # Resolved as a ../../wai/scripts/ sibling like the shared classifier; FAIL-OPEN — a logging failure
 # must never break a scan.
+# Why: docs/rationale/backlog-scan.md § Attendance: a run that files nothing vanishes
 RUNLOG_SH="$(dirname "$0")/../../wai/scripts/run-log.sh"
 runlog() { [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-team "backlog scan" "$1" >/dev/null 2>&1 || true; }
 

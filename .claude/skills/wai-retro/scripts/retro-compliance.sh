@@ -1,17 +1,16 @@
 #!/usr/bin/env sh
 # retro-compliance.sh — the retro's denominator: did the period's work leave a trace?
 #
-# Issue #10, Part B, measured in the field: a skill left a trace ONLY if it filed something, so the
-# record measured the side effects of work, not the work. The run log (issue #11) is the fix — one
-# appended row per run — but the run log's own writers are split in two tiers, and the second tier
-# is PROSE: a skill's SKILL.md says "log the run at hand-back", and nothing checks that the model
-# obeyed. That is the suite's own prompt-contract weakness, pointed at itself. This script is the
-# check: it crosses the three artifacts that exist independently of each other — the run log (what
-# claims to have run), the gate ledger (what the gate demonstrably emitted) and `git log --merges`
-# (what demonstrably landed) — and reports the share of merged PRs that carry a gate verdict, with
-# every raw count printed beside the rate. A merged PR with no verdict row is a review that either
-# never ran or ran without its script; the ledger cannot tell those apart, and this line is where
-# that gap becomes visible instead of comfortable.
+# The run log's writers are split in two tiers, and the second tier is PROSE: a skill's SKILL.md
+# says "log the run at hand-back", and nothing checks that the model obeyed. That is the suite's
+# own prompt-contract weakness, pointed at itself. This script is the check: it crosses the three
+# artifacts that exist independently of each other — the run log (what claims to have run), the
+# gate ledger (what the gate demonstrably emitted) and `git log --merges` (what demonstrably
+# landed) — and reports the share of merged PRs that carry a gate verdict, with every raw count
+# printed beside the rate. A merged PR with no verdict row is a review that either never ran or
+# ran without its script; the ledger cannot tell those apart, and this line is where that gap
+# becomes visible instead of comfortable.
+# Why: docs/rationale/retro-compliance.md § The record measured side effects, not work
 #
 # ADR-0002, and the reason this script does not self-log: it EXTRACTS, it does not run a skill.
 # run-log.sh's own header restricts self-logging to scripts whose script↔skill mapping marks a real
@@ -169,12 +168,9 @@ fi
 
 # ── merged PRs in the period ─────────────────────────────────────────────────────────────────────
 # TWO ENUMERATORS, AND THEY ARE DIFFERENT MEASUREMENTS. `git log --merges` reads merge COMMITS: a
-# squash- or rebase-merged PR leaves none. That is offline and deterministic, and it was the only
-# source — which inverted the metric's purpose on any repo that squash-merges. On this repo PRs
-# #1–#6 were merge-committed and everything since #15 was squashed, so the live traced share (5/5 =
-# 100%) covered only the era that PREDATES the metric, and the very gap that motivated it (#15/#16
-# merged without gate verdicts) was invisible. A denominator that silently excludes the population
-# it was built to measure is worse than no denominator. (#24)
+# squash- or rebase-merged PR leaves none, so on a squash-merging repo it enumerates the wrong
+# population.
+# Why: docs/rationale/retro-compliance.md § The merge-commit denominator inverted the metric
 #
 # So: prefer `gh pr list --state merged` when gh is available and authenticated — it counts a
 # squash merge exactly like a merge commit — and fall back to `git log --merges` otherwise, with
@@ -236,8 +232,8 @@ fi
 
 # ── the traced share ─────────────────────────────────────────────────────────────────────────────
 # Of the merged PRs whose number is readable, how many carry a gate verdict row in the period? The
-# raw counts stand beside the rate (principle: every metric needs a counter-reader — a 0% that was
-# really 15% once shipped inside the very line meant to prove trustworthiness).
+# raw counts stand beside the rate (principle: every metric needs a counter-reader).
+# Why: docs/rationale/retro-compliance.md § A 0% that was really 15%
 if [ "$MPN" = 0 ]; then
   echo "  traced share: not derivable — 0 merged PRs with a readable number is an empty denominator, not 100% compliance (enumerator: $MERGE_SRC)$MERGE_NOTE"
 else

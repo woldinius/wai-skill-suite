@@ -1,13 +1,12 @@
 #!/usr/bin/env sh
 # ledger-lint.sh — the third operation on the personal ledger.
 #
-# A ledger has ingest (the skill WRITES rows) and query (it READS boxes to choose a gap). It never
-# had a lint — the same hole catalog-lint.sh was written to close, one level down. So an axis label
-# could be a typo the box-weighting silently ignores, an enabled axis could carry no level, two
-# gaps could be open at once, and a Socratic gap could record NO expected answer — which is fatal,
-# because a Socratic gap stays GREEN (it removes no code): its ONLY proof of a solve is the
-# comparison against a recorded expected answer, and if none was recorded the gap can never be
-# closed and rides along invisibly. Nothing checked. This checks.
+# A ledger has ingest (the skill WRITES rows) and query (it READS boxes to choose a gap); this is
+# the lint. It checks: every axis label is in the enum, an enabled axis carries a level, at most
+# ONE gap is open, and a Socratic gap records its expected answer. The last is load-bearing: a
+# Socratic gap stays GREEN (it removes no code), so its ONLY proof of a solve is the comparison
+# against the recorded expected answer — without one the gap can never be closed.
+# Why: docs/rationale/ledger-lint.md § The same hole catalog-lint closed, one level down
 #
 # IT NEVER REWRITES A LEDGER. An existing ledger belongs to the human — including a human-authored
 # one whose shape differs from the template (different section names, another language). This lint

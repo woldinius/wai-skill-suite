@@ -2,13 +2,10 @@
 # cross-issue-digest.sh — the notes a team run leaves on OTHER people's issues, gathered so none
 # evaporates.
 #
-# A long run touches many issues in passing: it references #this from a comment on #that, it learns
-# that #A actually depends on #B, it discovers a real problem on an issue it is not working. The
-# landing rule says a genuine finding gets FILED — but the raw material for that decision is scattered
-# across every issue the run brushed against, and asking a model to remember, at report time, every
-# comment it made three hours ago on an issue outside the set is the please-remember pattern ADR-0002
-# retired. So a script re-reads the backlog for edits SINCE THE RUN STARTED, on issues OUTSIDE the
-# worked set, and hands back the candidates. The model curates; nothing is filed automatically.
+# The landing rule says a genuine finding gets FILED. This script re-reads the backlog for edits
+# SINCE THE RUN STARTED, on issues OUTSIDE the worked set, and hands back the candidates. The model
+# curates; nothing is filed automatically.
+# Why: docs/rationale/cross-issue-digest.md § Why a re-read and not the model's memory
 #
 # WHAT IT GATHERS (mechanical): #-references, depends-on / blocked-by relations, and the text of
 # comments added since the run's start timestamp — grouped by issue and deduped within each group.

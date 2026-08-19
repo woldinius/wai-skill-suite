@@ -1,19 +1,15 @@
 #!/usr/bin/env sh
 # open-items.sh — the hand-back state footer, derived from artifacts instead of recalled.
 #
-# Issue #7, measured twice in the field: self-recall under-reports ~3× (a long session retrospected
-# from memory reported 2 of 6 verified failures — and described one of the missed ones as handled),
-# and "MERGED" is not "arrived" (a four-commit batch landed on a branch whose PR was already merged;
-# GitHub said MERGED, the default branch never saw it, found a day later by accident). A footer the
-# model writes from memory inherits exactly that bias, in the comfortable direction: an empty list
-# reads as coverage. So: THE SCRIPT EMITS, THE MODEL PASTES — every ▶ Recommended next hand-back
-# ends with this output, verbatim.
+# A footer the model writes from memory inherits self-recall's bias, in the comfortable direction:
+# an empty list reads as coverage. So: THE SCRIPT EMITS, THE MODEL PASTES — every ▶ Recommended
+# next hand-back ends with this output, verbatim.
+# Why: docs/rationale/open-items.md § Self-recall under-reports, and MERGED is not arrived (issue #7)
 #
 # THE ADR-0002 BOUNDARY, UP FRONT: this script reports FACTS — what is open, what is assigned, what
-# never arrived. "What to do next" is judgment and stays the model's ▶ Recommended next line; a
-# script that decided that would be exactly the class this repo has deleted twice.
+# never arrived. "What to do next" is judgment and stays the model's ▶ Recommended next line.
 #
-# THREE RULES make the output trustworthy (each one a measured failure without it):
+# THREE RULES make the output trustworthy:
 #   1. An empty line NAMES its derivation ("none — 0 open PRs") or prints "not checked" — an empty
 #      list without a derivation is a claim, not a statement.
 #   2. A class whose artifact is absent in this repo is SKIPPED, and the final summary names what
@@ -57,20 +53,11 @@ fi
 
 # ── 0. WHICH remote is the base? ─────────────────────────────────────────────────────────────────
 # THE GH SIDE AND THE GIT SIDE MUST ANSWER ABOUT THE SAME REPOSITORY. `gh` follows
-# `gh repo set-default`; this script used to take the git side from a fixed candidate list
-# (origin/HEAD, origin/main, …). With ONE remote those agree, which is why it shipped. With TWO
-# they do not: a checkout whose work lives on a second remote while `origin` points elsewhere had
-# EVERY merged PR reported "MERGED BUT UNREACHABLE" — 18 false alarms in one field run, in capitals.
-# The PRs were not unreachable; they were in a different repo than the git side was asked about.
-#
-# That is not cosmetic. The sweep is a good check and it catches a real class (a stacked PR merged
-# into a dead base, never arriving on the default branch). An alarm that is wrong 18 times in a
-# LEGITIMATE setup is skipped by the third run — and then it is absent the day it is right. The
-# false-positive rate is what keeps a finding alive; the same argument the gate's own record makes.
-#
-# So: ask gh which repository is in play, find the remote whose URL points there, and prefer that
-# remote's refs. When it cannot be resolved, fall back to the old list and SAY SO — a base that
-# might be the wrong repository must never read like a verified one.
+# `gh repo set-default`, so: ask gh which repository is in play, find the remote whose URL points
+# there, and prefer that remote's refs. When it cannot be resolved, fall back to the fixed
+# candidate list (origin/HEAD, origin/main, …) and SAY SO — a base that might be the wrong
+# repository must never read like a verified one.
+# Why: docs/rationale/open-items.md § Eighteen false alarms: gh and git answered about different repositories
 BASE_REMOTE=""; GH_NWO=""; BASE_NOTE=""
 if [ "$GH_OK" = yes ] && [ "$GIT_OK" = yes ]; then
   GH_NWO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"

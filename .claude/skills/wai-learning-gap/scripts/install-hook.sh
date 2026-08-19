@@ -87,9 +87,8 @@ MARKER="wai-learning-gap pre-commit (personal, auto-installed)"
 # The gap marker, assembled — NEVER written here as one contiguous string. This file generates a
 # hook that greps for the marker, so writing the literal would put it in the tree, where every
 # marker-scanner (this suite's own open-gap-check, and the hook itself once the suite is vendored
-# into a repo) would match it as if it were a real open exercise. That is not hypothetical: it
-# blocked a human's commit in the field, and it made open-gap-check unable to ever say "safe to
-# plant" in any repo that carries .claude/skills/.
+# into a repo) would match it as if it were a real open exercise.
+# Why: docs/rationale/install-hook.md § The literal marker blocked a commit in the field
 GAP_WORD='LEARN'
 
 # --- Chain a pre-existing FOREIGN hook ----------------------------------------------------------
