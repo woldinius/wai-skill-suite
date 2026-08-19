@@ -67,7 +67,7 @@ them everywhere else.
 
 ## Sizing — the catalog is the suite's token budget
 
-The bundled baseline is the **full** tier: **91 IDs, ~530 lines** (checkable with
+The bundled baseline is the **full** tier: **87 IDs, ~510 lines** (checkable with
 `grep -c`/`wc -l`). Every skill reads the catalog at runtime, so its size is the biggest lever.
 **The coarse cut comes first — the variant** (ADR-0004): **platform** (the full build — the only
 variant carrying `IOS-*`/`AND-*`/`PAY-*`/`AI-*`, so every mobile or token-selling repo starts
@@ -120,7 +120,7 @@ IDs) and the tailoring rules.
    If it *is* a real, tailored catalog:
    - **Default: keep.** Deliver only a **diff proposal** that preserves local tailoring, custom IDs
      and edits. Do **not** re-ask tier or attributes — decided at creation.
-   - **Offer a reset explicitly**, *keep* pre-selected: "The catalog exists (91 IDs, ~530 lines) —
+   - **Offer a reset explicitly**, *keep* pre-selected: "The catalog exists (87 IDs, ~510 lines) —
      keep and propose updates, or reset and regenerate?" **A reset discards the human's tailoring**
      — name that cost. Only a clear yes resets.
    - Only on **new or reset** does step 4 ask scope and tier.
