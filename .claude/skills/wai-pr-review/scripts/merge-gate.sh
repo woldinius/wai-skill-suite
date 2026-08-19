@@ -1,69 +1,34 @@
 #!/usr/bin/env sh
 # merge-gate.sh — the MECHANICAL preconditions for an agent-merged PR.
 #
-# `wai-pr-review` runs this and obeys the exit code. It exists because the alternative is
-# asking a language model to remember six checks on every run, and "the model checked" is not a
-# thing you can audit. This is.
+# `wai-pr-review` runs this and obeys the exit code. It exists because the alternative is asking a
+# language model to remember six checks on every run, and "the model checked" is not a thing you
+# can audit. This is.
 #
 #   exit 0  GO      — every mechanical precondition is met. The skill may merge (solo) or arm
 #                     auto-merge (team) — IF its own review also found no Blocker/Major.
 #   exit 1  NO-GO   — a precondition failed. The human merges. Reasons are printed.
 #   exit 2  UNKNOWN — a precondition could not be verified. Also the human merges.
 #
-# There is no path from "I could not check" to "go". A gate that says OK when it is unsure is an
-# invitation, not a gate.
+# THE FOUR RULES THIS FILE IS EDITED UNDER. Each one was bought with an incident; the incidents are
+# in docs/rationale/merge-gate.md, deliberately NOT here — a comment is billed to the context window
+# every time a model opens this file, and these rules are what an editor actually needs:
 #
-# ── A GATE THAT HAS NEVER SAID GO IS NOT CAUTIOUS. IT IS BROKEN — AND THE BREAKAGE IS INVISIBLE,
-#    BECAUSE "NO" IS WHAT A WORKING GATE LOOKS LIKE. ────────────────────────────────────────────
-#
-# This gate never said GO. Not once, in two repos, for its entire existence: it read `SKIPPED` as a
-# failure, and the suite's own CI template ships a job skipped on every PR. The auto-merge path —
-# the whole reason it exists — shipped DEAD, and nobody noticed for months.
-#
-# ON 2026-07-15 IT SAID GO. The first one, in any repo, ever — and it fell to the PR that documented
-# that it never had. The gate is now a validated branch and not merely a hopeful one; keep that
-# sentence in the past tense, and keep the date, because "it has never said GO" was TRUE when it was
-# written and would be a lie today. A claim in a comment rots exactly like a claim in a document.
-#
-# The model declined to merge it anyway — docs about its own errors, corrected twice in ten minutes,
-# were not its to land unread. Both halves were green and it still said no. That is not a rule being
-# dodged. THAT IS THE JUDGMENT HALF OF THE CONJUNCTION DOING ITS JOB, and it is the only recorded
-# instance of it. (docs/learnings/field-reports/2026-07-15-backend-web-das-gate-hat-go-gesagt.md)
-#
-# A gate has four ways to be wrong. Only ONE of them is loud:
-#
-#   says GO when it should say NO   → something bad merges. You find out. Everyone designs for this.
-#   says NO-GO when it should say GO → NOTHING HAPPENS. Which is what a gate looks like. Nobody does.
-#   right verdict, wrong reason      → nobody does.
-#   an answer you cannot audit       → "the model checked". Nobody does.
-#
-# Gates do not die by letting something through. They die by becoming decoration people route around.
-# So: everyone tests that it BLOCKS — the easy path, and the one that fails safe. Almost nobody tests
-# that it PASSES, and the pass path carries the gate's entire value. If your test plan has no case
-# that says "here is a PR that SHOULD get GO, and it does", you have tested half the machine.
-# (tests/run.sh case 1 is that case, and it exists because of this.)
-#
-# AND THE THREE STATES ARE THREE, NOT TWO. The temptation is to fold UNKNOWN into NO-GO — both mean
-# "the human merges", so why distinguish? Because they are statements about different things:
-#
-#   NO-GO   is a fact about the PR.        It failed a check.
-#   UNKNOWN is a bug report about the GATE. It could not check.
-#
-# Fold them and you throw away the only signal that says the gate needs fixing — which is exactly the
-# signal that was missing for the months it never said GO. And folding the other way is worse: a
-# repair HINT once went out through unknown(), silently upgrading a definite NO-GO to "I couldn't
-# tell". Never unsafe. But a gate that misreports which of its own states it is in is a gate people
-# stop reading.
-#
-# Fail closed — and then go and check whether "closed" is where it has been the whole time.
-#
-# What this script does NOT decide: whether a finding is a Blocker. That is judgment, and it stays
-# with the reviewer. The gate is the CONJUNCTION of both: this script green AND no Blocker/Major.
+#   1. NO PATH FROM "I COULD NOT CHECK" TO GO. A gate that says OK when it is unsure is an
+#      invitation, not a gate.
+#   2. THE THREE STATES ARE THREE. NO-GO is a fact about the PR; UNKNOWN is a bug report about the
+#      GATE. Fold them and you lose the only signal that says the gate needs fixing.
+#   3. A GATE THAT HAS NEVER SAID GO IS NOT CAUTIOUS, IT IS BROKEN — and the breakage is invisible,
+#      because "no" is what a working gate looks like. This one never said GO in two repos for its
+#      entire existence, and nobody noticed for months. Test the PASS path first: tests/run.sh
+#      case 1 is "green repo → GO", and it is first on purpose.
+#   4. MECHANICS HERE, JUDGMENT IN THE MODEL. This script never decides whether a finding is a
+#      Blocker. The gate is the CONJUNCTION: this script green AND no Blocker/Major.
 #
 # Usage:  sh merge-gate.sh [PR-number] [--repo OWNER/NAME]
 #           PR-number defaults to the PR for the current branch.
 #           --repo (or $GH_REPO) says WHICH repository to ask about. Without it the repo is read
-#           from the git remote — which is a guess, and a wrong one costs a bogus verdict (below).
+#           from the git remote — which is a guess, and a wrong one costs a bogus verdict.
 # Config: docs/architecture/merge-gate.conf   (written by wai-init; see the template there)
 
 set -eu
@@ -74,16 +39,10 @@ set -eu
 # shell is worse than no gate, so if we were launched under zsh, re-exec under sh.
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
-# WHY THIS IS A SCRIPT AND NOT A PARAGRAPH IN A SKILL.md
-#   Anthropic, "Effective context engineering for AI agents": *hardcoding complex, brittle logic
-#   in prompts to elicit exact agentic behavior creates fragility.* This gate used to be six
-#   conditions a model had to remember on every run — and "the model checked" is not something
-#   anyone can audit. You cannot grep it, you cannot diff it, and six months on you cannot answer
-#   whether it happened: the failure case and the success case produce identical output.
-#   → docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md · REFERENCES.md
-#
-#   And the line this script must not cross: IT OWNS MECHANICS, THE MODEL OWNS JUDGMENT. No
-#   script can decide whether a finding is a Blocker. The gate is one half of a conjunction.
+# WHY THIS IS A SCRIPT AND NOT A PARAGRAPH IN A SKILL.md: "the model checked" cannot be grepped,
+# diffed or audited — the failure case and the success case produce identical output (ADR-0002).
+# And the line this script must not cross: IT OWNS MECHANICS, THE MODEL OWNS JUDGMENT.
+# Why: docs/rationale/merge-gate.md § Why a script and not a paragraph
 
 PR=""
 REPO_SEL="${GH_REPO:-}"        # --repo, or $GH_REPO. Empty = read it from the git remote.
@@ -190,16 +149,11 @@ instead of running the gate (empirical-test-plan §0). That is itself a finding.
 |---|---|---|---|---|
 LEDGER_HDR
   fi
-  # VERDICT REASONS FIRST. The reasons arrive in check order — ✓ preambles, then the failure — and
-  # under any cap the cell loses its LAST token first. Field-measured (issue #10): median 143
-  # characters of "everything fine" before the first ✗, so of 7 domain NO-GOs exactly one still
-  # carried readable EX-* IDs, and the human reconstructed the rest BY HAND as ledger comments —
-  # the most expensive possible proof that the ordering was wrong. So the ✗ and ? lines go first,
-  # ✓ and · after — reordered HERE, at assembly time only: the terminal output keeps its natural
-  # check order, and past rows are records (append-only), so only NEW cells carry the new order.
-  # index()==1, not a regex: ✗ is multibyte and a bracket expression over it is byte-roulette.
-  # Guarded like every other line in this function: a reorder that fails falls back to the raw
-  # reasons — a worse-ordered row is a data gap, aborting the verdict over it would be a real cost.
+  # VERDICT REASONS FIRST: ✗ and ? before ✓ and ·, at ASSEMBLY TIME ONLY (the terminal keeps check
+  # order, past rows are records). Under any cap the cell loses its LAST token, so a cell that spends
+  # its budget on "everything fine" loses the reason it exists for. index()==1, not a regex: ✗ is
+  # multibyte. Falls back to the raw reasons if the reorder fails — a data gap beats a lost verdict.
+  # Why (field-measured, issue #10): docs/rationale/merge-gate.md § Verdict reasons first
   _srt=$(printf '%b' "$2" | awk '
     index($0, "  ✗ ") == 1 || index($0, "  ? ") == 1 { f[++nf] = $0; next }
     { r[++nr] = $0 }
@@ -245,20 +199,10 @@ if [ -z "$PR" ]; then
 fi
 
 # --- 0b. WHICH repository, and WHICH base? ------------------------------------------------------
-# THESE TWO LINES USED TO BE UNGUARDED, AND UNDER `set -e` THAT MADE A TOOL FAILURE LOOK LIKE A
-# JUDGMENT. `gh` exits 1 when it cannot resolve a repository; `set -e` then killed the script with
-# gh's exit code — and 1 is this gate's code for NO-GO. In the field: `origin` pointed at a repo the
-# human had lost access to, the PR lived on a second remote, and the gate reported
-# "a precondition failed" for a PR it had never even looked at.
-#
-# That is the exact failure this script's own header calls unforgivable: the three states are three,
-# and "I could not check" is state 2. Reporting it as state 1 is corrosive in BOTH directions — the
-# human reads a network error as a content verdict, and then learns to discount NO-GO ("that's just
-# the remote"), which is the state the gate protects `main` with.
-#
 # Guarded on TWO conditions, because there are two ways to get nothing: a non-zero exit, and a
-# SUCCESSFUL call that printed nothing (the same class as a scanner whose empty output reads as
-# "zero findings"). Either one is UNKNOWN.
+# SUCCESSFUL call that printed nothing. Either one is UNKNOWN, never NO-GO — unguarded under `set -e`
+# a gh failure exits 1, which is THIS gate's code for NO-GO, and a tool failure then reads as a
+# verdict about the code. Why: docs/rationale/merge-gate.md § Repo and base resolution
 if [ -n "$REPO_SEL" ]; then
   REPO="$REPO_SEL"                              # told explicitly — no guessing, nothing to fail
 elif ! REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)" || [ -z "$REPO" ]; then
@@ -278,13 +222,10 @@ if ! BASE="$(gh pr view "$PR" --repo "$REPO" --json baseRefName --jq .baseRefNam
 fi
 
 # --- Is the PR already merged? Then this gate is MOOT --------------------------------------------
-# The gate answers one question: "may this be merged?" Once the PR IS merged, that question is
-# already answered and the gate can prevent nothing — a GO would imply "you may merge" (already
-# done) and a NO-GO "do not merge" (too late). Neither is honest, so say MOOT and stop. No artefact
-# watches ORDERING, and this is the one place the gate can: a solo repo can merge before the review
-# runs, turning the review into a post-merge self-review of just-authored code — the weakest
-# configuration there is. Recording a MOOT row is the opposite of a missing one: a missing row reads
-# as "never checked", a MOOT row says "checked, too late". (Field report: a production iOS repo, 2026-08.)
+# Once the PR IS merged this gate can prevent nothing: GO would mean "you may merge" (already done),
+# NO-GO "do not merge" (too late). Neither is honest. A MOOT row is the opposite of a missing one —
+# it records that the gate ran and was TOO LATE, rather than reading as never-checked. No artefact
+# else watches ORDERING, and a solo repo can merge before the review runs.
 STATE="$(gh pr view "$PR" --repo "$REPO" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
 if [ "$STATE" = "MERGED" ]; then
   echo "merge-gate: PR #$PR ($REPO → $BASE) is already MERGED — this gate is MOOT."
@@ -318,23 +259,10 @@ case "$MODE" in
 esac
 
 # --- 3. Every check the base branch REQUIRES is SUCCESS -----------------------------------------
-# GREEN MEANS: every check the base branch REQUIRES is SUCCESS. Everything else is informational
-# and must never veto.
-#
-# The old rule was "every reported check must be SUCCESS", which treats SKIPPED as a failure. It is
-# not one — SKIPPED means the job's own condition said "do not run". And the suite's OWN ci.yml
-# ships a build job gated on `github.ref == 'refs/heads/main'`, so on a PR that job is skipped and
-# GitHub still reports a check run with conclusion `skipped`. Result: every PR in every repo carried
-# a permanently non-green check, and this gate returned NO-GO on all of them, forever. The
-# auto-merge path the whole suite is built around shipped DEAD. (Reproduced on two PRs, two repos.)
-#
-# THE OBVIOUS FIX IS A TRAP. "Treat SKIPPED as green" opens SKIP-TO-GREEN: put a `paths-ignore` on
-# the test job, and an API PR skips it, the gate calls it green, and the required check never ran.
-# Same evasion class the stub guard was just hardened against. A fix that swaps one hole for another
-# is not a fix.
-#
-# So: ask the branch what it REQUIRES, and judge only that. A required check that is SKIPPED is a
-# NO-GO — deliberately stricter than GitHub, which lets a skipped required check pass.
+# GREEN MEANS: every check the base branch REQUIRES is SUCCESS. Everything else is informational and
+# must never veto. A REQUIRED check that is SKIPPED is a NO-GO — deliberately stricter than GitHub,
+# and the reason "just treat SKIPPED as green" is not the fix: it opens skip-to-green.
+# Why: docs/rationale/merge-gate.md § Required checks and skip-to-green
 required_from_rulesets() {
   ids="$(gh api "repos/$REPO/rulesets?includes_parents=true" --jq '.[].id' 2>/dev/null)" || return 0
   printf '%s\n' "$ids" | while IFS= read -r id; do
@@ -437,35 +365,13 @@ if [ "$MODE" = "team" ]; then
 fi
 
 # --- 5. Excluded domains — DELEGATED to the one shared classifier -------------------------------
-#
-# Three checks used to live here, inline: the hardcoded GUARDRAIL floor, the repo's CONTRACT_PATHS,
-# and destructive migrations. They now live in ONE place — the shared classifier next to doctor.sh
-# (`../../wai/scripts/excluded-domains.sh`) — and this gate CALLS it. The reason is
-# single-source. The same question — "is this an excluded domain, the human's alone?" — is asked by
-# THIS everyday gate, by pr-review, and by wai-team's autonomous drain. Three inline copies are
-# three chances to disagree about what is human-only, and the copy that fails OPEN is the one that
-# wins. One definition, cited from the canonical `agent-git-protocol.md` § "Excluded domains",
-# cannot drift against itself.
-#
-# WHAT MOVED, AND WHAT DID NOT:
-#   • The hardcoded GUARDRAIL_PATHS floor moved INTO the classifier — still hardcoded there, so
-#     config STILL cannot lower it. The two-harmless-steps escalation (an agent PR "tidies"
-#     merge-gate.conf, drops billing/* from CONTRACT_PATHS, then merges billing freely) is closed in
-#     the floor's new home, not reopened here. EX-PAY/AUTH/API/SEC (CONTRACT_PATHS), EX-MIG
-#     (MIGRATION_PATHS + a destructive-DDL grep) and the NEW EX-GDPR all live there too.
-#   • EX-GDPR is the hole this refactor closes. The classifier reads a new ERASURE_PATHS key AND
-#     greps the WHOLE diff for erasure — so an ad-hoc `DELETE FROM users`, `ON DELETE CASCADE` or
-#     `deleteAccount()` dropped OUTSIDE any migration file is caught. A path-only check let that
-#     self-merge through; a whole-diff grep does not.
-#   • §4 (team-mode approval enforcement) did NOT move, and must not. It is a fact about branch
-#     PROTECTION, not about the diff's domain — a different question with a different source of
-#     truth. It stays above this block, in this script, exactly where it was.
-#
-# FAIL CLOSED. The classifier is located from THIS script's own path (not from the cwd, which is the
-# repo root). If it cannot be found, or it returns UNKNOWN because it could not read the diff, this
-# gate is UNKNOWN and the human merges. There is no path from "I could not classify" to GO — the
-# rule the whole gate lives by. pr-review inherits EX-GDPR for free: it obeys this exit code, it
-# does not re-derive the domain set.
+# ONE definition, never three copies: this gate, pr-review and wai-team's drain all ask the same
+# question, and the copy that fails OPEN is the one that wins. The GUARDRAIL floor stays hardcoded
+# INSIDE the classifier, so no repo config can lower it. §4 (team-mode approval) deliberately did
+# NOT move: that is a fact about branch PROTECTION, not about the diff's domain.
+# FAIL CLOSED: classifier missing, or UNKNOWN because it could not read the diff → this gate is
+# UNKNOWN and the human merges. There is no path from "I could not classify" to GO.
+# Why, and what EX-GDPR closed: docs/rationale/merge-gate.md § Excluded domains: one classifier
 CONF="${REPO_ROOT:-.}/docs/architecture/merge-gate.conf"
 EXCL_SH="$(dirname "$0")/../../wai/scripts/excluded-domains.sh"
 if [ ! -f "$CONF" ]; then
