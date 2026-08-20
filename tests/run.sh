@@ -1185,7 +1185,7 @@ rlgit() { _d="$1"; shift; git -C "$_d" -c core.hooksPath=/nonexistent -c commit.
 # fixture actually needs is the FILES plus a git that can list them (#40).
 N=$((N+1)); PJD="$TMP/pj$N"; mkdir -p "$PJD"
 ( cd "$ROOT" && git ls-files -z | xargs -0 tar cf - ) | ( cd "$PJD" && tar xf - )
-sed 's/28 enforcement scripts/99 enforcement scripts/' "$ROOT/.claude-plugin/plugin.json" > "$PJD/.claude-plugin/plugin.json"
+sed -E 's/[0-9]+ enforcement scripts/99 enforcement scripts/' "$ROOT/.claude-plugin/plugin.json" > "$PJD/.claude-plugin/plugin.json"
 git init -q -b main "$PJD" 2>/dev/null; rlgit "$PJD" add -A; rlgit "$PJD" commit -q -m fixture
 out="$( cd "$PJD" && sh tests/numbers-lint.sh 2>&1 )"; rc=$?
 assert "numbers-lint: the marketplace copy is IN the living set (a wrong script count is STALE)" 1 "$rc" "$out" \
@@ -1321,6 +1321,24 @@ for r in $(grep -rhoE 'references/[a-z0-9./-]+\.md' "$ROOT"/.claude/skills/*/SKI
   find "$ROOT/.claude/skills" -path "*/$r" | grep -q . || dead="$dead $r"
 done
 assert "no SKILL.md points at a reference that does not exist" 0 "$([ -z "$dead" ] && echo 0 || echo 1)" "dead:$dead"
+
+# Arrival is part of done (#51): the prose anchors that wire the arrival check into the paths that
+# report success. The mechanics existed before the wiring did — the batch verifier and the
+# hand-back footer both ran `merge-base --is-ancestor` while nothing instructed the review skill
+# to ask the question after ITS OWN merge, and a stacked PR merged into a dead base read as done.
+# A rule that lives only in the script is that gap again, one layer up.
+if tr '\n' ' ' < "$ROOT/.claude/skills/wai/references/agent-git-protocol.md" | tr -s ' ' \
+   | grep -q 'retarget the next PR to the default branch'; then   # flattened: the claim wraps
+  ok "the git protocol carries the stacked-PR retarget rule"
+else bad "the git protocol carries the stacked-PR retarget rule" "no retarget-to-default sentence in agent-git-protocol.md"; fi
+if grep -q 'verify-arrival.sh' "$ROOT/.claude/skills/wai-pr-review/SKILL.md" \
+   && grep -q '"merged" in the report means ARRIVED' "$ROOT/.claude/skills/wai-pr-review/SKILL.md"; then
+  ok "wai-pr-review names verify-arrival.sh, and 'merged' is defined as ARRIVED"
+else bad "wai-pr-review names verify-arrival.sh, and 'merged' is defined as ARRIVED" "the review skill no longer wires the arrival check"; fi
+if grep -q 'full plan text' "$ROOT/.claude/skills/wai-requirements-planning/SKILL.md" \
+   && grep -q 'never truncate silently' "$ROOT/.claude/skills/wai-requirements-planning/SKILL.md"; then
+  ok "planning posts the full plan text to the issue, with the visible-split fallback"
+else bad "planning posts the full plan text to the issue, with the visible-split fallback" "full-text or never-truncate-silently sentence missing"; fi
 
 strays="$(find "$ROOT/.claude/skills" -maxdepth 2 -name 'README.md' | tr '\n' ' ')"
 assert "no README.md inside a skill folder" 0 "$([ -z "$strays" ] && echo 0 || echo 1)" "found: $strays"

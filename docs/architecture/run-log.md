@@ -47,3 +47,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-19T20:02Z | wai-pr-review | PR #46 | NO-GO |
 | 2026-08-19T20:31Z | wai-pr-review | PR #47 | NO-GO |
 | 2026-08-19T20:32Z | wai-pr-review | PR #47 | GO |
+| 2026-08-20T21:43Z | wai-implementation | arrival-is-done (#51) | verify-arrival.sh shipped and wired into review/team/protocol/planning; 395 cases green, live ARRIVED on 4e607f5 |

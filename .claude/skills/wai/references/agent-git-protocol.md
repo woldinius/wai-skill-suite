@@ -289,6 +289,17 @@ find the domain set written out anywhere else, that copy is the bug — fix it b
       [ "$(git rev-parse origin/<branch>)" = "$(gh pr view <n> --json headRefOid --jq .headRefOid)" ]
 
   **Never delete a branch on "the PR is merged".** Delete it on *that*.
+- **Stacked PRs: the base is ephemeral — retarget after every merge in the chain.** The base of a
+  stacked PR is its predecessor's branch, and that branch merges away. GitHub retargets the next
+  PR automatically only when the base merges into the **default** branch — not when it merges
+  elsewhere, and not reliably on squash merges. So **after every merge in the chain, retarget the
+  next PR to the default branch**: `gh pr edit <n> --base <default>`. A PR whose base already
+  merged and was deleted merges into nothing — the forge reports MERGED, CI is green, and the
+  default branch receives nothing (field report 2026-08-06: found a day later, by accident). This
+  is the merge-side twin of the pre-push hook above — the hook refuses a push to a dead branch;
+  this rule keeps a PR from being *merged into* one. After any merge a skill performed,
+  `verify-arrival.sh` (in this skill's `scripts/`) is the check that the commit actually arrived:
+  exit 0 ARRIVED · exit 1 LOST (say so loudly) · exit 2 could not verify, which is never "arrived".
 - **Clean tree before you switch or rebase.** A branch switch, rebase or `git stash` must not
   drag uncommitted personal state onto another branch. If an open learning gap (🧩 `LEARN #`) is
   in the working tree, resolve it first (`wai-learning-gap`, flow C — resolve and explain), then

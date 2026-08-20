@@ -4,6 +4,31 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
+## [Unreleased]
+
+### Added
+
+- **Arrival is part of done** (#51). "Merged" used to mean "the forge said MERGED" — and a stacked
+  PR whose base had already merged and been deleted merges into nothing: CI green, gate GO, label
+  purple, and the default branch never sees the commit (two field incidents of the same class in
+  five days). Four changes, one class — *the step that knows the target state now tells someone*:
+  **the git protocol** gains the stacked-PR paragraph — the base of a stacked PR is the
+  predecessor branch, and after every merge in the chain the next PR is retargeted to the default
+  branch (`gh pr edit <n> --base <default>`); it is the merge-side twin of the pre-push hook.
+  **A shared arrival check**, `wai/scripts/verify-arrival.sh`: resolves the default branch (gh,
+  then `origin/HEAD`), fetches it fresh, and asks whether the commit is reachable — ARRIVED
+  (exit 0), LOST plus the branches that do contain it (exit 1), could-not-verify fail-closed
+  (exit 2; never printed as arrived). **The report paths wire it in**: `wai-pr-review` after its
+  own merge and `wai-team`'s merge queue say "merged" only after ARRIVED, verify each `Closes #N`
+  issue is actually CLOSED instead of assuming, and warn once per run when the merge target is
+  not the default branch — never changing that repo setting, which is the human's.
+  **`wai-requirements-planning` posts the full plan text to the issue** — the human answers "is
+  this plan good?" where they work; the repo plan file stays the source of truth; oversized plans
+  split into numbered comments, and the summary-plus-path fallback announces itself rather than
+  truncating silently, with one boundary: on a public tracker, sensitive plans stay summary +
+  path. `post-merge-verify.sh` is deliberately untouched — it answers "is `main` green?", a
+  different question from "did the commit arrive?", and both must hold between queue merges.
+
 ## [0.3.1] — 2026-08-19
 
 ### Changed

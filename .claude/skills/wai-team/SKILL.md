@@ -146,6 +146,15 @@ this skill adds orchestration, **not** new authority.
    That is the expected outcome, not a failure: arm the head, hand the rest over in queue order
    as a `ready-to-merge` list (**not** armed), and say so in the report.
 
+   **A queue merge is "merged" only when it ARRIVED.** After each single merge the queue lands,
+   run `sh ../wai/scripts/verify-arrival.sh <mergeCommit>` (from this skill's directory — a
+   sibling path): exit 0 = **ARRIVED** on the freshly fetched `origin/<default>` — the report may
+   say "merged"; exit 1 = **LOST** — the forge says MERGED but the default branch never received
+   the commit (the stacked-PR class): stop the queue, say so loudly, hand it to the human; exit 2
+   = could not verify, which is never "arrived". `post-merge-verify.sh` stays the **batch**
+   barrier — it verifies `main` is *green* after a merge, a different question from whether the
+   commit *arrived*, and both must hold before the next merge starts.
+
 6. **Consolidate cross-issue notes** — run `cross-issue-digest.sh <START-ts> <worked-set>` to
    gather comments and edits made *since the run started* on issues **outside** the worked set:
    #-references, depends-on / blocked-by relations, and new findings, grouped and deduped.
