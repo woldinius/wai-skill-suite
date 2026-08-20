@@ -108,6 +108,40 @@ of the design. An earlier draft claim ("the verdict is deterministic *nowhere el
 **rejected** during the audit as an unfalsifiable negative — the exact claim class the
 publication rule exists for.
 
+### obra/superpowers
+<https://github.com/obra/superpowers> (MIT)
+**2026-08-20 · partially adopted**
+
+A software-development methodology shipped as composable skills. Read against
+`wai-implementation`, it is strong on the one axis this suite is thinnest on: **evidence and
+process discipline *during* the build**, where the suite had invested almost everything in
+judgment *before* it. The four primitives below each closed a place where `wai-implementation`
+could hand back finished-looking work with nothing behind it.
+
+| Source skill | What it became here |
+|---|---|
+| `verification-before-completion` — *"no completion claims without fresh verification evidence"* | **step 6, *Prove it*** — name the command, run it now, paste it and its output into the PR. For a bug, step 1's red command must be re-run **green**. Until this, nothing in the skill ever *ran* anything: step 1 built a red command that no later step re-ran, step 5 read the diff against the catalog, step 7 opened the PR. That is [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)'s own failure shape — *"the model checked" is not a thing anyone can audit* — sitting unnoticed in the suite's default doer |
+| `systematic-debugging` — the three-strikes rule | the bug branch of **step 1** now bounds its fix loop: hypothesis written before the first edit, one variable at a time, a failed attempt reverted before the next (the snapshot pattern), and **stop after three** — handing back what each attempt ruled out instead of stacking a fourth patch on a wrong model |
+| `brainstorming` — *"hidden complexity upgrades the path; nothing downgrades mid-task"* | **step 3**'s stop condition **re-fires on discovery** and ratchets one way only. The gap: the plan-delta check (step 2) covered what the *human* changed after planning, and nothing at all covered what the *code* revealed mid-implementation — a contract domain reached after the gate had already said proceed |
+| `requesting-code-review` — crafted context beats remembered context | **step 5** now starts from a full read of `git diff <base>...HEAD` and closes by naming the strongest reason a reviewer would reject the change. It had said "check your own diff" without ever requiring the diff be read — which is how a self-review becomes a checklist run against intent |
+
+**Rejected — with the reason, so it is not asked a third time:**
+
+- **The TDD iron law** (`test-driven-development`: no production code before a failing test).
+  Incompatible with a split this suite made deliberately — `wai-testing` owns tests,
+  `wai-implementation` only *notes* the needs, and the strategy bans speculative unit tests in
+  favour of end-to-end-testable functions. The two places test-first genuinely pays are already
+  kept: *bug → build the red first*, and the mid-implementation invocation for **foundational
+  seams**. Adopting the law wholesale would buy duplication, not coverage.
+- **The word budget** (`writing-skills`: frequently-loaded skills under ~500 words, detail
+  displaced into `references/`). Correct on the merits, and already on this repo's own record as
+  criticism **K8** and open question **Q5** (context cost per run, unmeasured). Deferred on
+  purpose: it is a *suite-wide* convention — all twelve skills carry the same Platform-context
+  and Affected-surfaces sections, and `wai-init` generates its catalog variants against them. One
+  skill cut in isolation buys the inconsistency **without** the measurement, so it belongs in its
+  own ADR with Q5's numbers attached. Recorded here rather than in a backlog because the negative
+  result is the expensive half.
+
 ### mattpocock/skills
 <https://github.com/mattpocock/skills> (MIT)
 **2026-07-09 · partially adopted**
