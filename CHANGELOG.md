@@ -29,6 +29,31 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   path. `post-merge-verify.sh` is deliberately untouched — it answers "is `main` green?", a
   different question from "did the commit arrive?", and both must hold between queue merges.
 
+### Changed
+
+- **`wai-implementation` gains a step that actually runs something — plus a bounded fix loop, a
+  ratchet and a real diff read.** Read against
+  [obra/superpowers](https://github.com/obra/superpowers) (MIT), the suite's default doer had four
+  places where it could hand back finished-looking work with nothing behind it. **A new step 6,
+  *Prove it*:** name the one command that proves the change, run it *now*, and paste it and its
+  output into the PR under **Verification** — and for a bug, re-run step 1's red command and see
+  it go **green**. Nothing in the skill had ever *executed* anything: step 1 built a red command
+  that no later step re-ran, step 5 read the diff against the catalog, step 7 opened the PR. That
+  is [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)'s own failure shape —
+  *"the model checked" is not a thing anyone can audit* — sitting unnoticed at home. Where no
+  command can prove it, the skill must now *say so* (`"not verified locally: <why>"`): fail-open
+  is allowed, silence is not. **Step 1** bounds the bug fix loop — hypothesis written before the
+  first edit, one variable at a time, revert before retry, and **stop after three** rather than
+  stacking a fourth patch on a wrong hypothesis class. **Step 3**'s stop condition now re-fires on
+  what the *code* reveals mid-implementation (the step 2 delta check only ever covered what the
+  *human* changed after planning) and **ratchets one way only**. **Step 5** starts from a full
+  `git diff <base>...HEAD` read and closes by naming the strongest reason a reviewer would reject
+  the change. Steps renumbered 6 → 7 → 8 → 9 with every cross-reference updated; no other skill
+  referenced these numbers. The source, and the two borrows deliberately **rejected** — the TDD
+  iron law (it conflicts with `wai-testing` owning tests) and the sub-500-word budget (that is
+  **K8**/**Q5**, and it needs its own ADR with the measurement attached) — are recorded in
+  [REFERENCES.md](REFERENCES.md), in the same commit, per that file's own rule.
+
 ## [0.3.1] — 2026-08-19
 
 ### Changed

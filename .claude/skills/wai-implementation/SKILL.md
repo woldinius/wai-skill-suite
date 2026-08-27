@@ -53,6 +53,13 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    goes red on exactly this bug** (a failing test, a curl, a CLI invocation — run it and keep
    its output). No reproducible red, no fix — the red command later proves the fix and becomes
    the regression test. Then find the root cause, don't just patch the symptom.
+   **Write the hypothesis down before you change a line**, change **one variable at a time**, and
+   **revert a failed attempt before trying the next** (the snapshot pattern,
+   `references/agent-git-protocol.md` §*The snapshot pattern* in the `wai` skill — `cp` aside,
+   never `git restore`). **After three failed fixes, stop.** Three misses means the *hypothesis
+   class* is wrong, not that the fourth patch is closer. Hand back what you tried, what each
+   attempt ruled out, and the red command — the human decides whether the architecture is the
+   bug. A fourth patch on a wrong model is how a symptom fix ships.
    **If the task is remediating a CVE, triage by its SOURCE before reaching for a package
    manager.** Lockfile dependency → update or override it. **OS package or a library bundled in
    the runtime** (e.g. Node's `undici` behind `fetch` — not an npm dependency, it ships inside
@@ -61,7 +68,7 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    the base image.
    **If the task is a GitHub Issue** (`#N`, a URL, or "the issue about X"), read it first with
    `gh issue view <N> --comments` and use it as the task source; note the issue number to wire
-   `Closes #N` into the PR (step 7).
+   `Closes #N` into the PR (step 8).
 
 2. **Load context** — review relevant code and git history. **Check `docs/`**,
    especially the contract domains **API, User Management, Login, Security, Token,
@@ -89,28 +96,60 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
      implementation. For a **high blast radius**, touching a **contract domain**
      (API, User Management, Login, Security, Token, Billing) or **ambiguity of
      intent** → stop after the plan and wait for the "go".
+   - **The gate is re-evaluated whenever implementation discovers what planning did not.** If the
+     change turns out to touch a **contract domain** (API, User Management, Login, Security,
+     Token, Billing), reach a **surface the plan did not name**, or carry a **materially larger
+     blast radius** → **stop where you are and re-gate**, even mid-file. Say what you found and
+     what it changes. **The ratchet only turns up:** discovering the change is *simpler* than
+     planned never removes a gate that already applied, and "I'm nearly done" is not a reason to
+     skip one. This is distinct from the plan-delta check (step 2), which covers what the *human*
+     changed — this covers what the *code* revealed.
 
 4. **Implement** — following repo conventions and the central quality catalog
    (`docs/architecture/quality-attributes.md`), per affected layer its concerns.
 
-5. **Self-Review** — run a lightweight check of your own diff against the catalog
-   (short form of wai-pr-review): no keys in the code (`SEC-3`), model output
-   validated (`AI-3`), idempotency on expensive/mutating paths (`RES-3`), cost impact
-   (`AI-9`/`OBS-3`), backward compatibility (`API-1`). For **client** work: no secrets in the
+5. **Self-Review — start from the diff, not from what you meant.** Read
+   `git diff <base>...HEAD` in full **first**, and review the code that is actually there
+   against the plan and the catalog — not your recollection of what you intended to write.
+   Then the lightweight checklist (short form of wai-pr-review): no keys in the code
+   (`SEC-3`), model output validated (`AI-3`), idempotency on expensive/mutating paths
+   (`RES-3`), cost impact (`AI-9`/`OBS-3`), backward compatibility (`API-1`). For **client** work: no secrets in the
    binary/bundle (`CLIENT-1`), attestation wired (`CLIENT-2`). For **token** work: server-side
    verification + idempotent credit/debit (`PAY-2`/`PAY-3`/`PAY-4`), digital-goods rule (`PAY-8`).
+   Close with one line naming **the strongest reason a reviewer would reject this** — if you
+   cannot name one, you reviewed your intent, not your diff. This is only the short form; the
+   fresh-context review is `wai-pr-review`'s, and it is **not** made optional by this one having
+   run.
 
-6. **Update `docs/`** — when a contract or architecture aspect has changed,
+6. **Prove it — no "done" without fresh output.** Name the one command that proves this change
+   works, run it **now** (not from memory of a run earlier in the session), and keep its output.
+   - **Bug:** re-run the **exact red command from step 1**. It must go **green**. That
+     transition — red before, green after — is the proof, and it is what the regression test
+     locks in place.
+   - **Feature / refactor:** build, typecheck and lint clean, plus the narrowest command that
+     actually exercises the new path (a test, a `curl`, a CLI invocation).
+   - Paste the command and its verdict into the PR body under **Verification** (step 8).
+   - **If no command can prove it** — infra-only, a docs-shaped change, a path that needs a
+     device or a store sandbox — say so explicitly: *"not verified locally: <why>"*, and hand
+     the gap to `wai-testing`. **Fail-open is allowed here; silence is not.**
+   - Banned as a completion claim: *"should work"*, *"probably fixes it"*, *"looks right"*.
+     Those are predictions, not evidence. The merge gate is fail-closed for exactly this reason
+     ([ADR-0002](https://github.com/woldinius/wai-skill-suite/blob/main/docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md):
+     *"the model checked" is not a thing anyone can audit*) — and `wai-testing`'s counterproof
+     rule is the same rule one layer down: green proves the test *ran*, not that it *checks*.
+
+7. **Update `docs/`** — when a contract or architecture aspect has changed,
    deliver the docs change as a **visible proposal** (especially API/OpenAPI, User
    Management, Login, Security, Token, Billing). Don't rewrite silently.
 
-7. **Commit, open the PR, and hand off** — Verify the branch first (`git branch
+8. **Commit, open the PR, and hand off** — Verify the branch first (`git branch
    --show-current` — never commit on `main`), then commit the change atomically
    (Conventional Commits + `Co-Authored-By` trailer), then **open the PR** with `gh pr create`
-   (what/why, link to the plan, catalog IDs, API back-compat statement) — or update it if one
-   already exists; never touch `main`. **If an issue drove the work**, add `Closes #N` to the PR
-   body (same-repo only — for a cross-repo issue use `owner/repo#N` and close manually); skip
-   cleanly when there's no issue.
+   (what/why, link to the plan, catalog IDs, API back-compat statement, and the
+   **Verification** block from step 6 — the command and its real output, or the named reason
+   there is none) — or update it if one already exists; never touch `main`. **If an issue drove
+   the work**, add `Closes #N` to the PR body (same-repo only — for a cross-repo issue use
+   `owner/repo#N` and close manually); skip cleanly when there's no issue.
    **What the self-review (step 5) surfaced but this PR does not fix** — a pre-existing weakness
    you routed around, a follow-up the change makes obvious — is either **deliberately rejected
    with a reason in the PR body** or **filed as an issue** (`issues-protocol.md` §*Where a
@@ -127,7 +166,7 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    order: the script derives (exit 0 = emitted; exit 2 = nothing derivable — then say `not checked`
    yourself), the model recommends.
 
-8. **Learning gap — the last action, and only when you hand back to the human.** Applies only if
+9. **Learning gap — the last action, and only when you hand back to the human.** Applies only if
    **this** human has a personal learning ledger (`~/.claude/learning/<repo-slug>/ledger.md`, or
    the `temp/learning/` fallback). **No ledger → skip silently and create nothing**: learning
    mode is a per-developer opt-in, never a repo-wide switch (git protocol §*Personal state never
@@ -259,6 +298,8 @@ specific to *this* skill:
 ## Principles
 
 - **Think first, then build** — the plan including risk/ambiguity/blast radius is mandatory.
+- **Prove it, don't predict it** — "done" is a command that ran and an output you kept, never a
+  forecast. Where nothing can be run, the gap is named out loud, not passed over.
 - **Platform thinking** — does the change pull app-specific special logic into the shared
   core or does it violate tenant isolation? If so: name it.
 - **Keep docs consistent** — a contract change without a `docs/` update is unfinished.
@@ -274,10 +315,17 @@ This skill is the **implementation** stage in the lifecycle plan → implement �
   seams** (see *Tests*).
 - **wai-pr-review** — the full review stage; the self-review here (step 5) is only the short
   form for your own diff before handover.
-- **wai-learning-gap** — the **last action of the turn** (step 8), and **only** if *this* human
+- **wai-learning-gap** — the **last action of the turn** (step 9), and **only** if *this* human
   has a personal ledger. `CLAUDE.md` never activates learning mode. No ledger → skip silently
   and create nothing.
 - **wai** — the suite router/overview.
 - Shared source of truth: `docs/architecture/quality-attributes.md` (testing strategy:
   `docs/architecture/testing-strategy.md`; contract rules: `references/contract-protocol.md`
   (in the `wai` skill)).
+
+*Provenance: the evidence gate (step 6), the three-strikes bound (step 1), the ratchet (step 3)
+and the diff-first self-review (step 5) are adopted from
+[obra/superpowers](https://github.com/obra/superpowers) (MIT) — what was taken, and the two
+things deliberately not taken, are recorded in
+[REFERENCES.md](https://github.com/woldinius/wai-skill-suite/blob/main/REFERENCES.md). An
+arbitrary-looking rule is a rule the next person deletes.*
