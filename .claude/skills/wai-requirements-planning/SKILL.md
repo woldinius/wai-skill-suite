@@ -165,9 +165,16 @@ human gave you in chat, and note the gap in the plan.
    `agent/<handle>/<type>-<slug>` off the latest `main`, commit the plan, and **push it to
    remote** (`git push -u`). Do **not** open the PR yet — `wai-implementation` opens it once
    there is an implementation diff. **If the requirement came from an issue** (or the human
-   wants one), post a short plan summary + the plan path back to the issue
-   (`gh issue comment <N>`) and carry the issue number forward so implementation can wire
-   `Closes #N` into the PR. Optional — skip cleanly if there is no issue or `gh` is unavailable.
+   wants one), post the **full plan text** as the issue comment (`gh issue comment <N>
+   --body-file <plan>`): the human answers "is this plan good?" where they work — the tracker —
+   and a path forces a context switch into the repo. The repo plan file stays the **source of
+   truth** and the merge-relevant artifact; the comment is the copy the decision is read from.
+   Above the comment size limit, split into numbered comments ("plan 1/3 …", "plan 2/3 …"); if
+   splitting is impossible, fall back to a summary + the plan path **and say so in the comment**
+   — never truncate silently. One boundary: the issue's visibility is the plan's visibility — on
+   a public tracker, sensitive plans stay summary + path. Carry the issue number forward so
+   implementation can wire `Closes #N` into the PR. Optional — skip cleanly if there is no issue
+   or `gh` is unavailable.
    **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-requirements-planning"
    "<subject>" "<half-sentence outcome>"` (from this skill's directory; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — a run without a row is
    invisible work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing args).

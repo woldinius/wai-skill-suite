@@ -51,6 +51,7 @@ APLINT="$ROOT/.claude/skills/wai-security-audit/scripts/attack-path-lint.sh"
 BACKLOG="$ROOT/.claude/skills/wai-team/scripts/backlog-scan.sh"
 DIGEST="$ROOT/.claude/skills/wai-team/scripts/cross-issue-digest.sh"
 PMV="$ROOT/.claude/skills/wai-team/scripts/post-merge-verify.sh"
+VARR="$ROOT/.claude/skills/wai/scripts/verify-arrival.sh"
 AMR="$ROOT/.claude/skills/wai-team/scripts/autonomous-merge-report.sh"
 HANDOFF="$ROOT/.claude/skills/wai/scripts/handoff-lint.sh"
 
@@ -819,6 +820,73 @@ assert "the test runner is not on PATH → UNKNOWN, exit 2 (never RED)" 2 "$rc" 
 N=$((N+1)); D="$TMP/pmv-nogit$N"; mkdir -p "$D"
 out="$( cd "$D" && TEST_CMD="sh -c 'exit 0'" sh "$PMV" HEAD 2>&1 )"; rc=$?
 assert "not inside a git repository → UNKNOWN, exit 2" 2 "$rc" "$out" 'not inside a git repository'
+
+# =================================================================================================
+echo
+echo "verify-arrival.sh"
+# Did the merge actually ARRIVE on the default branch? 0 = ARRIVED, 1 = LOST (the forge says
+# MERGED, the default branch disagrees — the stacked-PR-into-a-dead-base class), 2 = could not
+# verify, which must NEVER read as arrived. A second repo plays origin, so the fetch and the
+# ancestry test run against a real remote, not a mocked answer.
+# =================================================================================================
+
+vafix() {   # an origin repo + a clone of it; the gh stub answers `repo view` with "main"
+  N=$((N+1))
+  VA_O="$TMP/va-origin$N"; gitrepo "$VA_O"
+  printf 'a\n' > "$VA_O/a.txt"; gitcommit "$VA_O" 'chore: base'
+  ARRSHA="$(git -C "$VA_O" rev-parse HEAD)"
+  D="$TMP/va-clone$N"
+  git clone -q "$VA_O" "$D" 2>/dev/null
+  git -C "$D" config user.email 'fixture@example.invalid'
+  git -C "$D" config user.name 'Fixture'
+  git -C "$D" config commit.gpgsign false
+  git -C "$D" config core.hooksPath "$NOHOOKS"
+  printf 'main\n' > "$D/repo"          # what `gh repo view -q .defaultBranchRef.name` answers
+}
+va() { ( cd "$D" && PATH="$GHBIN:$STUB:$PATH" GH_FIXTURE="$D" sh "$VARR" "$@" 2>&1 ); }
+
+# THE PASS PATH FIRST (run.sh's rule): a verifier that has never said ARRIVED is an untested
+# branch failing closed — and the wired skills would then report every clean merge as lost.
+vafix; out="$(va "$ARRSHA")"; rc=$?
+assert "a commit on origin/<default> → ARRIVED, exit 0" 0 "$rc" "$out" 'ARRIVED: .* is on origin/main' 'LOST'
+assert "  · and the default branch is named, with how it was resolved" 0 "$rc" "$out" 'default branch is main \(via gh\)'
+
+# No gh at all, but the clone carries origin/HEAD → the fallback answers, same verdict.
+vafix; out="$( cd "$D" && PATH="$GITONLY" "$SH" "$VARR" "$ARRSHA" 2>&1 )"; rc=$?
+assert "no gh but origin/HEAD resolves → the fallback answers, still ARRIVED" 0 "$rc" "$out" 'default branch is main \(via origin/HEAD\).*|ARRIVED: .* is on origin/main'
+
+# THE CLASS THE SCRIPT EXISTS FOR: a commit that reached a branch, never the default branch —
+# GitHub would say MERGED, the ancestry says otherwise, and the containing branch is NAMED so the
+# work can be recovered instead of mourned.
+vafix
+git -C "$D" checkout -q -b landed
+printf 'b\n' > "$D/b.txt"; gitcommit "$D" 'feat: merged into a dead base'
+LOSTSHA="$(git -C "$D" rev-parse HEAD)"
+git -C "$D" push -q origin landed 2>/dev/null
+git -C "$D" fetch -q origin 2>/dev/null
+git -C "$D" checkout -q main
+out="$(va "$LOSTSHA")"; rc=$?
+assert "a merged-but-unreachable commit → LOST, exit 1, never ARRIVED" 1 "$rc" "$out" 'LOST: .* NOT reachable from origin/main' 'ARRIVED'
+assert "  · and a branch that DOES contain it is named" 1 "$rc" "$out" 'origin/landed'
+
+# FAIL CLOSED, every unverifiable path. First: no gh AND no origin/HEAD — nothing can name the
+# default branch, and the output must never contain the word a caller would grep for.
+N=$((N+1)); D="$TMP/va-nodefault$N"; gitrepo "$D"
+printf 'a\n' > "$D/a.txt"; gitcommit "$D" 'chore: base'
+NODEFSHA="$(git -C "$D" rev-parse HEAD)"
+out="$( cd "$D" && PATH="$GITONLY" "$SH" "$VARR" "$NODEFSHA" 2>&1 )"; rc=$?
+assert "no gh AND no origin/HEAD → UNKNOWN, exit 2, and 'ARRIVED' appears nowhere" 2 "$rc" "$out" 'could not resolve the default branch' 'ARRIVED'
+
+# A fetch that fails: the ancestry test would run against a stale ref, and stale must not verify.
+vafix; git -C "$D" remote set-url origin "$TMP/va-gone$N"
+out="$(va "$ARRSHA")"; rc=$?
+assert "a failing fetch → UNKNOWN, exit 2 (a stale ref never verifies), and no verdict word" 2 "$rc" "$out" 'could not fetch origin/main' 'ARRIVED|LOST'
+
+vafix; out="$(va not-a-real-ref)"; rc=$?
+assert "an unresolvable commit → UNKNOWN, exit 2" 2 "$rc" "$out" 'could not resolve .not-a-real-ref.' 'ARRIVED|LOST'
+
+vafix; out="$(va)"; rc=$?
+assert "no commit argument at all → usage, exit 2" 2 "$rc" "$out" 'usage: sh verify-arrival.sh' 'ARRIVED'
 
 # =================================================================================================
 echo

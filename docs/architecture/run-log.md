@@ -51,4 +51,5 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-19T20:42Z | wai-pr-review | PR #49 | GO |
 | 2026-08-20T05:16Z | wai-implementation | obra/superpowers borrow — evidence gate, three-strikes, ratchet, diff-first review | four rules landed in wai-implementation with attribution in REFERENCES.md; draft PR #50, EX-GUARD so the human merges |
 | 2026-08-20T21:31Z | wai-pr-review | PR #50 | NO-GO |
+| 2026-08-20T21:43Z | wai-implementation | arrival-is-done (#51) | verify-arrival.sh shipped and wired into review/team/protocol/planning; 395 cases green, live ARRIVED on 4e607f5 |
 | 2026-08-20T21:46Z | wai-pr-review | PR #56 | NO-GO |

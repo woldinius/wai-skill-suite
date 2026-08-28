@@ -170,6 +170,24 @@ necessary aspects as findings.
      review from another human**. The script has already verified that this wall exists; without
      it, `--auto` would merge *immediately* while your report claimed to be waiting for a human.
 
+   **Once per run, before relying on `Closes #N` or reporting any merge as done:** check that the
+   merge target is the repository's **default branch** (`gh repo view --json defaultBranchRef`).
+   If it is not, warn loudly — a merge into anything else looks identical to success while every
+   `Closes #N` silently fails to fire — and **never change the repo setting**: the default branch
+   is the human's, however wrong it looks.
+
+   **After any merge this skill performed, "merged" in the report means ARRIVED — verify it.** Run
+   `sh ../wai/scripts/verify-arrival.sh <mergeCommit>` (from this skill's directory — a sibling
+   path, like the classifier's) and obey the exit code. **Exit 0 — ARRIVED:** the merge commit is
+   reachable from the freshly fetched `origin/<default>`; only now may the report say "merged".
+   **Exit 1 — LOST:** the forge says MERGED but the default branch never received the commit — a
+   stacked PR merged into a dead base looks exactly like success — so say so loudly, up front, and
+   hand it to the human together with the branches the script names as containing the commit.
+   **Exit 2 — could not verify:** fail closed — report "merged, arrival unverified", never "done",
+   and hand it to the human. After arrival, verify each issue the PR claims to close is actually
+   **CLOSED** (`gh issue view <N> --json state`) instead of assuming: `Closes #N` fires only on a
+   merge into the default branch, and an issue that stayed open is a signal, not a formality.
+
    **Never approve a pull request — not your own, and not a colleague's.** Never run
    `gh pr review --approve` on any PR, in any mode. Your verdict is a **comment**; the approving
    review is a human's. An agent that could approve *someone else's* PR would satisfy the
