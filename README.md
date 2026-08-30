@@ -158,7 +158,7 @@ Smaller repos work too — `wai-init` scopes and sizes everything to what the re
 
 A **router** points you to the right skill; three one-time **setup** skills prepare the repos;
 four skills form the per-requirement **lifecycle** (plan → implement → test → review); one
-**batch orchestrator** works several issues at once under your mandate; three run **periodically**
+**lifecycle orchestrator** works one issue or many under your mandate; three run **periodically**
 — a structural architecture audit, an adversarial security audit, and an artifact-derived
 retrospective of the suite's own record. All are triggered
 automatically via their `description` and demarcate themselves against the others to avoid
@@ -414,7 +414,7 @@ install.sh                                       # idempotent installer (inject/
   wai-implementation/
   wai-testing/                                   # + test-patterns reference
   wai-pr-review/                                 # + review lenses + merge-gate.sh (exit-code gate)
-  wai-team/                                      # mandated batch orchestrator (merge queue) + scripts
+  wai-team/                                      # mandated lifecycle orchestrator (merge queue) + scripts
   wai-architecture-audit/                        # + audit playbook
   wai-security-audit/                            # + security playbook + CVE/attack-path scripts
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh

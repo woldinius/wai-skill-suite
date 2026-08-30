@@ -58,10 +58,12 @@ PER REQUIREMENT (you orchestrate; skills work on one agent/<handle>/<type>-<slug
   wai-testing                → writes deterministic tests for the change (same branch)
   wai-pr-review              → reviews the PR against the catalog → merge to main
 
-BATCH (mandated — several issues at once)
-  wai-team                   → works an issue set through the per-requirement cycle,
+COMMISSIONED (mandated — one issue or many, run without a gap between phases)
+  wai-team                   → works one or more issues through the per-requirement cycle,
                                     one branch+PR per issue, integrated via the merge queue;
-                                    Blocker/Major & contract merges collect in your decision list
+                                    Blocker/Major & contract merges collect in your decision list.
+                                    UNATTENDED at any n: review on fresh context, and merging
+                                    sits behind the affirmed autonomy allowlist
 
 PERIODIC (after a few features/refactors, or on security triggers)
   wai-architecture-audit     → whole-codebase STRUCTURAL health: decoupling/modularity, drift,
@@ -94,10 +96,13 @@ PERIODIC (after a few features/refactors, or on security triggers)
   issue (`plan #42`), a set that forms **one** requirement (`#42 #43 #44`), or just a sentence —
   plus directives like `grill me` or `backend only`. It interviews you, then plans and pushes
   the branch with the plan on it. The **PR comes later**, from `wai-implementation`.
-- **A backlog of *independent* issues**, or **several issues as a batch** ("work the backlog",
-  "process #12–#18") → `wai-team` — needs your mandate (issue set, decision handling, budget).
-  A single issue goes through the lifecycle skills directly, and one requirement split across
-  several issues is still **planning's** job, not the team's.
+- **Issues you want *worked* rather than driven** — one ("run the cycle on #42") or a backlog
+  ("work the backlog", "process #12–#18") → `wai-team` — needs your mandate (issue set, decision
+  handling, budget); for one issue that is a single confirmation. What you buy is the removal of
+  the hand-backs between the phases; what it costs is that the run is **unattended**, so the review
+  runs on fresh context and merging needs an affirmed allowlist. Drive the phases yourself instead
+  and the lifecycle skills behave exactly as before. One requirement split across several issues is
+  still **planning's** job, not the team's.
 - **A clear, already-scoped change / bug / refactor** → `wai-implementation` directly
   (it still plans first and stops to ask on risky/contract-domain changes).
 - **Tests needed for a change, or "is this covered"** → `wai-testing` (typically right
@@ -187,7 +192,8 @@ own ▶ Recommended next will confirm/adjust this as it learns more.]
 ## Related Skills
 
 All skills and their hand-offs are in the lifecycle map and decision guide above. Beyond the
-lifecycle: **wai-team** (mandated batch orchestrator) and **wai-learning-gap** (personal
+lifecycle: **wai-team** (mandated lifecycle orchestrator, one issue or many) and
+**wai-learning-gap** (personal
 cloze-coding tutor — **per developer, opt-in**: implementation triggers it only for a human who
 has their own learning ledger, and does nothing for everyone else).
 

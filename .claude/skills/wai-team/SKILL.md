@@ -1,24 +1,32 @@
 ---
 name: wai-team
 description: >-
-  Mandated backlog orchestrator: works multiple GitHub issues through the full lifecycle — per issue
-  one run of plan → implement → test → review on its own `agent/**` branch and PR, integrated
-  serially through the merge queue. Requires an explicit mandate (which issues, and how decision
-  points are handled) and hands back one collected decision list. Invoked without a named issue set,
-  it first scans the backlog and proposes — it proposes, the human mandates — and an explicitly
-  opted-in, bounded autonomous-integration mode exists. Use it when the human commissions an issue
-  set: "work the backlog", "process issues #12–#18", "burn down the tier", "wai-team". Not for a
-  single issue — use the lifecycle skills directly.
+  Mandated lifecycle orchestrator: works ONE or MORE GitHub issues through the full lifecycle —
+  per issue one run of plan → implement → test → review on its own `agent/**` branch and PR,
+  integrated serially through the merge queue, with no human gap between the phases. Requires an
+  explicit mandate (which issues, and how decision points are handled) and hands back one collected
+  decision list. Invoked without a named issue set, it scans the backlog and proposes — it proposes,
+  the human mandates. Because the run is UNATTENDED, merging inside it sits behind the affirmed
+  autonomy allowlist and the review runs on fresh context. Use it whenever issues are commissioned
+  rather than driven phase by phase: "run the cycle on #42", "work the backlog", "process issues
+  #12–#18", "burn down the tier", "wai-team". Not for a change with no issue behind it
+  (wai-implementation) or a finished PR (wai-pr-review).
 license: MIT
 ---
 
-# Team (backlog orchestrator)
+# Team (lifecycle orchestrator)
 
-Work a **set of GitHub issues** through the suite's lifecycle — each issue as its own
+Work **one or more GitHub issues** through the suite's lifecycle — each issue as its own
 plan → implement → test → review cycle on its own `agent/<handle>/<type>-<slug>` branch and PR —
-and integrate the results **serially** through the merge queue. The human commissions a batch
-once, the team runs the proven per-issue cycle repeatedly, and everything that needs a human lands
-in **one collected decision list** instead of N interruptions.
+and integrate the results **serially** through the merge queue. The human commissions the work
+once, the skill runs the proven per-issue cycle **without a human gap between the phases**, and
+everything that needs a human lands in **one collected decision list** instead of N interruptions.
+
+**One issue is a legitimate mandate.** The cycle is the same cycle; what the human buys is the
+removal of the three hand-backs in the middle of it. But removing the human from the *middle*
+also removes them from *before the merge* — so a one-issue run is governed by the same
+unattended-run rules as a batch (see *Attended or unattended* below). It is a smaller run, not a
+safer one.
 
 ## Mandate first — no mandate, no team run
 
@@ -50,6 +58,12 @@ The mandate fixes:
   *Autonomous integration*). The default follows the repo: a `team` repo where a second human
   approves every merge is `team`; a solo repo is `solo`. **`autonomous` is never a default**
   and is refused unless the repo has affirmed an autonomy allowlist (see below).
+
+**For a single issue the mandate collapses to one confirmation, it does not disappear.** The four
+dimensions still resolve — the set is that issue, decision handling and stop budget take their
+defaults, and the integration mode follows the repo — but they are read back in one line and
+confirmed once ("`#42`, collect decisions, solo, merge behind the allowlist — go?"). Autonomy is a
+commission; what scales down for a small run is the ceremony, never the consent.
 
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
 (`date -u +%FT%TZ`). It bounds the cross-issue digest (step 6) and the autonomous-merge report.
@@ -87,8 +101,8 @@ this skill adds orchestration, **not** new authority.
    - **Order from the scan's dependency graph** (blockers first, then value/risk) — work the
      frontier: any issue whose blockers are done.
 
-3. **Run the cycle per issue — serial by default.** For each issue, on its own
-   `agent/<handle>/<type>-<slug>` branch: `wai-requirements-planning` (proportional — a
+3. **Run the cycle per issue — serial by default, the review on fresh context.** For each issue,
+   on its own `agent/<handle>/<type>-<slug>` branch: `wai-requirements-planning` (proportional — a
    well-specified small issue skips the plan doc, per the planning skill's own rules) →
    `wai-implementation` (includes the plan-delta check) → `wai-testing` → `wai-pr-review`. Under
    a **packaged mandate** the cycle runs once per **package**, on the package's one branch — the
@@ -98,7 +112,10 @@ this skill adds orchestration, **not** new authority.
    waiting for another human's approval — see the git protocol); everything else joins the
    **decision list**. After each merged issue, the next cycle starts from the fresh `main`. In
    **autonomous** mode the allowlist eligibility floor and the serial post-merge barrier both
-   apply — see *Autonomous integration*.
+   apply — see *Autonomous integration*. **`wai-pr-review` runs on fresh context** and the
+   allowlist floor governs any merge, because this run is unattended at every n — see *Attended or
+   unattended*. With a **single-issue mandate** the loop simply runs once: same cycle, same floor,
+   same decision list, one entry in it.
 
    Two things must hold **before each issue's branch is cut** — this skill switches branches more
    than any other, so it is where collisions and dirty trees actually bite:
@@ -185,16 +202,57 @@ this skill adds orchestration, **not** new authority.
    only makes the offer. **On a headless, scheduled, or otherwise non-interactive run, skip
    silently and offer nothing.** If the run was not clean, there is no offer.
 
+## Attended or unattended — the line the floor keys on
+
+**The floor keys on who is watching, not on how many issues.** A run of one issue is exactly as
+unattended as a run of eight: in both, four phases and possibly a merge happen with nobody reading
+the hand-backs in between. Cardinality was never the safety property — **attendance** is, and until
+now the suite inferred one from the other.
+
+- **Attended** — a human invokes the lifecycle skills themselves and reads each hand-back before
+  pressing go. `wai-pr-review`'s merge policy applies unchanged: green gate + clean review → merge
+  (`solo`), or auto-merge armed (`team`).
+- **Unattended** — **this skill**, at **any n, including n = 1**.
+
+Two consequences, and they are the whole point of this section:
+
+1. **Merging inside an unattended run sits behind the allowlist floor** — the same one defined
+   below, for the same reason: nobody reads the review before the merge lands. No affirmed
+   `AUTONOMY_SAFE_PATHS`, or an empty/unaffirmed surface → **nothing merges in this run**; it ends
+   with approval-ready PRs and the decision list. That is fail-closed, and it is a legitimate
+   outcome, not a failure. **This is stricter than `solo` mode used to be inside a team run** — a
+   solo batch previously merged every clean PR with nobody watching and no affirmed surface. Say so
+   in the report when it bites, and point at `wai-init` to affirm the allowlist once.
+2. **The review phase runs on FRESH CONTEXT.** The gate is a conjunction: the script owns the
+   mechanics, the model owns *"no Blocker, no Major"* — and in an unattended run that judgment half
+   is produced by the same session that just built the thing, under maximum completion pressure,
+   with no human between the verdict and the merge. So the review runs as a **fresh-context
+   reviewer**: hand it the diff, the issue/plan and the catalog — **never the session transcript**.
+   If the harness cannot dispatch one, **say so and merge nothing**: hand the PRs over instead. An
+   in-session self-review is a legitimate review to *read*; it is not a licence to *merge
+   unattended*. (The failure it guards against is documented: PR #50's review had to open by
+   declaring itself a self-review, because it was one.)
+
+**What this does not change.** The excluded-domain floor, the Blocker/Major decision point, the
+fail-closed `UNKNOWN`, and the absolute rule that skills never approve a PR all hold exactly as
+before, attended or not. This section only decides **when a green gate is allowed to become a
+merge without a human**.
+
 ## Autonomous integration (opt-in, bounded)
 
 Three integration modes, and they are **not** interchangeable:
 
 - **solo** — the default in a solo repo. Clean, non-excluded PRs merge under the normal gate as
-  each cycle ends; everything else joins the decision list.
+  each cycle ends; everything else joins the decision list. **Inside this skill the run is
+  unattended, so the allowlist floor above applies to that merge** — `solo` names who reviews, not
+  whether the surface was affirmed.
 - **team** — the default in a `team` repo. Skills never approve, so nothing merges inside the
   run: every PR ends *auto-merge armed, waiting for another human's approval*.
 - **autonomous** — opt-in, bounded, and **never a default**. Even here the skill issues **no**
-  merge command of its own.
+  merge command of its own. Now that *every* unattended run carries the allowlist floor, what this
+  mode still adds is the rest of the lane: the **serial `post-merge-verify.sh` barrier** between
+  merges, the **drain of PRs that piled up outside this run**, and `autonomous-merge-report.sh` as
+  the audit trail. The floor is no longer what distinguishes it — the barrier and the drain are.
 
 **The eligibility floor is an ALLOWLIST, not a blocklist.** A PR enters the autonomous drain
 only when *all four* hold: (a) `merge-gate.sh` returns **GO**; (b) the review found **no
@@ -312,7 +370,8 @@ thresholds had been tightened since filing, and the counterproof fired on both t
 - **wai-learning-gap** — the clean-run, interactive hand-off (step 8) routes here through
   **Flow D**, which owns the ledger gate, the PR ranking, the one-open-gap check and the
   `agent/learn-*` branch.
-- **wai** — the router; points here when several issues should be worked as a batch.
+- **wai** — the router; points here whenever issues should be *worked* rather than driven phase
+  by phase — one issue or a backlog.
 - Protocols (in the `wai` skill): `references/issues-protocol.md` (decision points, labels,
   formats), `references/agent-git-protocol.md` (branches, gate, and the canonical **Excluded
   domains** section this skill cites for the serial-lane and autonomy floor — it keeps **no**
