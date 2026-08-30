@@ -110,7 +110,8 @@ publication rule exists for.
 
 ### obra/superpowers
 <https://github.com/obra/superpowers> (MIT)
-**2026-08-20 · partially adopted**
+**2026-08-20 · partially adopted** · **2026-08-30 · re-read in full (14 skills); the three lanes
+it covers and this suite does not are named below, as pointers rather than plans**
 
 A software-development methodology shipped as composable skills. Read against
 `wai-implementation`, it is strong on the one axis this suite is thinnest on: **evidence and
@@ -141,6 +142,56 @@ could hand back finished-looking work with nothing behind it.
   skill cut in isolation buys the inconsistency **without** the measurement, so it belongs in its
   own ADR with Q5's numbers attached. Recorded here rather than in a backlog because the negative
   result is the expensive half.
+
+**Not adopted — because the gap is ours, not theirs.** Three lanes superpowers covers that this
+suite does not cover *at all*. They are listed as **pointers, not plans**: nothing here is
+scheduled, and a reader who needs one of them today is better served by going and reading the
+source than by waiting for a wAI version of it.
+
+- **`writing-skills` — testing what a prompt actually does.** This suite tests the two scripts that
+  own the verdict with 184 cases on two shells, and tests its **thirteen prompts with nothing**.
+  That is not a suspicion; it is written down in this repo already:
+  [`docs/learnings/empirical-test-plan.md`](docs/learnings/empirical-test-plan.md) opens with
+  *"everything built in this session is specification-verified, not behaviour-verified."*
+  superpowers supplies the missing **method** — write the failing scenario first, watch an agent
+  violate the rule *without* the skill, then write minimal guidance against that observed failure;
+  micro-test behaviour-shaping rules at 5+ repetitions against a no-guidance control. That is a
+  usable instrument for **Q2** (does the model *run* the gate or check from memory?) and **Q4**
+  (are the three lenses different, or decoration?), both of which have stayed open for lack of a
+  method rather than lack of will. The irony is worth naming: [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)
+  moves mechanics into scripts *because a rule in a prompt fails silently* — and then the suite
+  tests only the scripts.
+- **`receiving-code-review` — the other end of a finding.** This suite is thorough about
+  *producing* findings (`wai-pr-review`, both audits) and about *where a finding lands*
+  (`issues-protocol.md`: fixed, rejected, or filed — no fourth outcome). It says nothing about how
+  to **receive** one: verify the claim against the code before implementing it, clarify the whole
+  set before starting on part of it, and push back with technical reasoning when the reviewer is
+  wrong. That last one matters more here than upstream, because in this suite the reviewer is
+  frequently an *agent* and the recipient is a human who did not write the finding.
+- **`using-git-worktrees` — nothing owns their lifecycle.** `wai-team` parallelises *through*
+  worktrees and four scripts (`open-gap-check`, `doctor`, `open-items`, `verify-arrival`) *sweep*
+  them, but no skill creates or cleans one. The cost is measured, not hypothetical: on 2026-08-20
+  two deleted scratchpad worktrees left stale registrations behind and `open-gap-check` fail-closed
+  at **exit 2** — a red in this repo's own suite, from worktree bookkeeping nobody owns.
+  superpowers has the four rules that were missing: detect existing isolation before creating any,
+  prefer the harness's native worktree tool over raw `git worktree` ("never fight the harness"),
+  verify the directory is ignored, and baseline-test before starting.
+
+**One caution for anyone tempted to install both.** These skills reference each other, and one of
+them **contradicts this suite's merge path**: `finishing-a-development-branch` offers *"merge
+locally — switch to base, pull, merge"* as its first option, which `agent-git-protocol.md` forbids
+outright (only `wai-pr-review` merges, only through the gate). Loading that one installs a
+documented route around the guardrail this repo exists to defend. `receiving-code-review` and
+`using-git-worktrees` are the two that are safely loadable side by side; they touch nothing on the
+merge path.
+
+**And one correction to the table above,** because half an adoption recorded as a whole one is the
+kind of drift this file exists to prevent: what was taken from `requesting-code-review` was the
+*lesser* half. Reading your own diff is now step 5 — but the skill's actual thesis is that a
+reviewer should get **crafted context and no session history**, and `wai-pr-review` still runs in
+the same session as the work it reviews. That was demonstrated on the very PR that added the rule
+(#50): the review declared itself a self-review and could not audit its way out of it. Open, and
+named as open.
 
 ### mattpocock/skills
 <https://github.com/mattpocock/skills> (MIT)
