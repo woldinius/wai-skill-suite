@@ -6,6 +6,33 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ## [Unreleased]
 
+### Changed
+
+- **`wai-team` takes a single issue — and the autonomy floor now keys on ATTENDANCE, not on how
+  many issues are in the run.** The skill refused single issues ("use the lifecycle skills
+  directly"), which left the common case — *an accepted issue, worked end to end without pressing
+  go three times* — with no orchestrator at all. It accepts one now; for `n = 1` the mandate
+  collapses to a single confirmation rather than disappearing, because autonomy is a commission and
+  what scales down is the ceremony, never the consent.
+  **The larger correction is the floor.** The suite inferred "unattended" from "batch": `autonomous`
+  mode required a human-affirmed `AUTONOMY_SAFE_PATHS` allowlist, while `solo` mode inside a team
+  run merged every clean PR with nobody watching and no affirmed surface. Cardinality was never the
+  safety property — **attendance is**. A run of one is exactly as unattended as a run of eight. So
+  any merge inside this skill now sits behind the allowlist floor regardless of `n` or mode; with no
+  affirmed surface the run merges nothing and ends with approval-ready PRs plus the decision list
+  (fail-closed, and a legitimate outcome). **This is stricter than `solo` used to be** — affirm the
+  allowlist once via `wai-init` to get in-run merging back.
+  **And the review phase runs on fresh context.** The gate is a conjunction: the script owns the
+  mechanics, the model owns *"no Blocker, no Major"*. Unattended, that judgment half was being made
+  by the same session that had just built the thing, under maximum completion pressure, with no
+  human between the verdict and the merge. The reviewer now gets the diff, the issue/plan and the
+  catalog — never the session transcript; if the harness cannot dispatch one, the run merges nothing
+  and says so. The failure this guards against is on the record: PR #50's review had to open by
+  declaring itself a self-review, because it was one. Nothing else moves — the excluded-domain
+  floor, the Blocker/Major decision point, fail-closed `UNKNOWN` and the absolute never-approve rule
+  are untouched.
+
+
 ### Added
 
 - **Arrival is part of done** (#51). "Merged" used to mean "the forge said MERGED" — and a stacked
