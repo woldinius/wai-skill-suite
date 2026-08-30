@@ -6,6 +6,24 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ## [Unreleased]
 
+### Changed
+
+- **`REFERENCES.md` names the three lanes `obra/superpowers` covers and this suite does not** —
+  as pointers, not plans. Read in full (all 14 skills) rather than only against
+  `wai-implementation`: **`writing-skills`** supplies a method for testing what a *prompt* does,
+  which is the gap `docs/learnings/empirical-test-plan.md` already states in its first line
+  ("specification-verified, not behaviour-verified") and which **Q2** and **Q4** have been waiting
+  on; **`receiving-code-review`** owns the end of a finding this suite never wrote down — verify
+  before implementing, clarify the set before starting, push back with reasoning — which matters
+  more here because the reviewer is often an agent; **`using-git-worktrees`** owns a lifecycle
+  four of this repo's own scripts sweep but no skill creates or cleans, and that cost a real red
+  on 2026-08-20 when stale registrations fail-closed `open-gap-check` at exit 2. Also recorded: a
+  caution that `finishing-a-development-branch` documents a local-merge path
+  `agent-git-protocol.md` forbids, so the two suites are not blindly installable together — and a
+  correction that only the *lesser* half of `requesting-code-review` was ever adopted, since
+  `wai-pr-review` still reviews in the same session as the work.
+
+
 ### Added
 
 - **Arrival is part of done** (#51). "Merged" used to mean "the forge said MERGED" — and a stacked
