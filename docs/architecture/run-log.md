@@ -56,3 +56,5 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-13T09:55Z | wai-implementation | release 0.3.2 — claim corrections, references map, second CI shell | cut on a branch; EX-GUARD, so the human merges before the tag |
 | 2026-09-13T10:14Z | wai-implementation | rebase #58 onto 0.3.2, pin v0.3.2 | rebased; a misplaced CHANGELOG entry caught by release-lint and fixed; human merge pending |
 | 2026-09-13T10:36Z | wai-implementation | #58 — merge policy asked at kickoff or at the end | asked instead of held silently; target 0.3.3; human merge pending |
+| 2026-09-13T12:06Z | wai-pr-review | PR #58 | NO-GO |
+| 2026-09-13T12:06Z | wai-pr-review | PR #59 | MOOT |
