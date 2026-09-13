@@ -19,10 +19,11 @@
 #   EX-SEC    security                          }  sub-family is read from the path SHAPE and is
 #                                                   reporting only (EX-CONTRACT when indeterminate).
 #   EX-MIG    a destructive DB migration (MIGRATION_PATHS touched AND a destructive statement).
-#   EX-GDPR   erasure / data-deletion — ERASURE_PATHS touched OR an erasure statement ANYWHERE in
-#             the diff. This is the hole the old gate left open: a `DELETE FROM users` /
-#             `ON DELETE CASCADE` / `deleteAccount()` in an ordinary code PR, outside any migration
-#             folder, was never caught. The grep runs over the WHOLE diff for exactly that.
+#   EX-GDPR   erasure / data-deletion — ERASURE_PATHS touched OR an erasure statement in an ADDED
+#             CODE line anywhere in the diff. This is the hole the old gate left open: a
+#             `DELETE FROM users` / `ON DELETE CASCADE` / `deleteAccount()` in an ordinary code PR,
+#             outside any migration folder, was never caught. The same statement in an added PROSE
+#             line (a `.md`, a changelog, a ledger) is reported as advisory, not gating (#67).
 #
 # THE ORDER OF AUTHORITY (ADR-0003):
 #   PATHS and DIFF STATEMENTS are authoritative. A cited catalog-ID FAMILY PREFIX (`PAY-`, `AUTH`,
@@ -31,6 +32,16 @@
 #   read as a family only: `GDPR-3` and `GDPR-6` both mean "GDPR family" — the bare number is NEVER
 #   resolved against a catalog and NEVER copied across a repo boundary. So a repo-local PAY-family
 #   local ID (minted at >=100) still trips EX-PAY, and nothing here needs to know what number means what.
+#
+# WHAT THE TEXT CHANNELS READ (#67 — one reach for all three, measured in the field):
+#   The citation scan DECIDES from ADDED CODE LINES only — never from a context line the author did
+#   not touch, never from a removed line, never from the PR title or body. An added line of a PROSE
+#   file (a citation, or an erasure statement) is reported as ADVISORY: visible in the verdict, it
+#   holds the unattended drain, it does not gate. Labels still widen: a label is a declaration, a
+#   description is not. The prose deny-list is exactly PROSE_EXT below; an extension nobody listed
+#   counts as CODE, so the list's incompleteness fails toward the gate, not away from it. Why the
+#   reach was narrowed, with the numbers:
+#   docs/rationale/excluded-domains.md § Three text channels, one reach
 #
 # EXIT CODES — fail closed, because this is a gate:
 #   default mode
@@ -203,9 +214,31 @@ outside_globs() {   # $1 = files, $2 = globs → files matching no glob, on stdo
   done | sort -u
 }
 
-# Added lines of the diff (excluding the `+++ b/file` header lines). The authoritative statement
-# stream for the destructive-migration and erasure greps.
+# Added lines of the diff (excluding the `+++ b/file` header lines), from EVERY file. The statement
+# stream for the destructive-migration grep — EX-MIG is already AND-gated on a MIGRATION_PATHS hit,
+# so it needs no file-kind split.
 added_lines() { grep '^+' "$DIFF_FILE" 2>/dev/null | grep -v '^+++' ; }
+
+# The same stream split by FILE KIND (#67). A prose file is one whose extension is on this deny-list;
+# everything else — including a file with no extension, or one nobody thought of — is CODE. The list
+# is a deny-list on purpose: its incompleteness fails toward the gate (an unlisted extension is still
+# scanned and still gates), where an allow-list of code extensions would fail away from it. The
+# current file is tracked from the `+++ b/<path>` header; a diff captured without headers (a bare
+# `+line` stream, as the fixtures use) is all code — the fail-closed default again.
+PROSE_EXT="md markdown mdx txt rst adoc org rdoc textile"
+added_lines_of() {   # $1 = code | prose → the added lines of files of that kind, header lines dropped
+  awk -v prose="$PROSE_EXT" -v want="$1" '
+    BEGIN { n = split(prose, p, " "); for (i = 1; i <= n; i++) isprose["." p[i]] = 1; kind = "code" }
+    /^\+\+\+ / { f = $0; sub(/^\+\+\+ /, "", f); sub(/\t.*/, "", f)
+                 base = f; sub(/.*\//, "", base); kind = "code"
+                 if (base ~ /\./) { ext = base; sub(/.*\./, ".", ext); ext = tolower(ext)
+                                    if (ext in isprose) kind = "prose" }
+                 next }
+    /^\+/ { if (kind == want) print; next }
+  ' "$DIFF_FILE" 2>/dev/null
+}
+added_code_lines()  { added_lines_of code; }
+added_prose_lines() { added_lines_of prose; }
 
 # Sub-classify a contract-domain PATH into a reporting sub-family from its SHAPE. This never changes
 # the DECISION (any CONTRACT_PATHS hit is EXCLUDED regardless); it only makes the tag legible, and
@@ -222,10 +255,12 @@ contract_subtags() {   # $1 = a matched path → one or more EX-* tags on stdout
 }
 
 # =================================================================================================
-# Acquire inputs → FILES_FILE (newline file list), DIFF_FILE (unified diff), META_FILE (pr text)
-# Sets INPUT_UNKNOWN=1 (and a reason) when an AUTHORITATIVE input cannot be read. Labels/title/body
-# are NOT authoritative: if they cannot be read, widening from them is simply skipped — an absent
-# label can never suppress a real match.
+# Acquire inputs → FILES_FILE (newline file list), DIFF_FILE (unified diff), LABELS_FILE (pr labels)
+# Sets INPUT_UNKNOWN=1 (and a reason) when an AUTHORITATIVE input cannot be read. Labels are NOT
+# authoritative: if they cannot be read, widening from them is simply skipped — an absent label can
+# never suppress a real match. The PR title and body are not read at all (#67): the suite REQUIRES a
+# catalog ID in every review finding and PR body, so reading them made the gate trip on its own
+# mandatory citation — a label is a declaration, a description is not.
 # =================================================================================================
 WORK=""
 # shellcheck disable=SC2329  # invoked indirectly via the trap below
@@ -235,7 +270,7 @@ mktmp() { WORK="${WORK:-$(mktemp -d 2>/dev/null)}"; printf '%s/%s' "$WORK" "$1";
 
 FILES_FILE=""
 DIFF_FILE=""
-META_FILE=""
+LABELS_FILE=""
 INPUT_UNKNOWN=0
 INPUT_REASON=""
 
@@ -251,27 +286,26 @@ acquire_inputs() {
     command -v gh  >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="gh is not installed"; return; }
     command -v git >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="git is not installed"; return; }
     gh auth status >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="gh is not authenticated"; return; }
-    FILES_FILE="$(mktmp files)"; DIFF_FILE="$(mktmp diff)"; META_FILE="$(mktmp meta)"
+    FILES_FILE="$(mktmp files)"; DIFF_FILE="$(mktmp diff)"; LABELS_FILE="$(mktmp labels)"
     if ! gh_pr diff "$PR" --name-only >"$FILES_FILE" 2>/dev/null || [ ! -s "$FILES_FILE" ]; then
       INPUT_UNKNOWN=1; INPUT_REASON="could not read the file list for PR #$PR"; return
     fi
     if ! gh_pr diff "$PR" >"$DIFF_FILE" 2>/dev/null; then
       INPUT_UNKNOWN=1; INPUT_REASON="could not read the diff for PR #$PR"; return
     fi
-    # Best-effort widening text — never fatal.
-    { gh_pr view "$PR" --json title,body --jq '.title, .body' 2>/dev/null
-      gh_pr view "$PR" --json labels --jq '.labels[].name' 2>/dev/null; } >"$META_FILE" 2>/dev/null || true
+    # Best-effort widening text — LABELS only, never fatal. Not title, not body (#67).
+    gh_pr view "$PR" --json labels --jq '.labels[].name' >"$LABELS_FILE" 2>/dev/null || true
   else
     [ -n "$FILES_ARG" ] && [ -n "$DIFF_ARG" ] || die_usage "give --pr <n>, or both --files <f> and --diff <f>"
     [ -f "$FILES_ARG" ] || { INPUT_UNKNOWN=1; INPUT_REASON="file list '$FILES_ARG' is not readable"; return; }
     [ -f "$DIFF_ARG" ]  || { INPUT_UNKNOWN=1; INPUT_REASON="diff '$DIFF_ARG' is not readable"; return; }
-    FILES_FILE="$FILES_ARG"; DIFF_FILE="$DIFF_ARG"; META_FILE=""
+    FILES_FILE="$FILES_ARG"; DIFF_FILE="$DIFF_ARG"; LABELS_FILE=""
   fi
 }
 
 # =================================================================================================
 # Classify — populate TAGS (space list) and DETAIL (human lines). AUTHORITATIVE from paths+diff;
-# labels/prefixes only widen. Reads globals FILES_FILE / DIFF_FILE / META_FILE.
+# labels/prefixes only widen. Reads globals FILES_FILE / DIFF_FILE / LABELS_FILE.
 # =================================================================================================
 TAGS=""
 DETAIL=""
@@ -304,8 +338,10 @@ compute_anchored() {
 }
 anchored() { case " $ANCHORED " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 # Widen into the deciding set only where anchored; elsewhere the citation stays visible as advisory.
+# Both branches name the tag: a detail line that reads "widened by a cited PAY- family id" without
+# saying EX-PAY left the reader to infer which tag it had widened (#67).
 widen() {   # $1 = tag, $2 = detail
-  if anchored "$1"; then add_tag "$1"; add_detail "$2"
+  if anchored "$1"; then add_tag "$1"; add_detail "$1  $2"
   else add_advisory "$1"; add_detail "advisory only ($1 not anchored — no declared paths for this family): $2"; fi
 }
 add_detail() { DETAIL="$DETAIL  x $1
@@ -350,32 +386,44 @@ classify() {
     fi
   fi
 
-  # --- EX-GDPR — ERASURE_PATHS touched OR an erasure statement ANYWHERE in the diff -------------
+  # --- EX-GDPR — ERASURE_PATHS touched OR an erasure statement in an added CODE line -------------
   # The OR is the point (EX-MIG is an AND; this is not). An ad-hoc `DELETE FROM users` in a code PR
-  # outside any migration folder was the self-merge hole; the grep runs over the WHOLE diff, and a
-  # matched ERASURE_PATHS file trips it even with no statement (a dedicated erasure module IS the
-  # signal). The regex is a narrow, high-signal backstop; ERASURE_PATHS is the primary anchor and a
-  # repo tunes the globs. Soft-deletes that read as erasure are the known false-positive; err toward
-  # the human.
+  # outside any migration folder was the self-merge hole; the grep runs over every added code line
+  # of the diff, and a matched ERASURE_PATHS file trips it even with no statement (a dedicated
+  # erasure module IS the signal). The regex is a narrow, high-signal backstop; ERASURE_PATHS is the
+  # primary anchor and a repo tunes the globs. Soft-deletes that read as erasure are the known
+  # false-positive; err toward the human.
+  # The SAME statement in an added PROSE line — a changelog describing the erasure path, a review
+  # quoting the pattern, a ledger row — is documentation, not contact: it is REPORTED as advisory
+  # (visible in the verdict; it still HOLDS the unattended drain) but it does not gate (#67).
   ERASURE_PATHS="$(conf_val ERASURE_PATHS "$MERGE_CONF")"
+  ERASURE_RE='delete[[:space:]]+from[[:space:]]+[^;()[:space:]]*(user|account|person|customer|member|profile|subscriber|contact)|on[[:space:]]+delete[[:space:]]+cascade|drop[[:space:]]+database|truncate[[:space:]]+(table[[:space:]]+)?[^;()[:space:]]*(user|account|person|customer|member)|delete[_[:space:]]?account|erase[_[:space:]]?(user|account|personal|data)|right[_[:space:]]?to[_[:space:]]?be[_[:space:]]?forgotten|gdpr[_[:space:] -]*(delet|eras|purge|forget|remov)|hard[_[:space:]]?delet|purge[_[:space:]]?(user|account|personal|data)|forget[_[:space:]]?(me|user|account)'
   EP=""
   [ -n "$ERASURE_PATHS" ] && EP="$(match_any "$FILES" "$ERASURE_PATHS")"
-  EG="$(added_lines | grep -icE 'delete[[:space:]]+from[[:space:]]+[^;()[:space:]]*(user|account|person|customer|member|profile|subscriber|contact)|on[[:space:]]+delete[[:space:]]+cascade|drop[[:space:]]+database|truncate[[:space:]]+(table[[:space:]]+)?[^;()[:space:]]*(user|account|person|customer|member)|delete[_[:space:]]?account|erase[_[:space:]]?(user|account|personal|data)|right[_[:space:]]?to[_[:space:]]?be[_[:space:]]?forgotten|gdpr[_[:space:] -]*(delet|eras|purge|forget|remov)|hard[_[:space:]]?delet|purge[_[:space:]]?(user|account|personal|data)|forget[_[:space:]]?(me|user|account)' 2>/dev/null || true)"
+  EG="$(added_code_lines  | grep -icE "$ERASURE_RE" 2>/dev/null || true)"
+  EGP="$(added_prose_lines | grep -icE "$ERASURE_RE" 2>/dev/null || true)"
   if [ -n "$EP" ] || [ "${EG:-0}" -gt 0 ]; then
     add_tag EX-GDPR
     _why=""
     [ -n "$EP" ] && _why="erasure module touched: $(printf '%s' "$EP" | tr '\n' ' ')"
-    [ "${EG:-0}" -gt 0 ] && _why="${_why:+$_why; }$EG erasure statement(s) in the diff"
+    [ "${EG:-0}" -gt 0 ] && _why="${_why:+$_why; }$EG erasure statement(s) in added code lines"
     add_detail "EX-GDPR  $_why"
+  fi
+  if [ "${EGP:-0}" -gt 0 ]; then
+    add_advisory EX-GDPR
+    add_detail "advisory only (EX-GDPR — in prose, not code): $EGP erasure statement(s) in added lines of prose files"
   fi
 
   # --- Advisory widening: family prefixes + labels (may only ADD) -------------------------------
-  # Scan the diff (and, in --pr mode, the PR title/body/labels) for cited catalog-ID family
-  # prefixes. Read as a FAMILY only — the number is stripped and never resolved. This can flip CLEAR
-  # to EXCLUDED (a cited PAY-family local ID trips EX-PAY with no path match); it can never subtract a domain.
+  # Scan the ADDED CODE LINES of the diff — plus, in --pr mode, the PR labels — for cited catalog-ID
+  # family prefixes. Not the context lines, not the removed lines, not the title or body: a cited ID
+  # says what the author MEANS, it is not a finding in itself, and the suite's own reviews and PR
+  # bodies are REQUIRED to cite (#67). Read as a FAMILY only — the number is stripped and never
+  # resolved. This can flip CLEAR to EXCLUDED where the family is anchored (a cited PAY-family local
+  # ID trips EX-PAY with no path match); it can never subtract a domain.
   _scan="$(mktmp scan)"
-  cat "$DIFF_FILE" 2>/dev/null > "$_scan" || true
-  [ -n "$META_FILE" ] && [ -f "$META_FILE" ] && cat "$META_FILE" >> "$_scan" 2>/dev/null
+  added_code_lines > "$_scan" 2>/dev/null || true
+  [ -n "$LABELS_FILE" ] && [ -f "$LABELS_FILE" ] && cat "$LABELS_FILE" >> "$_scan" 2>/dev/null
   PREFIXES="$(grep -oiE '(PAY|AUTH|API|SEC|GDPR)-[0-9]+' "$_scan" 2>/dev/null \
               | sed 's/-[0-9].*//' | tr '[:lower:]' '[:upper:]' | sort -u)"
   compute_anchored
@@ -388,11 +436,25 @@ classify() {
       GDPR) widen EX-GDPR "widened by a cited GDPR- family id (family only)" ;;
     esac
   done
-  if [ -n "$META_FILE" ] && [ -f "$META_FILE" ]; then
-    LB="$(tr '[:upper:]' '[:lower:]' < "$META_FILE" 2>/dev/null)"
-    case "$LB" in *billing*|*payment*|*token*) widen EX-PAY  "widened by a payment/billing label" ;; esac
-    case "$LB" in *auth*|*login*|*'user management'*) widen EX-AUTH "widened by an auth/user label" ;; esac
-    case "$LB" in *gdpr*|*erasure*|*deletion*|*'right to be forgotten'*) widen EX-GDPR "widened by a gdpr/erasure label" ;; esac
+  # A citation in an added PROSE line — a document cites in order to document — never decides, even
+  # where the family is anchored: it is reported as advisory, so it stays visible in the verdict and
+  # still holds the unattended drain, and that is all.
+  _pscan="$(mktmp pscan)"
+  added_prose_lines > "$_pscan" 2>/dev/null || true
+  PPREFIXES="$(grep -oiE '(PAY|AUTH|API|SEC|GDPR)-[0-9]+' "$_pscan" 2>/dev/null \
+               | sed 's/-[0-9].*//' | tr '[:lower:]' '[:upper:]' | sort -u)"
+  for _pf in $PPREFIXES; do
+    add_advisory "EX-$_pf"
+    add_detail "advisory only (EX-$_pf cited in prose, not code): a $_pf- family id in an added line of a prose file"
+  done
+  # Labels widen by their WORDS. Only labels: the variable holds exactly what its name says (#67 —
+  # its predecessor was named "label" and held title + body + labels, so "widened by a gdpr/erasure
+  # label" fired on the word gdpr in a paragraph, under a single label named ready-to-merge).
+  if [ -n "$LABELS_FILE" ] && [ -f "$LABELS_FILE" ]; then
+    LABELS="$(tr '[:upper:]' '[:lower:]' < "$LABELS_FILE" 2>/dev/null)"
+    case "$LABELS" in *billing*|*payment*|*token*) widen EX-PAY  "widened by a payment/billing label" ;; esac
+    case "$LABELS" in *auth*|*login*|*'user management'*) widen EX-AUTH "widened by an auth/user label" ;; esac
+    case "$LABELS" in *gdpr*|*erasure*|*deletion*|*'right to be forgotten'*) widen EX-GDPR "widened by a gdpr/erasure label" ;; esac
   fi
 
   # Dedupe — and an advisory tag that is ALSO a real tag collapses into the real one.
@@ -456,11 +518,11 @@ if [ "$AUTONOMY" -eq 1 ]; then
   fi
 
   # Defense-in-depth: the blocklist must be CLEAR — including the ADVISORY set. The everyday gate
-  # lets an unanchored citation report without deciding; the unattended drain does not get that
-  # nuance. Autonomy errs closed, always.
+  # lets an unanchored citation, or a citation or erasure statement in prose, report without
+  # deciding; the unattended drain does not get that nuance. Autonomy errs closed, always.
   if [ -n "$ADVISORY" ]; then
     printf '%s' "$DETAIL"
-    echo "VERDICT: HELD — advisory domain citation(s) ($ADVISORY) are not clear enough for an unattended merge; held for the human."
+    echo "VERDICT: HELD — advisory domain citation(s) or prose statement(s) ($ADVISORY) are not clear enough for an unattended merge; held for the human."
     exit 1
   fi
   if [ -n "$TAGS" ]; then
@@ -488,7 +550,7 @@ if [ -z "$TAGS" ]; then
   if [ -n "$ADVISORY" ]; then
     printf '%s' "$DETAIL"
     echo "ADVISORY-DOMAINS: $ADVISORY"
-    echo "VERDICT: CLEAR — no excluded domain touched (advisory citations reported above; not gating, per #30)."
+    echo "VERDICT: CLEAR — no excluded domain touched (advisory signals reported above; not gating, per #30 and #67)."
   else
     echo "VERDICT: CLEAR — no excluded domain touched."
   fi

@@ -8,6 +8,27 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ### Fixed
 
+- **The classifier's three text channels read with one reach** (#67). `excluded-domains.sh` read
+  text in three places with three different reaches: the erasure regex read *added* lines from
+  *every* file, prose included; the citation scan read the **whole diff** — context lines the
+  author never touched, removed lines — plus the PR **title and body**; and the variable named for
+  labels held title + body + labels, so "widened by a gdpr/erasure label" fired on the word *gdpr*
+  in a paragraph. A field repo measured it over its last 64 merged PRs: 9 of 10 `EX-GDPR` verdicts
+  came through the citation channel, none touched an erasure path, and in 6 the citation was the
+  only reason — 12 of the 14 false positives in its balance of 259 verdicts. The suite requires a
+  catalog ID in every review finding; its own mandatory citation tripped its own gate. Now the
+  citation scan **decides from added code lines only**, plus labels — a label is a declaration, a
+  description is not; title and body are no longer requested from `gh` at all. An added line of a
+  **prose** file (`.md .markdown .mdx .txt .rst .adoc .org .rdoc .textile` — an extension nobody
+  listed, or none, counts as code) reports a citation or an erasure statement as **advisory**:
+  visible in the verdict and the ledger row, holding the unattended drain, not gating. `widen()`
+  names its tag in the anchored detail line. Unchanged: the path channel, `EX-GUARD`, `EX-MIG`, the
+  dial's anchoring (#30) and `--autonomy`'s hold on the advisory set. Fourteen cases in
+  `tests/run.sh`, the fixtures carrying `+++ b/<file>` headers; the nine changed shapes were run
+  against the previous script and fail there. The `gh` stub now serves labels and, for that
+  counterproof only, a body — the classifier's test asserts the body is never requested.
+  Rationale: `docs/rationale/excluded-domains.md` § *Three text channels, one reach*.
+
 - **`merge-gate.sh` writes both books before it prints a line** (#64). The ledger row and the
   run-log row used to be written *after* the `VERDICT:` line, with the `note:` line printed between
   them. A caller who trimmed the output (`| head -6`) closed the pipe; the next write died of

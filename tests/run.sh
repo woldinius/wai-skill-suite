@@ -841,6 +841,11 @@ edrun() {   # classify the fixture's captured file-list + diff; $@ = extra flags
   EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" \
   sh "$ED" --files "$ED_D/files" --diff "$ED_D/diff" "$@" 2>&1
 }
+edrun_pr() {   # classify the same fixture via --pr 1 against the gh stub — the only mode with a label channel
+  EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" \
+  EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" \
+  PATH="$STUB:$PATH" GH_FIXTURE="$ED_D" sh "$ED" --pr 1 --repo acme/repo 2>&1
+}
 
 echo
 echo "excluded-domains.sh"
@@ -866,8 +871,8 @@ assert "a billing path → EX-PAY, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX
 
 # THE HOLE THE OLD GATE LEFT OPEN — and the EX-GDPR regression (was CLEAR/GO, now EXCLUDED). A
 # `DELETE FROM users` in an ordinary code file, OUTSIDE any migration/erasure path, was never caught:
-# the old §6 only grepped INSIDE MIGRATION_PATHS, so a path-only check said clean → GO. The whole-diff
-# erasure grep now trips EX-GDPR. It is NOT EX-MIG — no migration file is touched, so the AND-gated
+# the old §6 only grepped INSIDE MIGRATION_PATHS, so a path-only check said clean → GO. The added-lines
+# erasure grep now trips EX-GDPR (over added CODE lines since #67 — a header-less fixture is all code). It is NOT EX-MIG — no migration file is touched, so the AND-gated
 # migration check cannot be what caught it. (The merge-gate.sh INTEGRATION of this — §5-6 delegating
 # here — is blueprint I1 and lands with that script; this pins the classifier the gate delegates to.)
 edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
@@ -951,6 +956,77 @@ else bad "  · and the ledger row carries it" "$(tail -1 "$D/docs/architecture/g
 # An input that cannot be read is HELD, never CLEAR — the fail-closed rule the whole suite rests on.
 edfix; out="$(EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" sh "$ED" --files "$ED_D/files" --diff "$ED_D/does-not-exist" 2>&1)"; rc=$?
 assert "an unreadable diff → UNKNOWN, exit 2 (fail-closed, never CLEAR)" 2 "$rc" "$out" 'UNKNOWN' 'VERDICT: CLEAR'
+
+# ── ONE REACH FOR THE TEXT CHANNELS (#67) ───────────────────────────────────────────────────────
+# Field-measured over 64 merged PRs: 9 of 10 EX-GDPR verdicts came through the citation scan, none
+# of them touched an erasure path, and in 6 the citation was the ONLY reason — from CONTEXT lines
+# the author never touched, from added lines of prose files, once from the PR body alone. The cause
+# was two greps with different reach eighty lines apart: the erasure regex read added lines, the
+# citation scan read the whole diff file plus title and body. Now the citation scan DECIDES from
+# added CODE lines (plus labels) only; an added PROSE line — a citation or an erasure statement —
+# is ADVISORY: visible, not gating. The fixtures below carry `+++ b/<file>` headers on purpose:
+# a header-less diff is all code (the fail-closed default the older fixtures above rely on).
+# Counterproof: the classifier as of origin/main before this change says EXCLUDED on every case
+# marked ✗ below and prints no tag in the widen detail; the cases marked = must NOT change.
+
+# ✗ A catalog ID in a CONTEXT line — this PR did not write it and did not add it.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1,3 +1,3 @@\n // PAY-2 applies here\n-old\n+new\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in a CONTEXT line → CLEAR, no advisory (the field's context-line hits)" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-PAY'
+
+# ✗ … in a REMOVED line — the PR deletes the citation; it cannot be widening anything.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1,2 +1,1 @@\n-// PAY-2 applies here\n+new\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in a REMOVED line → CLEAR, no advisory" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-PAY'
+
+# ✗ … in an added line of a PROSE file — a document cites in order to document. Advisory: visible
+# in the verdict, not gating, even though PAY IS anchored in this fixture.
+edfix; printf 'docs/notes.md\n' > "$ED_D/files"
+printf -- '--- a/docs/notes.md\n+++ b/docs/notes.md\n@@ -1 +1,2 @@\n x\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in an added .md line → CLEAR with an ADVISORY, even where PAY is anchored" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+assert "  · and the detail says WHY it is advisory (prose, not code)" 0 "$rc" "$out" 'advisory only \(EX-PAY cited in prose, not code\)'
+
+# = … in an added CODE line: unchanged — anchored decides, unanchored reports. The two guards that
+# prove the narrowing did not go one step too far.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n x\n+// PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in an added CODE line → still EXCLUDED (anchored; the field's one real code hit)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+assert "  · ✗ and widen() now NAMES the tag in its detail line" 1 "$rc" "$out" 'EX-PAY  widened by a cited PAY- family id'
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n x\n+// SEC-7 unchanged\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a SEC id in an added CODE line → still advisory (unanchored; the dial is untouched)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-SEC' 'EXCLUDED-DOMAINS'
+
+# = The deny-list is a DENY-list: an extension nobody listed is code, and the channel still reads it.
+edfix; printf 'notes.wtf\n' > "$ED_D/files"
+printf -- '--- a/notes.wtf\n+++ b/notes.wtf\n@@ -1 +1,2 @@\n x\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "an UNKNOWN extension counts as code → the id still widens (the list fails toward the gate)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+
+# ✗ The erasure regex gets the same split: a DELETE FROM users in a runbook is a sentence …
+edfix; printf 'docs/runbook.md\n' > "$ED_D/files"
+printf -- '--- a/docs/runbook.md\n+++ b/docs/runbook.md\n@@ -1 +1,2 @@\n x\n+DELETE FROM users WHERE id = 1\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "DELETE FROM users in an added .md line → CLEAR with an EX-GDPR ADVISORY (prose, not code)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-GDPR' 'EXCLUDED-DOMAINS'
+# = … and in a .sql file it is a statement. The self-merge hole stays closed.
+edfix; printf 'scripts/cleanup.sql\n' > "$ED_D/files"
+printf -- '--- a/scripts/cleanup.sql\n+++ b/scripts/cleanup.sql\n@@ -1 +1,2 @@\n x\n+DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "DELETE FROM users in an added .sql line → EX-GDPR, exit 1 (code gates as before)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# ✗ The PR TITLE AND BODY widen nothing any more — and are not even read. --pr mode against the gh
+# stub is the only mode with that channel; gh-calls.log records what the classifier asked for.
+edfix; printf 'This review found nothing under SEC-3; PAY-3 unchanged.\n' > "$ED_D/body"
+out="$(edrun_pr)"; rc=$?
+assert "SEC-3 and PAY-3 in the PR body → CLEAR, no advisory, no widening (the body is a description)" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-SEC|EX-PAY'
+if grep -q 'title,body' "$ED_D/gh-calls.log" 2>/dev/null; then bad "  · and the body was never requested from gh" "$(grep 'title,body' "$ED_D/gh-calls.log")"
+else ok "  · and the body was never requested from gh"; fi
+
+# = LABELS still widen — a label is a declaration. GDPR is anchored here (ERASURE_PATHS declared).
+edfix; printf 'gdpr\n' > "$ED_D/labels"
+out="$(edrun_pr)"; rc=$?
+assert "a label 'gdpr' → EX-GDPR widened, exit 1 (labels are the declaration channel that stays)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+assert "  · and the detail calls it a label — because now it IS one" 1 "$rc" "$out" 'EX-GDPR  widened by a gdpr/erasure label'
 
 # ── excluded-domains.sh --autonomy (the ALLOWLIST eligibility gate) ──────────────────────────────
 # The blocklist above is UNDER-inclusive by construction — it cannot know a risky path idiom no rule
