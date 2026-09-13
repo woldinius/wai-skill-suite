@@ -4,7 +4,7 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
-## [Unreleased]
+## [0.3.3] — 2026-09-13
 
 ### Changed
 
