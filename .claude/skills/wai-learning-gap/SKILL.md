@@ -211,7 +211,8 @@ are in `references/axes.md`.
    misplaced). A session working from a worktree plants only on code that also exists in the
    main checkout — and plants it there; if the code lives only on the unmerged branch, wait
    until it merges. Use **absolute paths** when writing the marker: the field fix for exactly
-   this case once landed in the wrong tree through a lingering `cd`.
+   this case once landed in the wrong tree through a lingering `cd`
+   ([suite issue #13](https://github.com/woldinius/wai-skill-suite/issues/13)).
 
    Once planted, confirm the gap fails visibly with `verify-gap-breaks.sh` — **except against a
    Socratic architecture gap**, which stays green by design and would be wrongly rejected by the

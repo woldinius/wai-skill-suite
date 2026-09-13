@@ -106,7 +106,8 @@ sandbox/fakes.
    see green. A sabotage the test survives means the assertion never touched the path the product
    takes; fix the **test**, never soften the sabotage. The anti-pattern to name when you find it:
    **the test rebuilds the rule in a helper instead of calling the production path — if the logic
-   has no callable seam, create the seam; never adapt the test.** One field session hit all three
+   has no callable seam, create the seam; never adapt the test.** One field session
+   ([suite issue #9](https://github.com/woldinius/wai-skill-suite/issues/9)) hit all three
    shapes of this failure: (a) a test that rebuilt the rule in a helper — two sabotages of the
    real code passed unnoticed; (b) a grep that asserted the helper *call* and survived when the
    function merely stopped being called; (c) a section asserted directly while no longer mounted

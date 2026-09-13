@@ -38,7 +38,8 @@ Depending on stack and deploy target (not everything is always needed):
   (`npm`/`pnpm`/`yarn audit`, `pip-audit`, `govulncheck`, `osv-scanner`) sees only **lockfile**
   dependencies — not **OS packages** or **libraries bundled in the runtime** (e.g. Node's
   `undici`, the engine behind global `fetch()`). Those ship in the image and only an **image
-  scan** (trivy/grype on the built image) sees them: a real `undici` CVE reported **0** under
+  scan** (trivy/grype on the built image) sees them: a real `undici` CVE
+  ([CVE-2026-12151](https://github.com/advisories/ghsa-vxpw-j846-p89q)) reported **0** under
   `pnpm audit` and was caught **only** by the image scan; its fix was a **base-image bump**, not
   a package update. So the template makes the **image scan a first-class layer of the gate**
   (built and scanned on every PR), and **pin the base image to a patch tag**

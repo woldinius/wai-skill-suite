@@ -28,7 +28,7 @@ This script used to take the git side's base from a fixed candidate list (origin
 origin/main, …) while `gh` followed `gh repo set-default`. With ONE remote those agree, which is
 why it shipped. With TWO they do not: a checkout whose work lives on a second remote while
 `origin` points elsewhere had EVERY merged PR reported "MERGED BUT UNREACHABLE" — 18 false alarms
-in one field run, in capitals. The PRs were not unreachable; they were in a different repo than
+in one field run (issue #27), in capitals. The PRs were not unreachable; they were in a different repo than
 the git side was asked about.
 
 That is not cosmetic. The sweep is a good check and it catches a real class (a stacked PR merged

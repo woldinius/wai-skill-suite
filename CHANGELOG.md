@@ -11,7 +11,9 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 - **Arrival is part of done** (#51). "Merged" used to mean "the forge said MERGED" — and a stacked
   PR whose base had already merged and been deleted merges into nothing: CI green, gate GO, label
   purple, and the default branch never sees the commit (two field incidents of the same class in
-  five days). Four changes, one class — *the step that knows the target state now tells someone*:
+  five days — the [field report of 2026-08-06](docs/field-reports/2026-08-06-merged-but-not-on-main.md)
+  and the origin-repo batch in [`docs/rationale/verify-arrival.md`](docs/rationale/verify-arrival.md)).
+  Four changes, one class — *the step that knows the target state now tells someone*:
   **the git protocol** gains the stacked-PR paragraph — the base of a stacked PR is the
   predecessor branch, and after every merge in the chain the next PR is retargeted to the default
   branch (`gh pr edit <n> --base <default>`); it is the merge-side twin of the pre-push hook.

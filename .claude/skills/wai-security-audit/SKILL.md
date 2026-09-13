@@ -108,8 +108,9 @@ parts you hadn't charted yet.
    scan** (`trivy image <img>` / grype). Run the image scan too, and report all three surfaces.
    Remediate **by source**: lockfile → update the package; OS/runtime-bundled → **bump/pin the
    base image, no package to update** (hand that to `wai-implementation`; the CI gate lives in
-   `wai-cicd`). A real `undici` CVE reported 0 under `pnpm audit` and was caught only by the
-   image scan.
+   `wai-cicd`). A real `undici` CVE
+   ([CVE-2026-12151](https://github.com/advisories/ghsa-vxpw-j846-p89q)) reported 0 under
+   `pnpm audit` and was caught only by the image scan.
 
 4. **Adversarial dimension walk** — Go through the attack classes below; cite the **catalog ID**
    in every finding (read the playbook for the per-class red flags and probes). Evaluate what the

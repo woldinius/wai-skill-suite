@@ -6,7 +6,8 @@
 
 Claude Code skills for **sustainable software product development**: a gated engineering
 lifecycle that keeps architecture maintainable and clean and security first-class while agents
-write the code. The premise is an observation, not a slogan: **even frontier models lose
+write the code. The premise is drawn from this suite's own [field runs](docs/field-reports/), not
+from a study: **even frontier models lose
 context, are confident when they are wrong, and forget rules and guidelines** — so this suite
 does not ask the model to remember. Each goal gets a gate, a rule, or a deterministic check.
 Skills plan, build, test and review on `agent/**` branches — and **whether a PR may merge is
@@ -92,13 +93,14 @@ whether a finding is a Blocker* — two scripts that tried crossed into semantic
 
 **Prior art, named.** Related work ships as *quality gates for AI-generated code* (CodeRabbit's
 pre-merge checks; Codacy's guidance to keep AI review advisory and let branch protection
-recognise only deterministic checks), occasionally under the label *"ACT gate"* — there mostly as
-a pre-review filter before a human reads the PR. The difference here is the **level**: not the
+recognise only deterministic checks) — there mostly as a pre-review filter before a human reads
+the PR. The difference here is the **level**: not the
 flow is deterministic but the **verdict**, and it is computed where the agent decides — in its
 own loop, before the merge command — with CI and branch protection as the layers behind it, not
 instead of it. Sources, and what each changed here: [REFERENCES.md](REFERENCES.md).
 
-**The pattern is not software-specific.** Every serious AI deployment ends at the same division
+**The pattern is not software-specific.** Our position: every serious AI deployment ends at the same
+division
 of labor: equip the model with tools that make its work *verifiable* where the task is decidable,
 leave it the judgment where it is not, and keep a human above both where verifiability collapses.
 This suite is that pattern instantiated for one domain — the software lifecycle on GitHub. The
@@ -106,13 +108,14 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 *precondition* for delegating real work at all. (Deliberately no productivity number here — Q5 in
 [open-questions](docs/open-questions.md) is still open.)
 
-**The price, honestly:** the deterministic layer took nine repair commits in two days; the gate
-once failed *open* under zsh and later could never say GO at all. That is why
-[`tests/`](tests/) exists — 395 cases, **founded** on bugs that shipped and grown into the
-regression guards around them, run on two shells because shellcheck passed a construct that is a
-syntax error in the `/bin/sh` of macOS. (The second shell runs locally on every branch, not in
-CI: macOS runners bill at 10× and exhausted the private repo's Actions minutes until no check
-could run at all — the dated trade is in [`ci.yml`](.github/workflows/ci.yml) itself.)
+**The price, honestly:** the deterministic layer took eleven repair commits in two days
+([retrospective](docs/retrospective-2026-07.md)); the gate once failed *open* under zsh and later
+could never say GO at all. That is why [`tests/`](tests/) exists — 395 cases, **founded** on bugs
+that shipped and grown into the regression guards around them, run on two shells in CI because
+shellcheck passed a construct that is a syntax error in the `/bin/sh` of macOS. (While the repo was
+private, the macOS job was dropped — its runners burned the Actions budget until no check could run
+at all; since the repo went public it runs again, as a second job that is not yet a required check.
+Both trades are dated in [`ci.yml`](.github/workflows/ci.yml) itself.)
 *Determinism does not buy safety. It buys testability — and
 then you have to actually test.*
 
@@ -166,8 +169,9 @@ mis-routing.
 
 **Field exposure** — the author's self-report as of 2026-08: a usage claim, not an efficacy
 claim, and nothing in this repo measures it yet (that is Q9 in
-[open-questions](docs/open-questions.md)). What *is* checkable: the heavily-used skills are where
-most recorded defects were found — and fixed — so most regression tests trace back to them.
+[open-questions](docs/open-questions.md)). What *would* be checkable, though nobody has counted it
+yet: the heavily-used skills appear to be where most recorded defects were found — and fixed — so
+most regression tests would trace back to them.
 **daily** = in daily use across the author's repos since consolidation · **periodic** =
 deliberately not daily — run every 5–10 PRs, or after a stretch of major changes · **less
 often** = fewer occasions, well-tested · **once per repo** = by nature runs once-to-rarely per
@@ -176,7 +180,7 @@ repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explici
 | Skill | Stage | Exposure | What for | Trigger (examples) |
 |-------|-------|----------|----------|--------------------|
 | [`wai`](.claude/skills/wai/SKILL.md) | Router | less often · well-tested | Front door: recommends which skill to run next and how the suite hands off. Routes by **surface** (backend/web/iOS/Android) and lifecycle position. | "which skill do I use", "where do I start", "what's next" |
-| [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 87 IDs / ~510 lines). Every other skill reads the catalog at runtime, so its size is the suite's biggest cost lever. Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
+| [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 87 IDs / ~510 lines). Every other skill reads the catalog at runtime, so its size is expected to be the suite's biggest cost lever (unmeasured — Q5). Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
 | [`wai-cicd`](.claude/skills/wai-cicd/SKILL.md) | Setup (backend+web) | once per repo · proving | **One-time:** GitHub-native CI/CD (Actions, GHCR) + deploy to your own server via Compose/SSH — Dockerfile, Compose, Caddy, the **merge gate** + branch protection. Other delivery systems are out of scope by design. | "set up CI/CD", "deploy to my server", "wire required checks" |
 | [`wai-mobile-release`](.claude/skills/wai-mobile-release/SKILL.md) | Setup (iOS/Android) | once per repo · proving | **One-time:** build, code signing (match / Play App Signing), the **mobile merge gate**, and store delivery (TestFlight / Play tracks). | "set up the iOS build", "Fastlane", "TestFlight", "Play Console" |
 | [`wai-requirements-planning`](.claude/skills/wai-requirements-planning/SKILL.md) | Plan | daily | Prepare a requirement; interview — or **grill-me mode** (one question at a time, recommended answers, alternatives for imprecise asks); decompose **per surface + contract-first**; diagrams over text; small items become issues, not planning docs. | "plan this requirement", "how do we build X", "grill me" |
@@ -194,7 +198,7 @@ Not part of the wAI lifecycle — reusable helpers for the human, adopted per pr
 
 | Skill | Exposure | What for | Trigger (examples) |
 |-------|----------|----------|--------------------|
-| [`wai-learning-gap`](.claude/skills/wai-learning-gap/SKILL.md) | daily · two developers (author + one junior) — **needs many users, not more days** | Cloze-coding tutor, **per developer and opt-in**: after **every implementation phase**, plant exactly one learning gap (1–3 removed lines, 🧩 `LEARN #` marker, working tree only) the human must rebuild to get back to green. On first run it builds a **stack profile** from the repo's manifests (+ a short self-assessment) that seeds the **Leitner boxes** in the *personal* ledger `~/.claude/learning/<repo>/ledger.md` (outside the repo, so it survives a second clone or worktree); topics are interleaved, a local pre-commit hook keeps gaps out of commits, stale gaps are resolved & explained so implementation speed doesn't suffer. **The ledger is the opt-in**: a developer without one gets nothing — no gap, no hook, no ledger — so in a shared repo your colleagues are untouched. Works standalone in any repo. | "learning gap", "hint", "solution", "learning status", "learning mode on" |
+| [`wai-learning-gap`](.claude/skills/wai-learning-gap/SKILL.md) | daily · two developers — **needs many users, not more days** | Cloze-coding tutor, **per developer and opt-in**: after **every implementation phase**, plant exactly one learning gap (1–3 removed lines, 🧩 `LEARN #` marker, working tree only) the human must rebuild to get back to green. On first run it builds a **stack profile** from the repo's manifests (+ a short self-assessment) that seeds the **Leitner boxes** in the *personal* ledger `~/.claude/learning/<repo>/ledger.md` (outside the repo, so it survives a second clone or worktree); topics are interleaved, a local pre-commit hook keeps gaps out of commits, stale gaps are resolved & explained so implementation speed doesn't suffer. **The ledger is the opt-in**: a developer without one gets nothing — no gap, no hook, no ledger — so in a shared repo your colleagues are untouched. Works standalone in any repo. | "learning gap", "hint", "solution", "learning status", "learning mode on" |
 
 ## Installation
 
@@ -354,7 +358,8 @@ Cross-skill rules live next to the router and are referenced by every relevant s
 
 Early versions of these skills grew inside product repos starting **December 2025** — a wild set
 of similar skills, drifting apart. On **2026-06-13** they were consolidated into one suite, and
-that suite has been **in daily use in three commercial projects plus prototypes** since. This
+that suite has been **in daily use in three commercial projects plus prototypes** since — by the
+author's own account, not yet independently evidenced (Q7). This
 repository is a **curated re-publication** of that work: real milestone dates, cleaned content,
 and the dated evidence — [empirics](docs/empirics.md),
 [field reports](docs/field-reports/), [ADRs](docs/adr/), and the audits (returning from the

@@ -18,7 +18,7 @@ model then judges, never as a verdict.
 
 ## An issue body is the most PII-dense text in a repo
 
-Stack traces with usernames, customer emails, tokens pasted in a hurry — an issue body is the most
+Stack traces with usernames, customer emails, tokens pasted in a hurry — an issue body is among the most
 PII-dense text in a repo, and why the refusal to print one is the point, not a limitation. Mining
 bodies wholesale into a catalog proposal would launder that PII into a committed doc. That is why
 the script prints issue NUMBERS, never bodies; why bodies are read only behind `--bodies` and only

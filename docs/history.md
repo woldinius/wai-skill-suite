@@ -1,7 +1,8 @@
 # How this suite came to be
 
 A development history — what was adopted when, and just as deliberately, what was dropped and why.
-Every claim below is backed by a dated artefact in this repo: the [ADRs](adr/), the
+Every claim from 12 July 2026 on is backed by a dated artefact in this repo — the prehistory before
+it is reconstructed from commit messages and notes (see the retrospective): the [ADRs](adr/), the
 [empirics ledger](empirics.md), the [field reports](field-reports/), the
 [July retrospective](retrospective-2026-07.md) and the first structural audit
 (`architecture/audits/2026-08-03.md` — not yet republished from the archive).
@@ -23,6 +24,8 @@ skills — an implementation skill under a different name, review helpers, plann
 inside the product repos they served: several production projects and prototypes, each carrying
 its own slightly-diverged copy. By **May 2026** another product repo had joined, with the same
 pattern: skills that looked alike, drifted apart, and were fixed in one place but not the others.
+*(Reconstructed from commit messages and notes, like everything before 12 July — see the
+[retrospective](retrospective-2026-07.md).)*
 
 That divergence is the founding problem. A rule that lives in four copies is four rules.
 
@@ -31,7 +34,8 @@ That divergence is the founding problem. A rule that lives in four copies is fou
 The first commit of the master repo consolidates the strongest of those scattered skills into one
 place: **pr-review**, **requirements-planning**, **init**. From this day on the suite is a single
 source of truth, adopted *into* the product repos rather than grown inside them — and it has been
-in daily use across several projects ever since. Publication changes the audience, not the usage.
+in daily use across several projects ever since (by the author's own account). Publication changes
+the audience, not the usage.
 
 ## 2026-06-27 — The router, the git flow, the first gate
 
@@ -63,7 +67,8 @@ matrix of half-tested ones. That narrowing was a choice, and it still stands.
 
 Branches gain an **owner segment** (`agent/<handle>/…`), issues are **claimed** before they are
 built, and the catalog learns **sizing** (scope × tier) — because the catalog is read on every
-lifecycle run, its size is the suite's biggest cost lever. **Review lenses** arrive
+lifecycle run, its size is expected to be the suite's biggest cost lever (unmeasured — Q5).
+**Review lenses** arrive
 (breadth · adversarial · null-hypothesis). The suite is decoupled from its origin repo and becomes
 English-only.
 
@@ -92,8 +97,9 @@ position, not an accident.
 ## 2026-07-14/15 — Determinism gets its bill
 
 The scripts that decide everything turn out to be deciding wrongly: the gate had **failed open**
-under zsh, then **could never say GO** in any repo (it read SKIPPED as failure). Nine repair
-commits in two days. The consequence is `tests/` — every case a bug that shipped — on **two
+under zsh, then **could never say GO** in any repo (it read SKIPPED as failure). Eleven repair
+commits in two days (retrospective). The consequence is `tests/` — founded on bugs that shipped,
+though only 8 of its first 29 cases were one (retrospective §1d) — on **two
 shells**, because shellcheck passed a construct that is a syntax error in bash 3.2, which is what
 `/bin/sh` is on macOS. *Determinism does not buy safety. It buys testability — and then you have
 to actually test.*
@@ -141,7 +147,7 @@ blockers are closed the same day. The audit is the suite's own medicine, taken.
 
 The suite claims a vendor namespace: `platform-*` becomes **`wai-*`** — `platform` was a claim on
 a generic English word that collided with what users would plausibly name their own skills, and
-two skills with near-identical names is the documented way to make routing fail. The installer
+two skills with near-identical names is a known way to make routing fail. The installer
 migrates existing installs (prune by manifest, never by name), the docs you are reading are the
 cleaned evidence base, and the milestones above become this repository's commit history.
 
