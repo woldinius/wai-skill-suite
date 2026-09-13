@@ -71,7 +71,8 @@ commission; what scales down for a small run is the ceremony, never the consent.
 the mandate, with three answers. **(a) The repo's own mode — the default.** In `solo`, each clean
 PR (gate GO, a fresh-context review with no Blocker and no Major) merges under the gate as its cycle
 ends: that is what solo means, and it keeps the tempo. In `team`, auto-merge is armed and a second
-human approves. **(b) Decide at the end** — the run holds every clean PR and puts them to the human
+human approves. With `autonomous` mandated, (a) is the only policy — its drain *is* the merge, so
+(b) and (c) cannot be mandated together with it. **(b) Decide at the end** — the run holds every clean PR and puts them to the human
 in one question in the report (step 7). **(c) Hand over** — nothing merges in this run. Under (b)
 and (c) `main` does not advance during the run, so the team-repo rule applies to every dependent
 issue (step 3). The autonomy allowlist (`AUTONOMY_SAFE_PATHS`) is not part of this choice — it is
@@ -150,10 +151,12 @@ this skill adds orchestration, **not** new authority.
    consequences, and they are not optional:
    - **Never start an issue whose blocker hasn't merged.** Its code isn't on `main`, so the
      branch would be cut without it. Leave it in the frontier and report it as *blocked — waiting
-     on #X's approval*. Only **independent** issues keep running.
+     on #X* (its approval in a `team` repo; the end of the run under (b) or (c)). Only
+     **independent** issues keep running.
    - Say so plainly in the report: a team run delivers a **set of approval-ready PRs**, not a
      merged backlog. If the human wants the dependent chain built anyway, the honest options are
-     to approve as the run goes, or to mandate stacked PRs (each branched off its predecessor),
+     to mandate policy (a) or approve as the run goes, or to mandate stacked PRs (each branched
+     off its predecessor),
      which trades review simplicity for throughput.
 
 4. **Worktrees — and honesty about what they buy.** A single-agent session runs nothing

@@ -169,9 +169,13 @@ necessary aspects as findings.
      itself* once branch protection is satisfied — which in team mode includes **one approving
      review from another human**. The script has already verified that this wall exists; without
      it, `--auto` would merge *immediately* while your report claimed to be waiting for a human.
-   - **Inside a `wai-team` run under merge policy (b) or (c)** (see `wai-team` §*Mandate first*) →
-     **merge nothing and arm nothing:** post the review and the gate result, then hand back. The
-     run holds the merge for the human's end-of-run answer, or hands it over.
+   - **Inside a `wai-team` run** (see `wai-team` §*Mandate first*), the merge policy confirmed at
+     kickoff decides. Under **(a)** the rules above apply — **only if this review ran on fresh
+     context**; a same-session review inside a `wai-team` run posts its verdict and **merges
+     nothing**. Under **(b)** → **merge nothing and arm nothing until the human's end-of-run yes**:
+     post the review and the gate result, then hand back; on the yes, `wai-team` step 7 sends the
+     held PRs through merge-queue mode, and this clause no longer holds them. Under **(c)** →
+     merge nothing and arm nothing; the run hands over.
 
    **Once per run, before relying on `Closes #N` or reporting any merge as done:** check that the
    merge target is the repository's **default branch** (`gh repo view --json defaultBranchRef`).
@@ -320,6 +324,7 @@ Use exactly this structure:
 
 **Classification:** [change type(s) · surface(s)/repo · affected components]
 **Lens:** [null-hypothesis | adversarial | breadth (| several)] — [requested, or the rule that selected it]
+**Reviewed by:** [fresh-context reviewer | same session] — required inside a `wai-team` run, optional elsewhere
 **Recommendation:** [Merge | Changes required | Blocked]
 
 ### Blocker
