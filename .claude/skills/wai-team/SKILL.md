@@ -75,8 +75,9 @@ human approves. With `autonomous` mandated, (a) is the only policy — its drain
 (b) and (c) cannot be mandated together with it. **(b) Decide at the end** — the run holds every
 clean PR and puts them to the human in one question in the report (step 7). **(c) Hand over** —
 nothing merges in this run. Under (b) and (c) `main` does not advance during the run, so the
-team-repo rule applies to every dependent issue (step 3). The autonomy allowlist (`AUTONOMY_SAFE_PATHS`) is not part of this choice — it is
-the floor of the `autonomous` drain, below.
+team-repo rule applies to every dependent issue (step 3). The autonomy allowlist
+(`AUTONOMY_SAFE_PATHS`) is not part of this choice — it is the floor of the `autonomous` drain,
+below.
 
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
 (`date -u +%FT%TZ`). It bounds the cross-issue digest (step 6) and the autonomous-merge report.
