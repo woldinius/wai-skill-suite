@@ -53,3 +53,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-08-20T21:31Z | wai-pr-review | PR #50 | NO-GO |
 | 2026-08-20T21:43Z | wai-implementation | arrival-is-done (#51) | verify-arrival.sh shipped and wired into review/team/protocol/planning; 395 cases green, live ARRIVED on 4e607f5 |
 | 2026-08-20T21:46Z | wai-pr-review | PR #56 | NO-GO |
+| 2026-09-13T09:55Z | wai-implementation | release 0.3.2 — claim corrections, references map, second CI shell | cut on a branch; EX-GUARD, so the human merges before the tag |

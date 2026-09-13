@@ -69,3 +69,14 @@ open.
 
 It does not make the catalog *cheap*. It establishes that **splitting it would have made it more
 expensive**, which is a different and much narrower claim. The token question is open.
+
+## Correction 2026-09-13 — two figures above were never measured
+
+This record stays as written; the two figures are corrected here, where a reader of them will look.
+
+- **"Roughly 9 100 tokens"** is ~36 500 characters ÷ 4 — a rule-of-thumb conversion, not a
+  tokenizer count.
+- **"Roughly six IDs"** was never derived. Counted on 2026-09-13, the router's own text cites **no**
+  catalog ID, `wai-cicd` **9** and `wai-mobile-release` **15** distinct IDs (the catalog is 497
+  lines today). The finding survives in its honest form: each of the three loads the whole
+  catalog while its own text cites a fraction of it — or none of it.

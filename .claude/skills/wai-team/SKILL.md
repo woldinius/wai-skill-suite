@@ -36,7 +36,8 @@ The mandate fixes:
   guard**; unrelated small fixes stay one-PR-per-issue. Inside a package the per-issue mechanics
   survive in full: every issue is **claimed individually**, keeps its **own counterproof and
   rigor**, and gets its own `Closes #N` line in the package PR body. First field run: eight
-  issues, two packages, **2 PRs, 8/8 counterproofs, 2 skill cycles instead of 32**. (No conflict
+  issues, two packages, **2 PRs, 8/8 counterproofs, 2 skill cycles instead of 32**
+  ([suite issue #12](https://github.com/woldinius/wai-skill-suite/issues/12)). (No conflict
   with `wai-requirements-planning`'s "a set means ONE requirement": planning **fuses** one
   requirement into one plan; a team package bundles issues that **share a cause but remain
   separate issues**.)
@@ -324,5 +325,5 @@ thresholds had been tightened since filing, and the counterproof fired on both t
   here. Worked call, from this skill's directory:
   `sh ../wai/scripts/excluded-domains.sh --files <file-with-paths> --diff <file-with-diff>` —
   **both flags take a FILE CONTAINING the path list / the diff**, not the paths or the diff
-  themselves; passing paths positionally cost the first field run a round trip
+  themselves; passing paths positionally is the mistake this note exists for
   (`unknown argument 'test/…'`).

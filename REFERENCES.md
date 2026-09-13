@@ -42,8 +42,9 @@ and **read** them (ten of twelve skills) — and had **never once linted them**.
 dimensions came to have no Red Flag** while every skill was being told to *"look up the Red Flag for
 ID X"*. Nobody noticed, because nothing checked.
 
-`catalog-lint.sh` exists because of that one line, and has since found six further defects that no
-amount of reading found. → [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)
+`catalog-lint.sh` exists because of that one line, and has since found further defects that no
+amount of reading found (the [retrospective](docs/retrospective-2026-07.md), §4, counts who found
+what). → [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)
 
 ### Anthropic · *The Complete Guide to Building Skills for Claude*
 <https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf>
@@ -70,7 +71,8 @@ a missing `index.md`. → [ADR-0001](docs/adr/0001-the-catalog-stays-one-file.md
 
 The **conformance** half — frontmatter, stable IDs, addressability *without* a split — is still
 open, together with the real token win the analysis did surface: the router, `wai-cicd` and
-`wai-mobile-release` load all **518 lines** when they need about six IDs.
+`wai-mobile-release` load the whole catalog (**518 lines** at the time) while their own text cites
+0, 9 and 15 distinct IDs (counted 2026-09-13).
 
 ### hivetrail · *The Anthropic context-engineering guide*
 <https://hivetrail.com/blog/anthropic-context-engineering-guide>
@@ -110,7 +112,8 @@ publication rule exists for.
 
 ### obra/superpowers
 <https://github.com/obra/superpowers> (MIT)
-**2026-08-20 · partially adopted**
+**2026-08-20 · partially adopted** · **2026-08-30 · re-read in full (14 skills): two skills to load
+from the source, one gap that is ours — see below**
 
 A software-development methodology shipped as composable skills. Read against
 `wai-implementation`, it is strong on the one axis this suite is thinnest on: **evidence and
@@ -136,11 +139,61 @@ could hand back finished-looking work with nothing behind it.
 - **The word budget** (`writing-skills`: frequently-loaded skills under ~500 words, detail
   displaced into `references/`). Correct on the merits, and already on this repo's own record as
   criticism **K8** and open question **Q5** (context cost per run, unmeasured). Deferred on
-  purpose: it is a *suite-wide* convention — all twelve skills carry the same Platform-context
-  and Affected-surfaces sections, and `wai-init` generates its catalog variants against them. One
+  purpose: it is a *cross-skill* convention — seven of the thirteen skills carry a Platform-context
+  section and two an Affected-surfaces section, and `wai-init` generates its catalog variants
+  against them. One
   skill cut in isolation buys the inconsistency **without** the measurement, so it belongs in its
   own ADR with Q5's numbers attached. Recorded here rather than in a backlog because the negative
   result is the expensive half.
+
+**Load theirs — don't build ours.** Two lanes superpowers covers that are deliberately *not* this
+suite's job. A reader who needs one loads that skill from its source; nothing here is scheduled to
+replace it, and nothing will be copied.
+
+- **`receiving-code-review` — the other end of a finding.** This suite is thorough about
+  *producing* findings (`wai-pr-review`, both audits) and about *where a finding lands*
+  (`issues-protocol.md`: fixed, rejected, or filed — no fourth outcome). It says nothing about how
+  to **receive** one: verify the claim against the code before implementing it, clarify the whole
+  set before starting on part of it, and push back with technical reasoning when the reviewer is
+  wrong. That matters more here than upstream, because in this suite the reviewer is frequently an
+  *agent* and the recipient a human who did not write the finding.
+- **`using-git-worktrees` — the lifecycle of a worktree.** `wai-team` parallelises *through*
+  worktrees and four scripts (`open-gap-check`, `doctor`, `open-items`, `verify-arrival`) *sweep*
+  them, but no skill here creates or cleans one. The cost is measured, not hypothetical: on
+  2026-08-20 two deleted scratchpad worktrees left stale registrations behind and `open-gap-check`
+  fail-closed at **exit 2**. superpowers has the four rules: detect existing isolation before
+  creating any, prefer the harness's native worktree tool over raw `git worktree` ("never fight the
+  harness"), verify the directory is ignored, and baseline-test before starting.
+
+**A gap that is ours.** One lane sits *inside* this suite's declared purpose and is not covered:
+
+- **`writing-skills` — testing what a prompt actually does.** This suite tests the scripts that own
+  the verdict with the cases the README counts, on two shells in CI, and tests its **thirteen
+  prompts with nothing**. That is written down here already:
+  [`docs/learnings/empirical-test-plan.md`](docs/learnings/empirical-test-plan.md) opens with
+  *"everything built in this session is specification-verified, not behaviour-verified."*
+  superpowers supplies the missing **method** — write the failing scenario first, watch an agent
+  violate the rule *without* the skill, then write minimal guidance against that observed failure;
+  micro-test behaviour-shaping rules at 5+ repetitions against a no-guidance control. That is a
+  usable instrument for **Q2** (does the model *run* the gate or check from memory?) and **Q4**
+  (are the three lenses different, or decoration?). The irony is worth naming:
+  [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md) moves mechanics into
+  scripts *because a rule in a prompt fails silently* — and then the suite tests only the scripts.
+
+**One caution for anyone tempted to install both.** These skills reference each other, and one of
+them **contradicts this suite's merge path**: `finishing-a-development-branch` offers *"merge
+locally — switch to base, pull, merge"* as its first option, which `agent-git-protocol.md` forbids
+outright (only `wai-pr-review` merges, only through the gate). Loading that one installs a
+documented route around the guardrail this repo exists to defend. `receiving-code-review` and
+`using-git-worktrees` touch nothing on the merge path and are safe to load side by side.
+
+**And one correction to the table above,** because half an adoption recorded as a whole one is the
+kind of drift this file exists to prevent: what was taken from `requesting-code-review` was the
+*lesser* half. Reading your own diff is now step 5 — but the skill's actual thesis is that a
+reviewer should get **crafted context and no session history**, and `wai-pr-review` still runs in
+the same session as the work it reviews. That was demonstrated on the very PR that added the rule
+(#50): its review declared itself a self-review and could not audit its way out of it. Open, and
+named as open.
 
 ### mattpocock/skills
 <https://github.com/mattpocock/skills> (MIT)

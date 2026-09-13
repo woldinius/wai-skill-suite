@@ -111,3 +111,18 @@ code you can log, diff and require in CI), the model owns what is **expensive to
 (judgment), and where verifiability collapses — the question, the reinterpreted rule — **the human
 is the design, not the fallback**. Nothing above changes; the reasoning simply turns out to have a
 name and an upstream. Source and consequence: [REFERENCES.md](../../REFERENCES.md).
+
+## Correction 2026-09-13 — three statements above that the record contradicts
+
+This record stays as written; the corrections are dated here, where a reader of the claims will find
+them.
+
+- **"29 cases — every one a bug that shipped."** It was **8 of 29**: the file was *founded* on
+  shipped bugs, and most of its cases guard their neighbourhood
+  ([retrospective §1d](../retrospective-2026-07.md)).
+- **"Nine repair commits in two days."** The retrospective's count is **eleven** (its evidence
+  table).
+- **"CI therefore runs the tests on two shells."** True when written; false from 2026-08-06, when the
+  then-private repo's Actions budget forced CI down to one Ubuntu job (PR #25, dated in `ci.yml`) and
+  bash 3.2 ran only on a developer's machine. True again from 2026-09-13: a second job, `ci-macos`,
+  runs the suites on macOS — reported on every PR, not yet a required check.

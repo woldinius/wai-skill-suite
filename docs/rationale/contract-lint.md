@@ -16,7 +16,7 @@ that the two sides still said the same thing. A script gets a third
 exit code, a prompt keeps documenting two. A skill is renamed, a documented path stops resolving.
 A script is superseded and nobody deletes it, because nothing reports that nobody calls it.
 
-The 2026-08-03 architecture audit found FIFTEEN findings of exactly this shape — not one of
+The 2026-08-03 architecture audit (not republished) found FIFTEEN findings of exactly this shape — not one of
 them a hard bug, every one of them a place where the model is told something that is no longer
 true. That is the worst failure mode this suite has: the prompt is the instruction, so a stale
 prompt does not crash, it QUIETLY INSTRUCTS THE WRONG THING, and the good run and the bad run
@@ -68,6 +68,7 @@ nineteen lines above its own `exit 0/1/2` list, and that is correct documentatio
 
 The step/bullet block is the unit a human actually reads as "this paragraph is about this script".
 Measured on this repo, tightening from section to block turned 11 findings into 23 — and all 12 of
-the new ones were verified by hand as real. Where a block still names several scripts the
+the new ones were verified by hand as real (that run's output was not kept). Where a block still
+names several scripts the
 attribution is by proximity, not by parsing: that is counted and said out loud, never silently
 counted as coverage.

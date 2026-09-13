@@ -16,7 +16,8 @@
 
 This gate never said GO. Not once, in two repos, for its entire existence: it read `SKIPPED` as a
 failure, and the suite's own CI template ships a job skipped on every PR. The auto-merge path — the
-whole reason it exists — shipped **dead**, and nobody noticed for months.
+whole reason it exists — shipped **dead**, and nobody noticed through its first five field runs
+(empirics, Runs 1–5).
 
 **On 2026-07-15 it said GO.** The first one, in any repo, ever — and it fell to the PR that
 documented that it never had. The gate is a validated branch now and not merely a hopeful one; keep

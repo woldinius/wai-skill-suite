@@ -461,7 +461,8 @@ path, and the pass path carries the gate's entire value.
 > **A gate you have never seen say GO is not a validated gate. It is an untested branch that happens
 > to be failing closed.**
 
-This suite ran one for months, in two repos, and *caution is exactly what it looked like.*
+This suite ran one through its first five field runs, in two repos (Runs 1–5 above), and *caution is
+exactly what it looked like.*
 
 ### NO-GO is a fact about the PR. UNKNOWN is a bug report about the gate.
 

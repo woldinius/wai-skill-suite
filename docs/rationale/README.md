@@ -8,7 +8,8 @@ incidents, the field measurements, the traps that were tried and rejected. The s
 
 A comment is free on disk and expensive in a context window. These scripts get opened — when a
 skill says "run it", when a verdict is disputed, when anyone edits a check — and every time, the
-whole comment head is billed. Measured on 2026-08-19, before the split: the shipped scripts carried
+whole comment head is billed. Measured on 2026-08-19, before the split (the measuring command was
+not recorded): the shipped scripts carried
 **29,180 words of comments against 27,440 words of code**, more prose than all thirteen `SKILL.md`
 files put together, and 60 % of it sat in 68 blocks of eight lines or more.
 
