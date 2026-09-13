@@ -4,6 +4,40 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
+## [Unreleased]
+
+### Changed
+
+- **`wai-team` takes a single issue — and when nobody is watching, the review runs on fresh
+  context and the merge policy is confirmed at kickoff.** The skill refused single issues ("use
+  the lifecycle skills directly"), which left the common case — *an accepted issue, worked end to
+  end without pressing go three times* — with no orchestrator at all. It accepts one now; for
+  `n = 1` the mandate collapses to a single confirmation rather than disappearing, because
+  autonomy is a commission and what scales down is the ceremony, never the consent.
+  **Attendance, not the number of issues, is what changes the rules.** A run of one is exactly as
+  unattended as a run of eight, so every `wai-team` run — any `n` — reviews on **fresh context**:
+  the reviewer gets the diff, the issue/plan and the catalog, never the session transcript, and
+  its review comment names it. The gate is a conjunction — the script owns the mechanics, the
+  model owns *"no Blocker, no Major"* — and unattended, that judgment half was being made by the
+  session that had just built the thing (PR #50's review had to open by declaring itself a
+  self-review). No fresh-context reviewer, no merge: the run hands over.
+  **The merge policy is confirmed at kickoff, never assumed.** The default is the repo's own mode —
+  in `solo`, each clean PR (gate GO, no Blocker/Major) merges under the gate as its cycle ends,
+  which is what solo means and keeps the tempo; in `team`, auto-merge is armed. Two alternatives:
+  **decide at the end** — the run holds its clean PRs and puts them to the human in one question,
+  each reviewed on fresh context — or **hand over**. Under either, nothing merges during the run,
+  so a dependent issue waits for its blocker as it does in a `team` repo. The autonomy allowlist
+  stays the floor of the `autonomous` drain only. Nothing else moves — the excluded-domain floor,
+  the Blocker/Major decision point, fail-closed `UNKNOWN` and the absolute never-approve rule are
+  untouched. The half of `requesting-code-review`
+  ([obra/superpowers](https://github.com/obra/superpowers)) that [REFERENCES.md](REFERENCES.md)
+  listed as *not* adopted — crafted context, no session history — is now adopted for unattended
+  runs, and the entry there says which half is still open.
+- **`merge-gate.conf` holds the record, too.** `CONTRACT_PATHS` widens to include
+  `docs/field-reports/**` and `docs/publication/**`: the evidence the suite's claims rest on, and
+  the text published under the maintainer's name, now change only with a human reading the
+  change. The three existing entries stay, each with its reason in the header.
+
 ## [0.3.2] — 2026-09-13
 
 ### Added

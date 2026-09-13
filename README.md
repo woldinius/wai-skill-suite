@@ -161,7 +161,7 @@ Smaller repos work too — `wai-init` scopes and sizes everything to what the re
 
 A **router** points you to the right skill; three one-time **setup** skills prepare the repos;
 four skills form the per-requirement **lifecycle** (plan → implement → test → review); one
-**batch orchestrator** works several issues at once under your mandate; three run **periodically**
+**lifecycle orchestrator** works one issue or many under your mandate; three run **periodically**
 — a structural architecture audit, an adversarial security audit, and an artifact-derived
 retrospective of the suite's own record. All are triggered
 automatically via their `description` and demarcate themselves against the others to avoid
@@ -187,7 +187,7 @@ repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explici
 | [`wai-implementation`](.claude/skills/wai-implementation/SKILL.md) | Implement | daily | Concrete implementation — plan with risk/blast-radius first, then code, with per-surface concern sets. Default for code changes. | "implement X", "fix", "returns error 503", "refactor" |
 | [`wai-testing`](.claude/skills/wai-testing/SKILL.md) | Test | daily | Deterministic tests + the testing strategy: per-surface levels, **contract tests both sides**, token economy as a mandatory target (no real models/billing). | "write tests for X", "is this covered", "cover the billing path" |
 | [`wai-pr-review`](.claude/skills/wai-pr-review/SKILL.md) | Review | daily | Evaluate a PR/diff against the catalog, ordered by severity; classify by surface; token/billing & contract are human-gated domains. | "review this PR", "can this be merged", "check this diff" |
-| [`wai-team`](.claude/skills/wai-team/SKILL.md) | Batch | less often · well-tested | **Mandated backlog orchestrator:** works a set of GitHub issues through the full cycle — one branch+PR per issue, serial by default, bounded parallelism only for disjoint issues — integrated via pr-review's **merge queue**; Blocker/Major & contract merges collect in **your decision list**. | "work the backlog", "process issues #12–#18", "burn down the tier" |
+| [`wai-team`](.claude/skills/wai-team/SKILL.md) | Commissioned | less often · well-tested | **Mandated lifecycle orchestrator:** works one or more GitHub issues through the full cycle — one branch+PR per issue, serial by default, bounded parallelism only for disjoint issues — integrated via pr-review's **merge queue**; every review on fresh context, the merge policy confirmed at kickoff; Blocker/Major & contract merges collect in **your decision list**. | "run the cycle on #42", "work the backlog", "process issues #12–#18" |
 | [`wai-architecture-audit`](.claude/skills/wai-architecture-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **structural** audit: decoupling/modularity, drift, dead code + **non-obvious semantic redundancy / inconsistency / cross-surface dead-ends**, efficiency & container topology — as a trend over time. Measures against a persisted **architecture baseline**. | "audit the codebase", "is it decoupled", "find redundancy/drift" |
 | [`wai-security-audit`](.claude/skills/wai-security-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **adversarial** cyber-security sweep: attack-surface map + authZ/IDOR, secrets, injection (incl. prompt), SSRF, rate-limiting, session/token lifecycle, dependency CVEs, crypto/TLS, **token-economy fraud**, client attestation — posture as a trend. Report-only; redacted. | "security audit", "are we secure", "pentest", "check the attack surface", "dependency CVEs" |
 | [`wai-retro`](.claude/skills/wai-retro/SKILL.md) | Periodic | new — proving | **Artifact-derived retrospective** of the suite's own record, at a threshold (doctor's report-cadence advisory) — never from recall: the gate ledger's report extract, the run log and `git log` in; a dated, narrated report with raw counts beside every rate out; the judgment column stays human. Finishes by advancing the ledger's report marker so the cadence resets. Collaboration level gated until a question trace exists; publication to this repo only on explicit request, sanitized + pseudonymized (`fr-<12hex>`). | "run the retro", "retrospective", "what did the suite do this month", "cut a report" |
@@ -224,7 +224,7 @@ sits inside a checkout, it installs *from that checkout* — so the tree you rev
 you get, not whatever the remote's default branch holds.
 
 ```bash
-git clone --depth 1 --branch v0.3.1 https://github.com/woldinius/wai-skill-suite.git /tmp/wai
+git clone --depth 1 --branch v0.3.2 https://github.com/woldinius/wai-skill-suite.git /tmp/wai
 sh /tmp/wai/install.sh            # installs into the current directory
 rm -rf /tmp/wai
 ```
@@ -234,7 +234,7 @@ same version. (An earlier README once pinned to a tag before that tag existed �
 `tests/numbers-lint.sh` now checks every version reference here against `git tag`.)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.3.1/install.sh | SKILLS_REF=v0.3.1 sh
+curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.3.2/install.sh | SKILLS_REF=v0.3.2 sh
 ```
 
 What the script does — and deliberately does **not** do:
@@ -419,7 +419,7 @@ install.sh                                       # idempotent installer (inject/
   wai-implementation/
   wai-testing/                                   # + test-patterns reference
   wai-pr-review/                                 # + review lenses + merge-gate.sh (exit-code gate)
-  wai-team/                                      # mandated batch orchestrator (merge queue) + scripts
+  wai-team/                                      # mandated lifecycle orchestrator (merge queue) + scripts
   wai-architecture-audit/                        # + audit playbook
   wai-security-audit/                            # + security playbook + CVE/attack-path scripts
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh

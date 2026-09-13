@@ -169,6 +169,9 @@ necessary aspects as findings.
      itself* once branch protection is satisfied — which in team mode includes **one approving
      review from another human**. The script has already verified that this wall exists; without
      it, `--auto` would merge *immediately* while your report claimed to be waiting for a human.
+   - **Inside a `wai-team` run under merge policy (b) or (c)** (see `wai-team` §*Mandate first*) →
+     **merge nothing and arm nothing:** post the review and the gate result, then hand back. The
+     run holds the merge for the human's end-of-run answer, or hands it over.
 
    **Once per run, before relying on `Closes #N` or reporting any merge as done:** check that the
    merge target is the repository's **default branch** (`gh repo view --json defaultBranchRef`).
@@ -247,8 +250,9 @@ The first row exists because `adversarial` alone would fire on a contract change
 while the question that actually matters (*do the three clients that cannot be force-updated still
 parse this?*) lives in `breadth`. So run both.
 
-`wai-team` batches and the merge-queue delta re-review have no human invocation per PR, so
-they take the derived default; a queue entry keeps the lens of its first review.
+`wai-team` runs (any number of issues) and the merge-queue delta re-review have no human invocation
+per PR, so they take the derived default; a queue entry keeps the lens of its first review. Inside a
+`wai-team` run both are reviewed on fresh context, the delta re-review included.
 
 **The lens is additive.** It never narrows the dimension walk and **never changes the merge
 gate** — the contract-domain gate, the Blocker/Major decision point, the green-checks condition

@@ -188,12 +188,15 @@ documented route around the guardrail this repo exists to defend. `receiving-cod
 `using-git-worktrees` touch nothing on the merge path and are safe to load side by side.
 
 **And one correction to the table above,** because half an adoption recorded as a whole one is the
-kind of drift this file exists to prevent: what was taken from `requesting-code-review` was the
-*lesser* half. Reading your own diff is now step 5 — but the skill's actual thesis is that a
-reviewer should get **crafted context and no session history**, and `wai-pr-review` still runs in
-the same session as the work it reviews. That was demonstrated on the very PR that added the rule
-(#50): its review declared itself a self-review and could not audit its way out of it. Open, and
-named as open.
+kind of drift this file exists to prevent: what `wai-implementation` took from
+`requesting-code-review` was the *lesser* half — reading your own diff is its step 5. The skill's
+actual thesis is that a reviewer should get **crafted context and no session history**. That half
+is now adopted where it matters most: an **unattended** `wai-team` run hands its review to a
+fresh-context reviewer — the diff, the issue or plan and the catalog, never the session transcript
+— and merges nothing if the harness cannot dispatch one. An **attended** `wai-pr-review`, invoked
+by a human, still runs in the same session as the work it reviews; that was demonstrated on the
+very PR that added the diff-first rule (#50), whose review declared itself a self-review. Adopted
+for unattended runs, open for attended ones — and named as such.
 
 ### mattpocock/skills
 <https://github.com/mattpocock/skills> (MIT)
