@@ -311,6 +311,49 @@ else
   bad "the terminal output keeps its natural check order — only the ledger cell is reordered" "✓ at line ${lok:-none}, ✗ at line ${lxx:-none}"
 fi
 
+# BOOKS BEFORE OUTPUT (issue #64; a field report of 2026-09-12). The two writers used to run AFTER
+# the verdict was printed, with one more stdout write — the note: — between them. A caller who
+# trimmed the output (`| head -6`) closed the pipe; that write died of SIGPIPE, BETWEEN emit_ledger
+# and emit_runlog: a ledger row with no run-log partner, which a pairing guard reads as tampering.
+# Both books are now written before the first line reaches stdout. Two shapes, because the naive
+# one proves nothing: with a stub gh the gate finishes before `head` even reads, and nothing fails.
+#   A · stdout CLOSED (`>&-`): deterministic — the first stdout write fails and `set -e` exits the
+#       script right there, so anything printed before the books are written loses them. Against
+#       the old order this lost BOTH rows (measured 3/3 before the fix).
+#   B · the field's exact shape: a git repo on a feature branch (so the note: prints), piped into
+#       `head -1`. Against the old order: ledger row written, run-log row lost (measured 3/3).
+gfix
+( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 >&- 2>/dev/null ) || true
+if grep -qE '^\| .* \| 1 \| GO \|' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then ok "stdout closed (>&-) → the ledger row is written before the first output line"
+else bad "stdout closed (>&-) → the ledger row is written before the first output line" "no GO row in the fixture's ledger"; fi
+if grep -qF '| wai-pr-review | PR #1 | GO |' "$D/docs/architecture/run-log.md" 2>/dev/null; then ok "  · and the run-log row — both books, before any output"
+else bad "  · and the run-log row — both books, before any output" "no GO row in the fixture's run log"; fi
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
+( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 2>/dev/null | head -1 >/dev/null )
+if grep -qE '^\| .* \| 1 \| GO \|' "$D/docs/architecture/gate-ledger.md" 2>/dev/null && grep -qF '| wai-pr-review | PR #1 | GO |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "on a feature branch, piped into head -1 → the pair a closed pipe used to split is complete"
+else bad "on a feature branch, piped into head -1 → the pair a closed pipe used to split is complete" "ledger or run-log row missing — the field's orphan"; fi
+gfix; printf 'MERGED\n' > "$D/state"
+( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 >&- 2>/dev/null ) || true
+if grep -qE '^\| .* \| 1 \| MOOT \|' "$D/docs/architecture/gate-ledger.md" 2>/dev/null && grep -qF '| wai-pr-review | PR #1 | MOOT |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "the MOOT short-circuit writes both books before its first output line, too"
+else bad "the MOOT short-circuit writes both books before its first output line, too" "a MOOT row is missing in the ledger or the run log"; fi
+
+# A ROW IS A LINE (this repo, 2026-09-13). Tagging the last row's outcome with a tool that trimmed the
+# trailing newline left the file without one; the next verdict was appended ONTO that row — 13
+# fields on one line — and gate-stats.sh, which recognises rows by their leading `| YYYY-`, never
+# saw it. Both writers now restore the newline before appending.
+gfix; gate >/dev/null
+for f in gate-ledger run-log; do printf '%s' "$(cat "$D/docs/architecture/$f.md")" > "$D/docs/architecture/$f.md"; done
+gate >/dev/null
+lrows="$(grep -cE '^\| [0-9]' "$D/docs/architecture/gate-ledger.md")"
+lfields="$(tail -1 "$D/docs/architecture/gate-ledger.md" | awk -F'|' '{print NF}')"
+if [ "$lrows" -eq 2 ] && [ "$lfields" -eq 7 ]; then ok "a ledger whose last line lost its newline gets a NEW row, not a longer one"
+else bad "a ledger whose last line lost its newline gets a NEW row, not a longer one" "rows=$lrows fields=$lfields"; fi
+rrows="$(grep -cE '^\| [0-9]' "$D/docs/architecture/run-log.md")"
+if [ "$rrows" -eq 2 ]; then ok "  · the run log, same guard"
+else bad "  · the run log, same guard" "rows=$rrows"; fi
+
 # gate-stats.sh: it counts what the script emitted and what the human tagged — nothing more.
 STATS="$ROOT/.claude/skills/wai-pr-review/scripts/gate-stats.sh"
 N=$((N+1)); SD="$TMP/s$N"; mkdir -p "$SD"
