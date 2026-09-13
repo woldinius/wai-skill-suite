@@ -1384,6 +1384,41 @@ N=$((N+1)); D="$TMP/oi-nothing$N"; mkdir -p "$D"
 out="$( cd "$D" && PATH="$GITONLY" "$SH" "$OPENITEMS" 2>&1 )"; rc=$?
 assert "no git repo AND no gh → exit 2: nothing could be derived, and it says so" 2 "$rc" "$out" 'nothing could be derived'
 
+# ROWS THAT EXIST ONLY IN A WORKTREE (#68). A field repo lost 11 run-log and 16 invocation-log rows
+# when its PR assembly copied the three books from the main checkout over a linked worktree's — the
+# writers were right (--show-toplevel: a row belongs to the worktree that produced it), the copy was
+# wrong, and nothing had shown that the rows were there. Fixture: origin/main = HEAD with a one-row
+# ledger; a linked worktree whose ledger has the same row UNTAGGED plus one row more.
+oifix; mkdir -p "$D/docs/architecture"
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | GO | x | ok |\n'
+} > "$D/docs/architecture/gate-ledger.md"
+gitcommit "$D" 'chore: ledger with one tagged row'
+git -C "$D" update-ref refs/remotes/origin/main "$(git -C "$D" rev-parse HEAD)"
+WTR="$TMP/oi-wtrows$N"
+git -C "$D" worktree add "$WTR" -b rows-wt >/dev/null 2>&1
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | GO | x | |\n'            # on the base, tagged there — not new
+  printf '| 2026-08-02T00:00Z | 2 | NO-GO | y | |\n'         # only in this worktree
+} > "$WTR/docs/architecture/gate-ledger.md"
+out="$(oi)"; rc=$?
+assert "a linked worktree whose ledger holds a row not on origin/main → named, with the book and count" 0 "$rc" "$out" 'rows only in a worktree \(not on origin/main.*oi-wtrows[^ ]*: gate-ledger \+1'
+assert "  · a row the human TAGGED on the base is not counted as new (first cells compared)" 0 "$rc" "$out" 'gate-ledger \+1' 'gate-ledger \+2'
+# The main checkout is included: an uncommitted row here is a row not on the base, too.
+printf '| 2026-08-03T00:00Z | 3 | GO | z | |\n' >> "$D/docs/architecture/gate-ledger.md"
+out="$(oi)"; rc=$?
+assert "  · this checkout's own unpushed row is listed as well (the line covers every worktree)" 0 "$rc" "$out" "oi$N: gate-ledger \\+1"
+# THE PASS PATH: books identical to the base in every worktree → none, with the derivation named.
+oifix; mkdir -p "$D/docs/architecture"
+printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n| 2026-08-01T00:00Z | 1 | GO | x | ok |\n' > "$D/docs/architecture/gate-ledger.md"
+gitcommit "$D" 'chore: ledger'
+git -C "$D" update-ref refs/remotes/origin/main "$(git -C "$D" rev-parse HEAD)"
+out="$(oi)"; rc=$?
+assert "every book on the base in every worktree → 'rows only in a worktree: none', naming the base" 0 "$rc" "$out" 'rows only in a worktree: none — every ledger/run-log/invocation-log row in 1 worktree\(s\) is on origin/main'
+# No origin ref at all → not checked, never "none": an empty comparison is not a clean one.
+oifix; out="$(oi)"; rc=$?
+assert "no origin ref → the worktree-rows line says NOT CHECKED, and the summary names it" 0 "$rc" "$out" 'rows only in a worktree: not checked — no origin ref' 'rows only in a worktree: none'
+
 # =================================================================================================
 echo
 echo "invocation-log.sh"
@@ -1427,6 +1462,12 @@ ivfix; out="$( cd "$D" && "$SH" "$IVLOG" --bogus 2>&1 )"; rc=$?
 assert "an unknown argument → exit 2 (misuse is the one loud path)" 2 "$rc" "$out" 'unknown argument'
 out="$( "$SH" "$IVLOG" --snippet 2>&1 )"; rc=$?
 assert "--snippet prints the settings.local.json opt-in (and names local, not settings.json)" 0 "$rc" "$out" 'settings.local.json'
+# …and says WHY it is the repo-local file, naming the global alternative with its condition (#68):
+# an opt-in nobody can reason about is one nobody keeps.
+assert "  · the snippet states why repo-local, and names ~/.claude/settings.json as the alternative" 0 "$rc" "$out" 'Why the repo-local file.*repo-relative'
+assert "  · with the global alternative's condition (an absolute command path)" 0 "$rc" "$out" '/\.claude/settings\.json with an ABSOLUTE command path'
+assert "  · and where a row lands in a linked worktree (the sentence wraps; grep is per line)" 0 "$rc" "$out" 'In a linked worktree the row lands in that worktree'
+assert "  · with the override named" 0 "$rc" "$out" 'INVOCATION_LOG overrides the path'
 
 # Repo-root resolution, same rule as every writer: from a subdir the row lands at the root.
 N=$((N+1)); D="$TMP/ivgit$N"; gitrepo "$D"; printf 'x\n' > "$D/f"; gitcommit "$D" 'chore: base'

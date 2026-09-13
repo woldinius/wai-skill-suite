@@ -56,7 +56,37 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   the fix; plus a ledger or run log without its final newline, which gets a new row, not a longer
   one.
 
+### Added
+
+- **Rows that exist only in a worktree are visible** (#68). The three append-only writers keep
+  `--show-toplevel` — a row belongs to the worktree that produced it, and reaches the default branch
+  with that branch's PR. A field repo lost 11 run-log and 16 invocation-log rows when its PR
+  assembly copied the three books from the main checkout over a linked worktree's; the loss was in
+  the copy, not the writer, and nothing had shown the rows were there. Now `open-items.sh` derives
+  an eighth class on every hand-back — per worktree, this one included, the rows in each book that
+  are not on the base ref, compared on their first cells so a row tagged on the base is not counted
+  as new; no base ref → *not checked*, never *none*. Each writer's header says in one sentence
+  where its row lands in a linked worktree and names its override (`MERGE_GATE_LEDGER`, `RUN_LOG`,
+  `INVOCATION_LOG`); `doctor.sh` says so once, in a linked worktree only; `invocation-log.sh
+  --snippet` says why the opt-in is repo-local and when a global hook with an absolute path is the
+  alternative. Nine cases across `tests/scripts.sh` and `tests/run.sh`. Rationale:
+  `docs/rationale/open-items.md` § *Rows only in a worktree*.
+
 ### Changed
+
+- **The gate's ledger note fires only when a row is loose** (#66). The 2026-08-18 rule — rows
+  belong on main, collect loose rows into a chore PR — was printed on every run from a branch, and
+  both repos using the suite had moved to the opposite practice: a row rides the PR that produced
+  it (here since 2026-08-20; in a field repo since 2026-08-21, where the collection path had cost
+  three row-only PRs, two near-losses and about sixteen duplicate rows in one sweep). New conf key
+  `LEDGER_HOME=branch|main`, default `branch` and what an absent key means: the note prints only
+  when the branch has no open PR (`gh pr list --head`, fail-open toward the note) and says the row
+  is loose until a PR carries it; `LEDGER_HOME=main` restores the older note. The ledger header,
+  the path comment and the conf template say the new rule; the rationale records both decisions
+  with their measurements; the 2026-08-18 retrospective gets a dated note, not a rewrite. The key
+  is read from the repo root, not `$CONF` — the MOOT path books its row before `$CONF` exists.
+  Four cases in `tests/run.sh` (no PR → note; open PR → silence; `LEDGER_HOME=main` → the old
+  note; default branch → silence).
 
 - **The second review of #58, closed out (#61).** Three Minors, two Nits and two open questions,
   all wording, none of them lowering the gate. `wai-pr-review` step 6's clause for a `wai-team`

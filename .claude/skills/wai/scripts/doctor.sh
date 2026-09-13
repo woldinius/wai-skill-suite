@@ -69,6 +69,21 @@ conf_val() { sed -n "s/^$1=//p" "$2" 2>/dev/null | tr -d '"' | head -1; }
 
 echo "doctor: $ROOT"
 
+# A LINKED worktree writes its own books. The three append-only writers (gate ledger, run log,
+# invocation log) resolve --show-toplevel, so here their rows land in THIS worktree's
+# docs/architecture/ and reach the default branch with this branch's PR — a field repo lost 27 rows
+# when a PR assembly copied the files from the main checkout over a worktree's (#68). Said once, as
+# an advisory, only where it applies: the main checkout gets no line. --git-dir is inside the common
+# dir for the main checkout and outside it for a linked one; both are compared as absolute paths.
+_gd="$(git rev-parse --absolute-git-dir 2>/dev/null || true)"
+_cd="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+if [ -n "$_gd" ] && [ -n "$_cd" ]; then
+  case "$_cd" in /*) : ;; *) _cd="$(cd "$_cd" 2>/dev/null && pwd -P)" ;; esac
+  if [ -n "$_cd" ] && [ "$_gd" != "$_cd" ]; then
+    note "this checkout is a linked worktree of $(dirname "$_cd") — gate-ledger, run-log and invocation-log rows land HERE ($(git rev-parse --show-toplevel 2>/dev/null)/docs/architecture/) and reach the default branch with this branch's PR"
+  fi
+fi
+
 # Suite version — the provenance foundation. Phase B compares an artifact's stamp against this.
 VER=".claude/.wai-suite-version"
 if [ -f "$VER" ]; then ok "installed suite version: $(head -1 "$VER" 2>/dev/null)"
