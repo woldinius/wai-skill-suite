@@ -72,10 +72,10 @@ the mandate, with three answers. **(a) The repo's own mode — the default.** In
 PR (gate GO, a fresh-context review with no Blocker and no Major) merges under the gate as its cycle
 ends: that is what solo means, and it keeps the tempo. In `team`, auto-merge is armed and a second
 human approves. With `autonomous` mandated, (a) is the only policy — its drain *is* the merge, so
-(b) and (c) cannot be mandated together with it. **(b) Decide at the end** — the run holds every clean PR and puts them to the human
-in one question in the report (step 7). **(c) Hand over** — nothing merges in this run. Under (b)
-and (c) `main` does not advance during the run, so the team-repo rule applies to every dependent
-issue (step 3). The autonomy allowlist (`AUTONOMY_SAFE_PATHS`) is not part of this choice — it is
+(b) and (c) cannot be mandated together with it. **(b) Decide at the end** — the run holds every
+clean PR and puts them to the human in one question in the report (step 7). **(c) Hand over** —
+nothing merges in this run. Under (b) and (c) `main` does not advance during the run, so the
+team-repo rule applies to every dependent issue (step 3). The autonomy allowlist (`AUTONOMY_SAFE_PATHS`) is not part of this choice — it is
 the floor of the `autonomous` drain, below.
 
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
