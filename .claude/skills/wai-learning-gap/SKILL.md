@@ -202,7 +202,7 @@ are in `references/axes.md`.
    on the same branch (`wai-testing`, `wai-pr-review`) would "repair" the deliberately red
    exercise away or report the phase as failed. So **plant no gap** when something else is still
    meant to run on this branch in the same turn, when a branch switch is coming — or when an
-   **autopilot** is running (`wai-team` working through a batch): nobody is at the keyboard to
+   **autopilot** is running (`wai-team`, any number of issues): nobody is at the keyboard to
    close a gap there. The normal case is interactive: commit the phase, plant the gap, hand
    control back.
 
@@ -307,7 +307,7 @@ Then carry on as normal.
 
 ## Flow D — post-autopilot offer (opt-in, one gap, off a merged commit)
 
-After a **clean** `wai-team` run, the most instructive change of the batch can seed exactly
+After a **clean** `wai-team` run, the most instructive change of the run can seed exactly
 **one** learning gap — never a queue. Strictly opt-in; when any precondition fails, it plants
 nothing and says nothing.
 

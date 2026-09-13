@@ -4,6 +4,25 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
+## [Unreleased]
+
+### Changed
+
+- **The second review of #58, closed out (#61).** Three Minors, two Nits and two open questions,
+  all wording, none of them lowering the gate. `wai-pr-review` step 6's clause for a `wai-team`
+  run now has its end point — under (b) the hold lasts **until the human's end-of-run yes**, after
+  which merge-queue mode carries the yes out — and says what (a) requires there: a review on fresh
+  context; a same-session review inside a `wai-team` run posts its verdict and merges nothing.
+  The review template gains the **`Reviewed by`** line that `wai-team` already required, so a
+  later reader can tell a fresh review from a self-review. `wai-team` names what (a) means with
+  `autonomous` mandated (the drain *is* the merge; (b)/(c) cannot be mandated with it) and no
+  longer describes a held dependent as "waiting on approval" when it waits for the end of the run.
+  `wai-learning-gap` stops calling a `wai-team` run a batch. Also riding here: the install examples
+  pinned to `v0.3.3`, the gate and run-log rows from #62 (its GO, and the MOOT of a later gate run
+  — whose run-log row is a marked reconstruction: that run was piped into `head` to reproduce a
+  field report's SIGPIPE finding, and the script died between its two writers), and the human's
+  `ok` tags on the three open #58 rows and on #62's GO row.
+
 ## [0.3.3] — 2026-09-13
 
 ### Changed

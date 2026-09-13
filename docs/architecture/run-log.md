@@ -60,3 +60,7 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-13T12:06Z | wai-pr-review | PR #59 | MOOT |
 | 2026-09-13T12:44Z | wai-pr-review | PR #58 | NO-GO |
 | 2026-09-13T13:11Z | wai-pr-review | PR #58 | NO-GO |
+| 2026-09-13T13:19Z | wai-pr-review | PR #62 | GO |
+<!-- reconstructed 2026-09-13, not from memory: the gate run behind the ledger's 14:12Z MOOT row on #62 was piped into `head -3` to reproduce a field report's finding — the script died of SIGPIPE between emit_ledger and emit_runlog, so the ledger row exists and this row was never written. Rebuilt from that ledger row; the defect is filed from PR #63's review. -->
+| 2026-09-13T14:12Z | wai-pr-review | PR #62 | MOOT |
+| 2026-09-13T14:43Z | wai-pr-review | PR #63 | NO-GO |

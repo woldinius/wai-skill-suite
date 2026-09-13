@@ -89,7 +89,10 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-08-19T20:42Z | 49 | GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | ok |
 | 2026-08-20T21:31Z | 50 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | ok |
 | 2026-08-20T21:46Z | 56 | NO-GO | ✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd; ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo | ok |
-| 2026-09-13T12:06Z | 58 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
+| 2026-09-13T12:06Z | 58 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | ok |
 | 2026-09-13T12:06Z | 59 | MOOT | PR already merged before the gate ran | |
-| 2026-09-13T12:44Z | 58 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
-| 2026-09-13T13:11Z | 58 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
+| 2026-09-13T12:44Z | 58 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | ok |
+| 2026-09-13T13:11Z | 58 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | ok |
+| 2026-09-13T13:19Z | 62 | GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | ok |
+| 2026-09-13T14:12Z | 62 | MOOT | PR already merged before the gate ran | |
+| 2026-09-13T14:43Z | 63 | NO-GO | ✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd; ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo | |
