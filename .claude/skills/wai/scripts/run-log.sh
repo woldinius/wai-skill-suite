@@ -85,6 +85,10 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 RUNLOG_HDR
 fi
 
+# A ROW IS A LINE — emit_ledger's guard, same reason: a last line that lost its newline would have
+# this row glued onto it, and every reader that recognises rows by their leading `| YYYY-` would miss
+# it. Why: docs/rationale/merge-gate.md § Books before output
+[ -s "$LOG" ] && [ -n "$(tail -c 1 "$LOG" 2>/dev/null)" ] && printf '\n' >> "$LOG" 2>/dev/null || true
 if printf '| %s | %s | %s | %s |\n' \
      "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" \
      "$(cell "$1")" "$(cell "$2")" "$(cell "$3")" >> "$LOG" 2>/dev/null; then

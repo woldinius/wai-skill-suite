@@ -6,6 +6,24 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ## [Unreleased]
 
+### Fixed
+
+- **`merge-gate.sh` writes both books before it prints a line** (#64). The ledger row and the
+  run-log row used to be written *after* the `VERDICT:` line, with the `note:` line printed between
+  them. A caller who trimmed the output (`| head -6`) closed the pipe; the next write died of
+  SIGPIPE — **between the two writers** — and a field repo's pairing guard read the orphaned
+  ledger row as tampering, in a PR that had nothing to do with it. Now the verdict is booked first,
+  on the normal path and on the MOOT short-circuit, and the `note:` is printed last; a caller can
+  trim as much as it likes without losing a book (the exit code was and is meaningful only from an
+  un-piped run). Second half, found by #63's review: both writers now restore a missing
+  trailing newline before appending — tagging the last row's outcome with a tool that trimmed it
+  had glued the next verdict onto that row (13 fields on one line), invisible to `gate-stats.sh`.
+  Six cases in `tests/run.sh` pin both, in the two shapes that actually fail against the old order
+  (a naive `| head` proves nothing — a stub-fast gate finishes before `head` reads): stdout closed,
+  and a feature-branch run piped into `head -1` — the field's exact orphan, reproduced 3/3 before
+  the fix; plus a ledger or run log without its final newline, which gets a new row, not a longer
+  one.
+
 ### Changed
 
 - **The second review of #58, closed out (#61).** Three Minors, two Nits and two open questions,

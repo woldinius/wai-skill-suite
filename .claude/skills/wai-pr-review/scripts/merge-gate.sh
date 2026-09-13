@@ -97,6 +97,7 @@ cap400() { awk '{ if (length($0) <= 400) print; else { s = substr($0, 1, 400); s
 # logging failure must NEVER change a merge decision, so every line is best-effort and guarded.
 # Losing a row is a data gap; blocking a correct merge because a file was read-only would be a real
 # cost. (ADR-0002; docs/learnings/empirical-test-plan.md §0–1.)
+LEDGER_NOTE=""   # set by emit_ledger, printed AFTER both books are written — never from inside it
 emit_ledger() {
   _led="${MERGE_GATE_LEDGER:-${REPO_ROOT:-.}/docs/architecture/gate-ledger.md}"
   if [ ! -f "$_led" ]; then
@@ -163,6 +164,11 @@ LEDGER_HDR
   # cap400. The row stays one line (the awk in gate-stats.sh and the human's outcome cell both
   # depend on that); only the cell got wider, and a cut is now marked as one.
   _lw=$(printf '%s\n' "$_srt" | tr '\n' ';' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^[ ;]*//; s/[ ;]*$//' | cap400)
+  # A ROW IS A LINE. If the file's last byte is not a newline (an editing tool trimmed it while a
+  # human tagged the last row), a plain append glues this verdict ONTO that row — 13 fields on one
+  # line — and gate-stats.sh, which recognises rows by their leading `| YYYY-`, never sees it. So
+  # the newline is restored first. Why (this repo, 2026-09-13): docs/rationale/merge-gate.md § Books before output
+  [ -s "$_led" ] && [ -n "$(tail -c 1 "$_led" 2>/dev/null)" ] && printf '\n' >> "$_led" 2>/dev/null || true
   printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
   # THE ROW BELONGS ON MAIN (the ledger-home decision, 2026-08-18). The ledger stays IN-REPO — numbers-lint
   # re-measures the repo's published ledger claims in CI, and a ledger in ~/.claude would break
@@ -170,11 +176,14 @@ LEDGER_HDR
   # twice in squash races (#28, #31), and one field repo invented this rule by hand in its
   # CLAUDE.md. So the script says it, every time it lands a row anywhere but the default branch:
   # collect loose rows into a small chore PR promptly. Fail-open: no git answer, no note.
+  # SAID LATER, NOT HERE: this function writes nothing to stdout. The note is stored and printed
+  # after emit_runlog has run, so a caller who closed the pipe cannot kill the script between the
+  # two writers — the incident § Books before output records.
   _cur="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
   _def="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')" || true
   [ -n "$_def" ] || _def=main
   if [ -n "$_cur" ] && [ "$_cur" != "$_def" ]; then
-    echo "note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (ledger-home decision). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
+    LEDGER_NOTE="note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (ledger-home decision). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
   fi
 }
 
@@ -228,12 +237,14 @@ fi
 # else watches ORDERING, and a solo repo can merge before the review runs.
 STATE="$(gh pr view "$PR" --repo "$REPO" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
 if [ "$STATE" = "MERGED" ]; then
+  # Books first, output second — the verdict block below says why.
+  emit_ledger MOOT "PR already merged before the gate ran"
+  emit_runlog MOOT
   echo "merge-gate: PR #$PR ($REPO → $BASE) is already MERGED — this gate is MOOT."
   echo "  Nothing is left to prevent. Any review findings are FOLLOW-UPS, not gate conditions."
   echo "  If you authored this code, this is a self-review of your own just-merged work."
-  emit_ledger MOOT "PR already merged before the gate ran"
-  emit_runlog MOOT
   echo "VERDICT: MOOT — the PR was merged before the gate ran; the human owns any follow-up."
+  [ -z "$LEDGER_NOTE" ] || echo "$LEDGER_NOTE"
   exit 2
 fi
 
@@ -409,6 +420,22 @@ else
   esac
 fi
 
+# --- Emit to the ledger — BEFORE the first line of output ---------------------------------------
+# The gate writes its OWN verdict to an append-only ledger, for the exact reason the gate exists:
+# "the model checked" cannot be audited, but a line the SCRIPT wrote can. The row is written by
+# emit_ledger() (defined near the top, and also called on the MOOT short-circuit).
+# BOOKS BEFORE OUTPUT. The verdict is final here; nothing below changes it. Both books are written
+# before anything reaches stdout, so a caller who trims the output (`| head -6`) and thereby closes
+# the pipe cannot kill this script BETWEEN the two writers. emit_ledger therefore writes nothing to
+# stdout; its note: is printed last. Why (a field report of 2026-09-12; reproduced here the next
+# day): docs/rationale/merge-gate.md § Books before output
+# PLAIN case — NOT `_v=$(case … esac)`. A case inside $() is a syntax error in bash 3.2, which is
+# what /bin/sh IS on macOS; shellcheck passes it, the shell does not. This is the FOURTH artefact in
+# the suite to relearn that (ADR-0002), and tests/run.sh caught it on the first run — as designed.
+case "$VERDICT" in 0) _v=GO ;; 1) _v=NO-GO ;; 2) _v=UNKNOWN ;; *) _v='?' ;; esac
+emit_ledger "$_v" "$REASONS"
+emit_runlog "$_v"
+
 # --- Verdict ------------------------------------------------------------------------------------
 echo "merge-gate: PR #$PR ($REPO → $BASE, mode: $MODE)"
 printf '%b' "$REASONS"
@@ -417,16 +444,6 @@ case "$VERDICT" in
   1) echo "VERDICT: NO-GO — a precondition failed. Leave the PR for the human." ;;
   2) echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human." ;;
 esac
-
-# --- Emit to the ledger -------------------------------------------------------------------------
-# The gate writes its OWN verdict to an append-only ledger, for the exact reason the gate exists:
-# "the model checked" cannot be audited, but a line the SCRIPT wrote can. The row is written by
-# emit_ledger() (defined near the top, and also called on the MOOT short-circuit).
-# PLAIN case — NOT `_v=$(case … esac)`. A case inside $() is a syntax error in bash 3.2, which is
-# what /bin/sh IS on macOS; shellcheck passes it, the shell does not. This is the FOURTH artefact in
-# the suite to relearn that (ADR-0002), and tests/run.sh caught it on the first run — as designed.
-case "$VERDICT" in 0) _v=GO ;; 1) _v=NO-GO ;; 2) _v=UNKNOWN ;; *) _v='?' ;; esac
-emit_ledger "$_v" "$REASONS"
-emit_runlog "$_v"
+[ -z "$LEDGER_NOTE" ] || echo "$LEDGER_NOTE"
 
 exit "$VERDICT"

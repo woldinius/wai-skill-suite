@@ -159,3 +159,45 @@ silent `cut -c1-160`, and the ledger's first real row ended mid-token (`test (ub
 amputation that reads exactly like a complete reason. The second review fixed the ledger cell and
 missed the classifier summary two hundred lines down: same cut, same cell, one level deeper. Both
 sites share one function now so they cannot drift apart a third time.
+
+## Books before output
+
+Until 2026-09-13 the script ended: print `VERDICT:` → `emit_ledger` (append the row, then print
+the `note:` line) → `emit_runlog` → exit. Every write to the two books came *after* output had
+begun, and one more stdout write sat *between* them.
+
+A field report (2026-09-12) showed what that costs. A caller trimmed the gate's output —
+`| head -6` — and so closed the pipe early. The next write to stdout, the `note:`, killed the
+script with SIGPIPE, exactly between the two writers. Result: a ledger row with no run-log
+partner. The field repo keeps a guard that pairs the two files, and it reported *"one of the two
+files was tampered with"* — the diagnosis its author had built it for, after a real tampering
+incident. Here the diagnosis was wrong and indistinguishable from right: nobody had touched
+anything, the script had died. The red landed in a PR that had nothing to do with either file.
+The report's own reproduction needed the gap the script really had between the writers; a script
+that finishes instantly beats `head` and shows nothing — which is also why the naive test in this
+repo proved nothing, and the pinned cases close stdout outright or run on a feature branch so the
+`note:` really hits the closed pipe.
+
+Reproduced in this repo the next day on a MOOT run (`| head -3`): the ledger row was written, the
+run-log row never was. The reproduction surfaced the second half. The ledger's last row had just
+been tagged by hand with a tool that trimmed the file's trailing newline; `emit_ledger` appended
+the MOOT row onto that line — 13 pipe-fields where a row has 7 — and `gate-stats.sh`, which
+recognises a row by its leading `| YYYY-`, counted the file as unchanged. An emitted verdict the
+denominator could not see, in a session that had run the gate to prove the denominator.
+
+Two rules — the first at the call sites in `merge-gate.sh`, the second inside `emit_ledger` and
+`run-log.sh` — both pinned by `tests/run.sh`:
+
+- **Both books are written before the first line of output.** The verdict is final when the
+  checks end; printing it never changes it. Order was habit, not a constraint. `trap '' PIPE`
+  alone would not do: under `set -e` a failing `echo` still exits the script — with the echo's
+  status, not the verdict's. Writing first makes the rest of the output free to fail *without
+  losing a book*. It does not make the exit status independent of the output: a failed write
+  still sets it, so the exit code is meaningful only from an un-piped run — through `| head` a
+  caller reads `head`'s status anyway, before and after this change.
+- **A row is a line.** Before appending, a writer restores a missing trailing newline. The
+  append-only rule protects rows from *edits*; this protects them from *each other*.
+
+"Call it correctly" — never pipe the gate through `head` — was the field repo's interim rule, and
+it is not the fix: a side effect that depends on whether the caller trims the output is the
+silent failure class the ledger exists to catch.
