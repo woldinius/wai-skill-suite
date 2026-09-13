@@ -23,6 +23,14 @@ name: ci
 #     cases INSIDE tests/run.sh — they are still enforced, once instead of twice.
 #   · The day this repo is public, Actions minutes are free and the matrix can return; the
 #     branch ruleset then requires this job by its name: `ci`.
+#
+# RESTORED AS A SECOND JOB, 2026-09-13. The repo has been public since 2026-08-10, so the minutes
+# are free and bash 3.2 comes back into CI: `ci-macos` (below) runs the same three suites on macOS,
+# where `/bin/sh` IS bash 3.2. A second job and NOT a matrix, on purpose: a matrix renames the job
+# to `ci (ubuntu-latest)` / `ci (macos-latest)`, and the ruleset's required check `ci` would never
+# report again — every PR blocked by a check that cannot run, the PR #25 failure once more. `ci`
+# stays exactly as it is. `ci-macos` reports on every PR but is NOT a required check until a human
+# adds it to the ruleset; until then a red macOS run is visible and does not block.
 
 on:
   push:
@@ -86,4 +94,20 @@ jobs:
       # The learning-gap skill ships its own harness and it once ran in NO ci — 88 cases that only
       # executed when somebody remembered. A check that runs on memory is the thing this repo
       # exists to argue against.
+      - run: sh .claude/skills/wai-learning-gap/scripts/tests/run.sh
+
+  # The second shell (see the header). The same three suites; the lint and the case-count check are
+  # properties of the tree and stay measured once, in `ci`. PyYAML is not installed here — the
+  # frontmatter guard is armed in `ci`, and here it SKIPs visibly, a counted SKIP rather than a pass.
+  ci-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      # Evidence, not assumption: which shell `sh` actually is on this runner.
+      - run: /bin/sh --version | head -1
+      - run: sh tests/run.sh
+      - run: sh tests/scripts.sh
       - run: sh .claude/skills/wai-learning-gap/scripts/tests/run.sh
