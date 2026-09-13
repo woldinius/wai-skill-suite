@@ -49,6 +49,7 @@ case "${1:-}" in
               esac ;;
       checks) emit checks ;;
       diff)   case "$*" in *--name-only*) emit files ;; *) emit diff ;; esac ;;
+      list)   emit pr-list ;;   # merge-gate's "does this branch have an open PR?" (#66); no fixture = none
     esac ;;
   api)
     url="${2:-}"

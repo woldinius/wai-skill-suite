@@ -50,7 +50,9 @@ fi
 
 # Default paths are REPO-relative, not cwd-relative (merge-gate.sh carries the incident that
 # forced this; same rule here so the two halves of one gate read the same files). Overrides win;
-# outside a git repo the cwd stays the base. --show-toplevel on purpose — see merge-gate.sh.
+# outside a git repo the cwd stays the base. --show-toplevel on purpose — see merge-gate.sh: in a
+# LINKED worktree the row lands in THAT worktree's docs/architecture/run-log.md, because its branch
+# is the PR that carries the row to the default branch (#68); RUN_LOG overrides the path.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 LOG="${RUN_LOG:-${REPO_ROOT:-.}/docs/architecture/run-log.md}"
 

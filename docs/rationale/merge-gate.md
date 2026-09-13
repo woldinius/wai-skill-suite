@@ -203,3 +203,36 @@ Two rules — the first at the call sites in `merge-gate.sh`, the second inside 
 "Call it correctly" — never pipe the gate through `head` — was the field repo's interim rule, and
 it is not the fix: a side effect that depends on whether the caller trims the output is the
 silent failure class the ledger exists to catch.
+
+## Where a row lives
+
+The ledger-home question has two halves: *which file*, and *which branch*. The first was decided
+on 2026-08-18 (#35): in-repo, not `~/.claude` like the learning ledger, because `numbers-lint`
+re-measures the repo's published ledger claims in CI and a file outside the repo would break that
+loop. The second was decided the same day from two incidents: PR #19's row and then PR #28's were
+deleted by squash merges that carried a stale copy of the ledger from a branch cut before the row
+existed (#28, #31). The rule became *rows belong on main*, and the gate said so on every run from a
+branch — *collect loose rows into a small chore PR promptly*.
+
+Both repos that use the suite then moved to the opposite practice, and measured why. This repo
+folded its row-only chore PRs on 2026-08-20 (#55): a row rides the PR that produced it, or the next
+one — never a PR of its own. A field repo followed on 2026-08-21 and reported (field report of
+2026-09-12, § 2) that the collection path had cost it three PRs carrying nothing but rows, two
+near-losses in the hand-offs between them, and about sixteen duplicate rows in one collection
+sweep — while the squash race the rule guarded against does not occur when the row's own PR carries
+it: the squash keeps the row. Meanwhile every agent run read the note and had to overrule it, which
+is the shape of a warning nobody reads.
+
+So the note fires only when the row is genuinely loose (#66). `LEDGER_HOME=branch` — the default,
+and what an absent key means — makes the gate ask `gh pr list --head <branch>`: an open PR means the
+row rides it and nothing is said; no PR, or no answer from `gh`, means the note names the branch and
+says the row is loose until a PR carries it. `LEDGER_HOME=main` in `merge-gate.conf` restores the
+2026-08-18 note for a repo that wants one ledger history on its default branch only. The key is read
+from the repo root, not from the gate's `$CONF` variable: the MOOT path books its row before `$CONF`
+is defined, and under `set -eu` that reference would have aborted the very path that must still
+write. The path resolution did not change — `--show-toplevel`, so in a linked worktree the row lands
+in that worktree's ledger; its branch *is* the PR (#68, and `docs/rationale/open-items.md` carries the
+worktree half).
+
+The 2026-08-18 retrospective keeps its recommendation as written, with a dated note pointing here: a
+record of a decision is not rewritten when the decision changes.
