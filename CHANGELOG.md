@@ -4,10 +4,18 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
-## [Unreleased]
+## [0.3.2] — 2026-09-13
 
 ### Added
 
+- **A second shell in CI again.** From 2026-08-06, CI ran one job on Ubuntu: in the then-private
+  repo the macOS runners had burned the Actions budget until no check could run (PR #25), so bash
+  3.2 — the `/bin/sh` of macOS, and the shell the shipped `case … esac in $( )` bug needed — ran
+  only on a developer's machine. The repo has been public since 2026-08-10; a second job,
+  `ci-macos`, runs the same three suites on macOS again and prints which shell `sh` is. A separate
+  job rather than a matrix, because a matrix renames the job and the ruleset's required check
+  `ci` would never report again. **`ci-macos` is not a required check until a human adds it to the
+  ruleset.** With it, ADR-0002's *"CI runs the tests on two shells"* is true again.
 - **Arrival is part of done** (#51). "Merged" used to mean "the forge said MERGED" — and a stacked
   PR whose base had already merged and been deleted merges into nothing: CI green, gate GO, label
   purple, and the default branch never sees the commit (two field incidents of the same class in
@@ -55,6 +63,28 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   iron law (it conflicts with `wai-testing` owning tests) and the sub-500-word budget (that is
   **K8**/**Q5**, and it needs its own ADR with the measurement attached) — are recorded in
   [REFERENCES.md](REFERENCES.md), in the same commit, per that file's own rule.
+- **`REFERENCES.md` maps what to load from [obra/superpowers](https://github.com/obra/superpowers)
+  instead of rebuilding it** (supersedes #57). Read in full (14 skills), it covers three lanes this
+  suite does not, and they are not the same kind of absence. **`receiving-code-review`** (the
+  other end of a finding) and **`using-git-worktrees`** (a lifecycle four scripts here sweep but
+  nothing owns) are deliberately not this suite's job and are named as **loadable from the
+  source** — nothing is copied. **`writing-skills`** is a **gap that is ours**: a method for
+  testing what a *prompt* does, which `docs/learnings/empirical-test-plan.md` already names and
+  Q2/Q4 wait on. Also recorded: `finishing-a-development-branch` documents a local-merge path
+  `agent-git-protocol.md` forbids, so the two suites are not blindly installable together; and
+  only the lesser half of `requesting-code-review` was ever adopted.
+- **The record matches the tree — unsourced claims corrected, sourced or labelled.** An audit of
+  every claim the repo presents as fact found numbers without a source, generalisations sold as
+  observations, and statements the repo's own record contradicts. **Corrected:** eleven repair
+  commits, not nine; "every case a bug that shipped" was 8 of the first 29; the dead gate went
+  unnoticed through five field runs, not "for months"; known-criticism K6 is closed; Q3's tagged
+  rows are 44 of 47; "about six IDs" is 0, 9 and 15 cited IDs, counted; and `REFERENCES.md` said
+  all twelve skills carry the Platform-context section, where it is seven of thirteen.
+  **Sourced** where a public source existed but was not cited: issues #9, #12, #13 and #27, and
+  the undici CVE's advisory. **Labelled** where none exists: self-reports, estimates, the
+  reconstructed prehistory, unpublished audits. The marketplace copy no longer claims that
+  *every* enforcement claim has a check behind it — it says what is true. ADRs are records, so
+  their corrections are dated addenda, not rewrites.
 
 ## [0.3.1] — 2026-08-19
 
