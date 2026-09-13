@@ -19,14 +19,18 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   catalog ID in every review finding; its own mandatory citation tripped its own gate. Now the
   citation scan **decides from added code lines only**, plus labels — a label is a declaration, a
   description is not; title and body are no longer requested from `gh` at all. An added line of a
-  **prose** file (`.md .markdown .mdx .txt .rst .adoc .org .rdoc .textile` — an extension nobody
-  listed, or none, counts as code) reports a citation or an erasure statement as **advisory**:
-  visible in the verdict and the ledger row, holding the unattended drain, not gating. `widen()`
-  names its tag in the anchored detail line. Unchanged: the path channel, `EX-GUARD`, `EX-MIG`, the
-  dial's anchoring (#30) and `--autonomy`'s hold on the advisory set. Fourteen cases in
-  `tests/run.sh`, the fixtures carrying `+++ b/<file>` headers; the nine changed shapes were run
-  against the previous script and fail there. The `gh` stub now serves labels and, for that
-  counterproof only, a body — the classifier's test asserts the body is never requested.
+  **prose** file (`.md .markdown .txt .rst .adoc .rdoc .textile` — an extension nobody listed, or
+  none, counts as code; `.mdx` and `.org` are code because they can execute) reports a citation or
+  an erasure statement as **advisory**: visible in the verdict and the ledger row, holding the
+  unattended drain, not gating. A file header is read only *between* hunks — the fresh-context
+  review of the PR found that an added content line beginning with `++ b/x.md` looked like one and
+  relabelled the rest of a code file as prose — and a failed or missing awk is UNKNOWN, never clean.
+  `widen()` names its tag in the anchored detail line. Unchanged: the path channel, `EX-GUARD`,
+  `EX-MIG`, the dial's anchoring (#30) and `--autonomy`'s hold on the advisory set. Twenty-one cases
+  in `tests/run.sh`, the fixtures carrying `+++ b/<file>` headers; the nine shapes this fix changes
+  were run against the previous script and fail there, and the six holes the review found fail
+  against the fix's own first head. The `gh` stub now serves labels and, for that counterproof
+  only, a title/body — the classifier's test asserts neither is ever requested.
   Rationale: `docs/rationale/excluded-domains.md` § *Three text channels, one reach*.
 
 - **`merge-gate.sh` writes both books before it prints a line** (#64). The ledger row and the

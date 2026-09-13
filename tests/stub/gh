@@ -40,10 +40,11 @@ case "${1:-}" in
                                emit base ;;
                 *state*)  emit state ;;
                 *number*) emit number ;;
-                # The classifier's two widening channels, post-jq. `title,body` is served so the
-                # OLD reader can be counterproofed; the classifier itself no longer asks (#67) —
-                # gh-calls.log is where a test proves that.
-                *title,body*) emit body ;;
+                # The classifier's two widening channels, post-jq. ANY title/body request is served
+                # so the OLD reader can be counterproofed; the classifier itself no longer asks (#67)
+                # — gh-calls.log is where a test proves that, and it greps for either word, so a
+                # future `--json body` alone would be caught too.
+                *--json*title*|*--json*body*) emit body ;;
                 *labels*) emit labels ;;
               esac ;;
       checks) emit checks ;;

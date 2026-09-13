@@ -39,8 +39,9 @@
 #   file (a citation, or an erasure statement) is reported as ADVISORY: visible in the verdict, it
 #   holds the unattended drain, it does not gate. Labels still widen: a label is a declaration, a
 #   description is not. The prose deny-list is exactly PROSE_EXT below; an extension nobody listed
-#   counts as CODE, so the list's incompleteness fails toward the gate, not away from it. Why the
-#   reach was narrowed, with the numbers:
+#   counts as CODE, so the list's incompleteness fails toward the gate, not away from it. A file
+#   header is read only BETWEEN hunks (inside one, a content line can look exactly like a header),
+#   and a failed or missing awk is UNKNOWN, never clean. Why the reach was narrowed, with the numbers:
 #   docs/rationale/excluded-domains.md § Three text channels, one reach
 #
 # EXIT CODES — fail closed, because this is a gate:
@@ -222,20 +223,48 @@ added_lines() { grep '^+' "$DIFF_FILE" 2>/dev/null | grep -v '^+++' ; }
 # The same stream split by FILE KIND (#67). A prose file is one whose extension is on this deny-list;
 # everything else — including a file with no extension, or one nobody thought of — is CODE. The list
 # is a deny-list on purpose: its incompleteness fails toward the gate (an unlisted extension is still
-# scanned and still gates), where an allow-list of code extensions would fail away from it. The
-# current file is tracked from the `+++ b/<path>` header; a diff captured without headers (a bare
-# `+line` stream, as the fixtures use) is all code — the fail-closed default again.
-PROSE_EXT="md markdown mdx txt rst adoc org rdoc textile"
+# scanned and still gates), where an allow-list of code extensions would fail away from it. `.mdx`
+# and `.org` are NOT on it although the field's list carried them: MDX embeds JSX and org files run
+# babel blocks — a format that can execute is code here.
+# The current file is tracked from the `+++ b/<path>` header, and a header is recognised ONLY
+# BETWEEN hunks: inside a hunk every line is content, and an added line whose text begins with
+# `++ b/x.md` renders as `+++ b/x.md` — read as a header it would relabel the rest of a code file as
+# prose and turn a DELETE FROM users two lines later into an advisory (found by the fresh-context
+# review of #71). The hunk is bounded by the counts in its own `@@ -o,l +n,m @@` line, so the parser
+# needs no `diff --git` marker and reads `gh pr diff`, `diff -u` and the fixtures' bare
+# `--- / +++ / @@` shape alike. A diff captured without any header (a bare `+line` stream) is all
+# code — the fail-closed default again.
+# awk is the one tool this split adds to the deciding path, so its failure must not read as "no
+# text": a non-zero exit leaves a marker in $WORK that the run turns into UNKNOWN, never CLEAR.
+PROSE_EXT="md markdown txt rst adoc rdoc textile"
 added_lines_of() {   # $1 = code | prose → the added lines of files of that kind, header lines dropped
   awk -v prose="$PROSE_EXT" -v want="$1" '
-    BEGIN { n = split(prose, p, " "); for (i = 1; i <= n; i++) isprose["." p[i]] = 1; kind = "code" }
-    /^\+\+\+ / { f = $0; sub(/^\+\+\+ /, "", f); sub(/\t.*/, "", f)
+    BEGIN { n = split(prose, p, " "); for (i = 1; i <= n; i++) isprose["." p[i]] = 1
+            kind = "code"; ro = 0; rn = 0 }
+    # A hunk header: remember how many old and new lines it announces (a missing count means 1).
+    /^@@ -[0-9]+(,[0-9]+)? \+[0-9]+(,[0-9]+)? @@/ {
+      ro = 1; rn = 1; split($0, h, " ")
+      if (index(h[2], ",")) ro = substr(h[2], index(h[2], ",") + 1) + 0
+      if (index(h[3], ",")) rn = substr(h[3], index(h[3], ",") + 1) + 0
+      next }
+    # Inside a hunk every line is CONTENT, whatever it begins with.
+    (ro > 0 || rn > 0) {
+      c = substr($0, 1, 1)
+      if (c == "+")  { rn--; if (kind == want) print; next }
+      if (c == "-")  { ro--; next }
+      if (c == " ")  { ro--; rn--; next }
+      if (c == "\\") { next }                      # "\ No newline at end of file"
+      ro = 0; rn = 0 }                             # not content: the hunk ended early — read on
+    # Between hunks: the +++ header names the file whose added lines follow (git quotes non-ASCII
+    # names, diff -u appends a tab and a timestamp, a CRLF diff carries a trailing CR — all stripped).
+    /^\+\+\+ / { f = $0; sub(/^\+\+\+ /, "", f); sub(/\r$/, "", f); sub(/\t.*/, "", f)
+                 sub(/^"/, "", f); sub(/"$/, "", f)
                  base = f; sub(/.*\//, "", base); kind = "code"
                  if (base ~ /\./) { ext = base; sub(/.*\./, ".", ext); ext = tolower(ext)
                                     if (ext in isprose) kind = "prose" }
                  next }
     /^\+/ { if (kind == want) print; next }
-  ' "$DIFF_FILE" 2>/dev/null
+  ' "$DIFF_FILE" 2>/dev/null || { [ -n "$WORK" ] && : > "$WORK/awk-failed" 2>/dev/null; true; }
 }
 added_code_lines()  { added_lines_of code; }
 added_prose_lines() { added_lines_of prose; }
@@ -281,6 +310,9 @@ gh_pr() {
 }
 
 acquire_inputs() {
+  # awk splits the diff by file kind for both text channels (#67). Without it neither channel runs,
+  # and "did not run" must never read as CLEAR — the same rule gh and git get below.
+  command -v awk >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="awk is not installed"; return; }
   if [ -n "$PR" ]; then
     if [ -n "$FILES_ARG$DIFF_ARG" ]; then die_usage "--pr and --files/--diff are mutually exclusive"; fi
     command -v gh  >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="gh is not installed"; return; }
@@ -348,6 +380,9 @@ add_detail() { DETAIL="$DETAIL  x $1
 "; }
 
 classify() {
+  # Materialise $WORK in THIS shell first: added_lines_of runs inside $(…) subshells, and its
+  # awk-failed marker needs a directory the parent can check afterwards.
+  mktmp .work >/dev/null 2>&1 || true
   FILES="$(cat "$FILES_FILE" 2>/dev/null)"
 
   # --- EX-GUARD — the floor ---------------------------------------------------------------------
@@ -484,6 +519,14 @@ if [ "$INPUT_UNKNOWN" -eq 1 ]; then
 fi
 
 classify
+
+# A text channel that did not run is not a clean one. added_lines_of leaves this marker when awk
+# exits non-zero (see there); like an unreadable diff, that is UNKNOWN — held for the human.
+if [ -n "$WORK" ] && [ -f "$WORK/awk-failed" ]; then
+  echo "excluded-domains: UNKNOWN — awk failed while splitting the diff by file kind; the text channels did not run" >&2
+  echo "VERDICT: UNKNOWN — could not scan the diff; held for the human."
+  exit 2
+fi
 
 # --- Autonomy: the ALLOWLIST eligibility gate ---------------------------------------------------
 if [ "$AUTONOMY" -eq 1 ]; then

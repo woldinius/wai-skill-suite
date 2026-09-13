@@ -50,7 +50,7 @@ IS anchored, nothing changes. Paths and diff statements remain authoritative eve
 
 Besides the path list, the classifier reads text in three places: the erasure regex (EX-GDPR), the
 catalog-ID citation scan, and the PR's own metadata. Until #67 the three had **inconsistent
-reach**, eighty lines apart in the same script. The erasure regex read *added* lines, but from
+reach**, fourteen lines apart in the same script. The erasure regex read *added* lines, but from
 *every* file — prose, ledger and run log included. The citation scan read the **whole diff file**
 — context lines the author never touched, removed lines — plus the PR **title and body**. And the
 variable holding title + body + labels was named for labels alone, so its detail line said
@@ -81,11 +81,21 @@ a finding in itself** — and one rule about their reach:
 
 1. **The citation scan decides from added code lines only.** Not a context line, not a removed
    line, not the title or body. `added_code_lines()` tracks the current file from the diff's
-   `+++ b/<path>` header; a diff captured without headers is all code.
-2. **Prose is a deny-list, and its incompleteness points at the gate.** `.md .markdown .mdx .txt
-   .rst .adoc .org .rdoc .textile` are prose; an extension nobody listed — and a file with none — is
-   **code**, so the channel keeps reading it and keeps widening. An allow-list of code extensions
-   would fail the other way, on exactly the file type nobody thought of.
+   `+++ b/<path>` header; a diff captured without headers is all code. A header is recognised only
+   *between* hunks — inside one, every line is content, and an added line whose text begins with
+   `++ b/x.md` looks exactly like a header. Read as one, it relabelled the rest of a code file as
+   prose and turned a `DELETE FROM users` two lines later into an advisory; the fresh-context review
+   of #71 found that hole in the first head, and the hunk's own `@@ -o,l +n,m @@` counts now bound
+   what is content. awk, the one tool this split adds to the deciding path, fails closed: a
+   non-zero exit, or no awk at all, is UNKNOWN — a text channel that did not run is not a clean one.
+2. **Prose is a deny-list, and its incompleteness points at the gate.** `.md .markdown .txt .rst
+   .adoc .rdoc .textile` are prose; an extension nobody listed — and a file with none — is **code**,
+   so the channel keeps reading it and keeps widening. An allow-list of code extensions would fail
+   the other way, on exactly the file type nobody thought of. `.mdx` and `.org`, which the field's
+   list carried, are deliberately *not* prose here: MDX embeds JSX and org files run babel blocks — a
+   format that can execute is code. And a `.md` runbook whose SQL a human is meant to paste is
+   advisory like any other document; `ERASURE_PATHS` is the declared way to gate a documented
+   erasure path.
 3. **Labels widen, descriptions do not.** A label is a declaration a human attached; a body is the
    text the suite told the author to fill with IDs. The variable is `LABELS`, and it holds labels;
    the title and body are no longer requested from `gh` at all — the test reads the stub's call log

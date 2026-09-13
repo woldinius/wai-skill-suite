@@ -872,7 +872,8 @@ assert "a billing path → EX-PAY, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX
 # THE HOLE THE OLD GATE LEFT OPEN — and the EX-GDPR regression (was CLEAR/GO, now EXCLUDED). A
 # `DELETE FROM users` in an ordinary code file, OUTSIDE any migration/erasure path, was never caught:
 # the old §6 only grepped INSIDE MIGRATION_PATHS, so a path-only check said clean → GO. The added-lines
-# erasure grep now trips EX-GDPR (over added CODE lines since #67 — a header-less fixture is all code). It is NOT EX-MIG — no migration file is touched, so the AND-gated
+# erasure grep now trips EX-GDPR (over added CODE lines since #67 — a header-less fixture is all code).
+# It is NOT EX-MIG — no migration file is touched, so the AND-gated
 # migration check cannot be what caught it. (The merge-gate.sh INTEGRATION of this — §5-6 delegating
 # here — is blueprint I1 and lands with that script; this pins the classifier the gate delegates to.)
 edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
@@ -948,8 +949,8 @@ assert "--autonomy: an advisory citation is HELD, not waved through (autonomy er
 gfix; printf 'benw\n' > "$D/login" 2>/dev/null || true
 printf '+| SEC-7 | unchanged |\n' > "$D/diff"
 out="$(gate)"; rc=$?
-assert "gate on a CLEAR-with-advisory diff → GO, and the advisory rides the verdict output" 0 "$rc" "$out" 'advisory \(not gating, citation dial\): EX-SEC'
-if grep -q 'advisory (not gating, citation dial): EX-SEC' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
+assert "gate on a CLEAR-with-advisory diff → GO, and the advisory rides the verdict output" 0 "$rc" "$out" 'advisory \(not gating\): EX-SEC'
+if grep -q 'advisory (not gating): EX-SEC' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
   ok "  · and the ledger row carries it (visible where the tags are audited)"
 else bad "  · and the ledger row carries it" "$(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
 
@@ -961,8 +962,8 @@ assert "an unreadable diff → UNKNOWN, exit 2 (fail-closed, never CLEAR)" 2 "$r
 # Field-measured over 64 merged PRs: 9 of 10 EX-GDPR verdicts came through the citation scan, none
 # of them touched an erasure path, and in 6 the citation was the ONLY reason — from CONTEXT lines
 # the author never touched, from added lines of prose files, once from the PR body alone. The cause
-# was two greps with different reach eighty lines apart: the erasure regex read added lines, the
-# citation scan read the whole diff file plus title and body. Now the citation scan DECIDES from
+# was two greps with different reach fourteen lines apart in this script: the erasure regex read
+# added lines, the citation scan read the whole diff file plus title and body. Now the citation scan DECIDES from
 # added CODE lines (plus labels) only; an added PROSE line — a citation or an erasure statement —
 # is ADVISORY: visible, not gating. The fixtures below carry `+++ b/<file>` headers on purpose:
 # a header-less diff is all code (the fail-closed default the older fixtures above rely on).
@@ -1019,14 +1020,65 @@ assert "DELETE FROM users in an added .sql line → EX-GDPR, exit 1 (code gates 
 edfix; printf 'This review found nothing under SEC-3; PAY-3 unchanged.\n' > "$ED_D/body"
 out="$(edrun_pr)"; rc=$?
 assert "SEC-3 and PAY-3 in the PR body → CLEAR, no advisory, no widening (the body is a description)" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-SEC|EX-PAY'
-if grep -q 'title,body' "$ED_D/gh-calls.log" 2>/dev/null; then bad "  · and the body was never requested from gh" "$(grep 'title,body' "$ED_D/gh-calls.log")"
-else ok "  · and the body was never requested from gh"; fi
+if grep -Eq 'title|body' "$ED_D/gh-calls.log" 2>/dev/null; then bad "  · and neither title nor body was ever requested from gh" "$(grep -E 'title|body' "$ED_D/gh-calls.log")"
+else ok "  · and neither title nor body was ever requested from gh"; fi
 
 # = LABELS still widen — a label is a declaration. GDPR is anchored here (ERASURE_PATHS declared).
 edfix; printf 'gdpr\n' > "$ED_D/labels"
 out="$(edrun_pr)"; rc=$?
 assert "a label 'gdpr' → EX-GDPR widened, exit 1 (labels are the declaration channel that stays)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
 assert "  · and the detail calls it a label — because now it IS one" 1 "$rc" "$out" 'EX-GDPR  widened by a gdpr/erasure label'
+
+# ── THE HOLES THE FRESH-CONTEXT REVIEW OF #71 FOUND IN THE FIRST HEAD (90e9b7a) ──────────────────
+# Each ✗ below is CLEAR or advisory on that commit and EXCLUDED/UNKNOWN now; the = case is the
+# direction the fix must not break.
+
+# ✗ A HEADER IS READ BETWEEN HUNKS ONLY. An added CONTENT line whose text begins with `++ b/notes.md`
+# renders as `+++ b/notes.md`. Read as a file header, it relabelled the rest of a code file as prose
+# — and a DELETE FROM users two lines later became an advisory: exit 0, agent-mergeable, with one
+# crafted comment. The hunk's own `@@ -o,l +n,m @@` counts bound the hunk, so this line is content.
+edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/services/reports.ts b/src/services/reports.ts\n--- a/src/services/reports.ts\n+++ b/src/services/reports.ts\n@@ -1 +1,6 @@\n export {}\n+/*\n+++ b/notes.md\n+*/\n+  await db.query("DELETE FROM users WHERE id = $1");\n+// PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a content line that LOOKS like a +++ header cannot relabel a code file → EX-GDPR still gates" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+assert "  · and the anchored PAY citation in the same file still decides" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+
+# = …while a REAL header after a finished hunk is honoured: a prose file first, then a code file —
+# the code file's citation decides. (Were the second header swallowed as content, the code file
+# would inherit "prose" and the gate would fail open the other way.)
+edfix; printf 'docs/notes.md\nsrc/util/format.ts\n' > "$ED_D/files"
+printf -- '--- a/docs/notes.md\n+++ b/docs/notes.md\n@@ -1 +1,2 @@\n x\n+PAY-2 in prose\n--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n y\n+// PAY-2 in code\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "prose file, then a code file: the second +++ header is honoured — the code citation decides" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+
+# ✗ A FORMAT THAT EXECUTES IS CODE. The field's deny-list carried `.mdx` and `.org`; MDX embeds JSX
+# and org files run babel blocks, so a deleteAccount() wired into a docs page is a statement, not a
+# sentence. Both are off the list — the fail-closed direction.
+edfix; printf 'docs/Admin.mdx\n' > "$ED_D/files"
+printf -- '--- a/docs/Admin.mdx\n+++ b/docs/Admin.mdx\n@@ -1 +1,3 @@\n # Admin\n+import { deleteAccount } from "../api"\n+<button onClick={() => deleteAccount(user.id)}>Delete</button>\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert ".mdx is code, not prose: deleteAccount() in a docs page → EX-GDPR, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# ✗ A git-QUOTED file name (non-ASCII → `+++ "b/caf\303\251.md"`) is still a .md — the quotes are
+# stripped before the extension is read, so the false-positive class does not return for those names.
+edfix; printf 'docs/caf\303\251.md\n' > "$ED_D/files"
+printf -- '--- "a/docs/caf\303\251.md"\n+++ "b/docs/caf\303\251.md"\n@@ -1 +1,2 @@\n x\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a git-quoted non-ASCII .md name is still prose → advisory, not EXCLUDED" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+
+# ✗ AWK FAILS CLOSED. The file-kind split is the one tool this fix added to the deciding path; a
+# broken awk must read as "could not scan", never as "no text found" — the first head said CLEAR.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n x\n+  DELETE FROM users WHERE id = 1\n' > "$ED_D/diff"
+BADAWK="$TMP/badawk$N"; mkdir -p "$BADAWK"; printf '#!/bin/sh\necho "awk: broken" >&2\nexit 2\n' > "$BADAWK/awk"; chmod +x "$BADAWK/awk"
+out="$( PATH="$BADAWK:$PATH"; export PATH; edrun )"; rc=$?
+assert "a failing awk → UNKNOWN, exit 2 — a text channel that did not run is not a clean one" 2 "$rc" "$out" 'VERDICT: UNKNOWN' 'VERDICT: CLEAR'
+# …and a MISSING awk is refused up front, like a missing gh or git. A PATH with the toolbox minus awk.
+NOAWK="$TMP/noawk$N"; mkdir -p "$NOAWK"
+for _t in sh git grep sed tr sort head tail cat mktemp rm mkdir date; do
+  _p="$(command -v "$_t" 2>/dev/null)"; [ -n "$_p" ] && ln -s "$_p" "$NOAWK/$_t" 2>/dev/null
+done
+out="$( PATH="$NOAWK"; export PATH; edrun )"; rc=$?
+assert "no awk on PATH → UNKNOWN, exit 2, and the reason names awk" 2 "$rc" "$out" 'awk is not installed' 'VERDICT: CLEAR'
 
 # ── excluded-domains.sh --autonomy (the ALLOWLIST eligibility gate) ──────────────────────────────
 # The blocklist above is UNDER-inclusive by construction — it cannot know a risky path idiom no rule

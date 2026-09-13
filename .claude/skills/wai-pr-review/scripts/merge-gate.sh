@@ -414,7 +414,7 @@ else
   EXCL_ADV="$(printf '%s\n' "$EXCL_OUT" | grep '^ADVISORY-DOMAINS:' | head -1 | sed 's/^ADVISORY-DOMAINS:[[:space:]]*//' || true)"
   case "$EXCL_RC" in
     0) ok "no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure)"
-       [ -z "$EXCL_ADV" ] || info "advisory (not gating, citation dial): $EXCL_ADV cited without declared paths — visible here so it reaches the ledger row" ;;
+       [ -z "$EXCL_ADV" ] || info "advisory (not gating): $EXCL_ADV — an unanchored citation, or a citation or erasure statement in prose (the classifier's detail says which); visible here so it reaches the ledger row" ;;
     1) no_go "touches an excluded domain — the human merges these, always: $EXCL_SUM" ;;
     *) unknown "the domain classifier could not verify this PR (fail closed): $EXCL_SUM" ;;
   esac
