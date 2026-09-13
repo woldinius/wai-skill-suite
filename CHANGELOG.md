@@ -8,33 +8,35 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ### Changed
 
-- **`wai-team` takes a single issue — and the autonomy floor now keys on ATTENDANCE, not on how
-  many issues are in the run.** The skill refused single issues ("use the lifecycle skills
-  directly"), which left the common case — *an accepted issue, worked end to end without pressing
-  go three times* — with no orchestrator at all. It accepts one now; for `n = 1` the mandate
-  collapses to a single confirmation rather than disappearing, because autonomy is a commission and
-  what scales down is the ceremony, never the consent.
-  **The larger correction is the floor.** The suite inferred "unattended" from "batch": `autonomous`
-  mode required a human-affirmed `AUTONOMY_SAFE_PATHS` allowlist, while `solo` mode inside a team
-  run merged every clean PR with nobody watching and no affirmed surface. Cardinality was never the
-  safety property — **attendance is**. A run of one is exactly as unattended as a run of eight. So
-  any merge inside this skill now needs the human's say-so regardless of `n` or mode — and the run
-  **asks for it** instead of failing silently. At kickoff, when no allowlist is affirmed, it offers
-  three answers: affirm one now (via `wai-init`), decide at the end, or hand everything over. At the
-  end, the clean PRs it held (gate GO, no Blocker/Major, no excluded domain) are put to the human in
-  one question and, on a yes, merged serially through the merge queue. Stricter than `solo` used to
-  be — but asked, not imposed.
-  **And the review phase runs on fresh context.** The gate is a conjunction: the script owns the
-  mechanics, the model owns *"no Blocker, no Major"*. Unattended, that judgment half was being made
-  by the same session that had just built the thing, under maximum completion pressure, with no
-  human between the verdict and the merge. The reviewer now gets the diff, the issue/plan and the
-  catalog — never the session transcript; if the harness cannot dispatch one, the run merges nothing
-  and says so. The failure this guards against is on the record: PR #50's review had to open by
-  declaring itself a self-review, because it was one. Nothing else moves — the excluded-domain
-  floor, the Blocker/Major decision point, fail-closed `UNKNOWN` and the absolute never-approve rule
-  are untouched. The half of `requesting-code-review` ([obra/superpowers](https://github.com/obra/superpowers))
-  that [REFERENCES.md](REFERENCES.md) listed as *not* adopted — crafted context, no session
-  history — is now adopted for unattended runs, and the entry there says which half is still open.
+- **`wai-team` takes a single issue — and when nobody is watching, the review runs on fresh
+  context and the merge policy is confirmed at kickoff.** The skill refused single issues ("use
+  the lifecycle skills directly"), which left the common case — *an accepted issue, worked end to
+  end without pressing go three times* — with no orchestrator at all. It accepts one now; for
+  `n = 1` the mandate collapses to a single confirmation rather than disappearing, because
+  autonomy is a commission and what scales down is the ceremony, never the consent.
+  **Attendance, not the number of issues, is what changes the rules.** A run of one is exactly as
+  unattended as a run of eight, so every `wai-team` run — any `n` — reviews on **fresh context**:
+  the reviewer gets the diff, the issue/plan and the catalog, never the session transcript, and
+  its review comment names it. The gate is a conjunction — the script owns the mechanics, the
+  model owns *"no Blocker, no Major"* — and unattended, that judgment half was being made by the
+  session that had just built the thing (PR #50's review had to open by declaring itself a
+  self-review). No fresh-context reviewer, no merge: the run hands over.
+  **The merge policy is confirmed at kickoff, never assumed.** The default is the repo's own mode —
+  in `solo`, each clean PR (gate GO, no Blocker/Major) merges under the gate as its cycle ends,
+  which is what solo means and keeps the tempo; in `team`, auto-merge is armed. Two alternatives:
+  **decide at the end** — the run holds its clean PRs and puts them to the human in one question,
+  each reviewed on fresh context — or **hand over**. Under either, nothing merges during the run,
+  so a dependent issue waits for its blocker as it does in a `team` repo. The autonomy allowlist
+  stays the floor of the `autonomous` drain only. Nothing else moves — the excluded-domain floor,
+  the Blocker/Major decision point, fail-closed `UNKNOWN` and the absolute never-approve rule are
+  untouched. The half of `requesting-code-review`
+  ([obra/superpowers](https://github.com/obra/superpowers)) that [REFERENCES.md](REFERENCES.md)
+  listed as *not* adopted — crafted context, no session history — is now adopted for unattended
+  runs, and the entry there says which half is still open.
+- **`merge-gate.conf` holds the record, too.** `CONTRACT_PATHS` widens to include
+  `docs/field-reports/**` and `docs/publication/**`: the evidence the suite's claims rest on, and
+  the text published under the maintainer's name, now change only with a human reading the
+  change. The three existing entries stay, each with its reason in the header.
 
 ## [0.3.2] — 2026-09-13
 

@@ -6,9 +6,9 @@ description: >-
   integrated serially through the merge queue, with no human gap between the phases. Requires an
   explicit mandate (which issues, and how decision points are handled) and hands back one collected
   decision list. Invoked without a named issue set, it scans the backlog and proposes — it proposes,
-  the human mandates. Because the run is UNATTENDED, the review runs on fresh context and nothing
-  merges without the human's say-so — an affirmed allowlist asked for at kickoff, or one question
-  over the clean PRs at the end. Use it whenever issues are commissioned
+  the human mandates. Because the run is UNATTENDED, every review runs on fresh context and the
+  merge policy is confirmed at kickoff (default: the repo's own — solo merges each clean PR under
+  the gate). Use it whenever issues are commissioned
   rather than driven phase by phase: "run the cycle on #42", "work the backlog", "process issues
   #12–#18", "burn down the tier", "wai-team". Not for a change with no issue behind it
   (wai-implementation) or a finished PR (wai-pr-review).
@@ -64,17 +64,18 @@ The mandate fixes:
 **For a single issue the mandate collapses to one confirmation, it does not disappear.** The four
 dimensions still resolve — the set is that issue, decision handling and stop budget take their
 defaults, and the integration mode follows the repo — but they are read back in one line and
-confirmed once ("`#42`, collect decisions, solo, merge policy: decide at the end — go?"). Autonomy
-is a commission; what scales down for a small run is the ceremony, never the consent.
+confirmed once ("`#42`, collect decisions, solo, merge as each cycle ends — go?"). Autonomy is a
+commission; what scales down for a small run is the ceremony, never the consent.
 
-**The merge policy is asked at kickoff — the run never decides it alone.** An unattended run merges
-only on the human's say-so. If `docs/architecture/coordination.conf` carries an affirmed
-`AUTONOMY_SAFE_PATHS`, that *is* the say-so for PRs wholly inside it. If not, the mandate asks, with
-three answers: **(a) affirm an allowlist now** — hand to `wai-init`, which writes it dated and
-hashed; **(b) decide at the end** — the run holds every clean PR and puts them to the human in one
-question in the report (step 7); **(c) hand over** — nothing merges in this run. The default is
-**(b)**: it costs the human one answer instead of one per PR, and it asks when there is something
-concrete to look at.
+**The merge policy is confirmed at kickoff — the run never decides it alone.** It is read back with
+the mandate, with three answers. **(a) The repo's own mode — the default.** In `solo`, each clean
+PR (gate GO, a fresh-context review with no Blocker and no Major) merges under the gate as its cycle
+ends: that is what solo means, and it keeps the tempo. In `team`, auto-merge is armed and a second
+human approves. **(b) Decide at the end** — the run holds every clean PR and puts them to the human
+in one question in the report (step 7). **(c) Hand over** — nothing merges in this run. Under (b)
+and (c) `main` does not advance during the run, so the team-repo rule applies to every dependent
+issue (step 3). The autonomy allowlist (`AUTONOMY_SAFE_PATHS`) is not part of this choice — it is
+the floor of the `autonomous` drain, below.
 
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
 (`date -u +%FT%TZ`). It bounds the cross-issue digest (step 6) and the autonomous-merge report.
@@ -118,15 +119,16 @@ this skill adds orchestration, **not** new authority.
    `wai-implementation` (includes the plan-delta check) → `wai-testing` → `wai-pr-review`. Under
    a **packaged mandate** the cycle runs once per **package**, on the package's one branch — the
    issues inside are still claimed one by one, counterproofed one by one, and each closes through
-   its own `Closes #N`; the package shares the branch and the PR, never the evidence. Clean,
-   non-excluded PRs merge under the normal gate (in a `team` repo that means auto-merge armed and
-   waiting for another human's approval — see the git protocol); everything else joins the
-   **decision list**. After each merged issue, the next cycle starts from the fresh `main`. In
+   its own `Closes #N`; the package shares the branch and the PR, never the evidence.
+   **`wai-pr-review` runs on fresh context** (see *Attended or unattended*), and the merge policy
+   confirmed at kickoff decides what a clean PR does next. Under **(a)** it merges under the normal
+   gate as its cycle ends (in a `team` repo: auto-merge armed, waiting for another human's approval
+   — see the git protocol), and the next cycle starts from the fresh `main`. Under **(b)** or **(c)**
+   the reviewer is told **"verdict only — do not merge"**: it posts the review and the gate result,
+   and the PR waits for the end of the run. Everything else joins the **decision list**. In
    **autonomous** mode the allowlist eligibility floor and the serial post-merge barrier both
-   apply — see *Autonomous integration*. **`wai-pr-review` runs on fresh context** and the
-   allowlist floor governs any merge, because this run is unattended at every n — see *Attended or
-   unattended*. With a **single-issue mandate** the loop simply runs once: same cycle, same floor,
-   same decision list, one entry in it.
+   apply — see *Autonomous integration*. With a **single-issue mandate** the loop simply runs once:
+   same cycle, same policy, same decision list, one entry in it.
 
    Two things must hold **before each issue's branch is cut** — this skill switches branches more
    than any other, so it is where collisions and dirty trees actually bite:
@@ -141,8 +143,10 @@ this skill adds orchestration, **not** new authority.
      pre-commit hook) and the branch switch: resolve it first (`wai-learning-gap`, flow C), then
      move on. Never carry a gap into the next issue's branch.
 
-   **In a `team` repo, nothing merges inside the run.** Every PR ends *auto-merge armed, waiting
-   for another human's approval* — so `main` does **not** advance between issues. Two
+   **In a `team` repo — and under merge policy (b) or (c) in any repo — nothing merges inside the
+   run.** In a `team` repo every PR ends *auto-merge armed, waiting for another human's approval*;
+   under (b) or (c) it waits for the end of the run. Either way `main` does **not** advance
+   between issues. Two
    consequences, and they are not optional:
    - **Never start an issue whose blocker hasn't merged.** Its code isn't on `main`, so the
      branch would be cut without it. Leave it in the frontier and report it as *blocked — waiting
@@ -165,7 +169,8 @@ this skill adds orchestration, **not** new authority.
 
 5. **Integrate through the merge queue — only what actually needs serializing.** The serial run
    (step 3) produces PRs that are **disjoint by construction**; those need no queue — each is
-   handled by the normal gate as its cycle ends. The **merge queue** is for PRs that genuinely
+   handled by the normal gate as its cycle ends (under merge policy (b), at the end of the run, one
+   at a time through the queue). The **merge queue** is for PRs that genuinely
    interact: results of **bounded parallelism** (step 4) and PRs that piled up. Hand those to
    `wai-pr-review` in **merge-queue mode** (rebase onto fresh `main` → re-run checks → re-review
    the delta → normal merge policy), strictly one at a time. A PR that doesn't rebase cleanly is
@@ -199,13 +204,15 @@ this skill adds orchestration, **not** new authority.
 7. **Report** — end the run with the team report (format below): autonomously merged (if any),
    merged, verified-nothing-to-fix, decision list, withheld, cross-issue notes, parked/failed,
    issues filed. The decision list is the deliverable the mandate promised — never bury it.
-   **Merge policy (b) — decide at the end:** the report opens with the clean PRs the run held —
-   each with its gate verdict (GO), its review (no Blocker, no Major) and the paths it touches —
-   and asks **one** question: merge these? Two yes-answers exist: *merge them now* (this run only),
-   or *affirm their paths as the allowlist and merge* (handed to `wai-init`, persisted). On a yes,
-   `wai-pr-review` merges them **serially** through the merge queue, with the post-merge barrier
-   between merges. A PR touching an excluded domain is never in this batch — it stays an
-   individual human merge. No answer is a no: the PRs stay approval-ready.
+   **Merge policy (b) — decide at the end:** the report opens with a **Held for your answer**
+   section — the clean PRs the run held, each with its gate verdict (GO), its review (no Blocker,
+   no Major) **and the name of its fresh-context reviewer**, and the paths it touches — and asks
+   **one** question: merge these? (In a `team` repo: arm these?) On a yes, `wai-pr-review` merges
+   them **serially** through the merge queue, with the post-merge barrier between merges; the
+   queue's rebase-delta re-review runs on fresh context too. A PR touching an excluded domain is
+   never in this batch — it stays an individual human merge — and neither is a PR whose review did
+   not run on fresh context. A run that could not dispatch a fresh-context reviewer offers no
+   batch: it hands over, as (c). No answer is a no: the PRs stay approval-ready.
    (The run-log row for this skill is written by `backlog-scan.sh` itself — do not log it again.)
    **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (from this skill's
    directory — a sibling path), paste its output verbatim beneath the ▶ Recommended next block,
@@ -220,12 +227,11 @@ this skill adds orchestration, **not** new authority.
    only makes the offer. **On a headless, scheduled, or otherwise non-interactive run, skip
    silently and offer nothing.** If the run was not clean, there is no offer.
 
-## Attended or unattended — the line the floor keys on
+## Attended or unattended — what changes when nobody watches
 
-**The floor keys on who is watching, not on how many issues.** A run of one issue is exactly as
+**The rules key on who is watching, not on how many issues.** A run of one issue is exactly as
 unattended as a run of eight: in both, four phases and possibly a merge happen with nobody reading
-the hand-backs in between. Cardinality was never the safety property — **attendance** is, and until
-now the suite inferred one from the other.
+the hand-backs in between. Cardinality was never the safety property — **attendance** is.
 
 - **Attended** — a human invokes the lifecycle skills themselves and reads each hand-back before
   pressing go. `wai-pr-review`'s merge policy applies unchanged: green gate + clean review → merge
@@ -234,45 +240,39 @@ now the suite inferred one from the other.
 
 Two consequences, and they are the whole point of this section:
 
-1. **Nothing merges inside an unattended run without the human's say-so** — nobody reads the
-   review before the merge lands, so the say-so has to come from somewhere else. It comes from one
-   of two places, both *asked for* rather than assumed (merge policy, under *Mandate first*): the
-   **affirmed allowlist** — the floor defined below, for PRs wholly inside `AUTONOMY_SAFE_PATHS` —
-   or the human's **answer at the end of the run** over the clean PRs the run held (step 7).
-   Without either — policy (c), or no answer — **nothing merges**; the run ends with approval-ready
-   PRs and the decision list. That is fail-closed and a legitimate outcome. **This is stricter than
-   `solo` mode used to be inside a team run**, where a batch merged every clean PR with nobody
-   watching — but it is asked, at kickoff and at the end, never imposed silently.
+1. **The merge policy is confirmed at kickoff, never assumed** (under *Mandate first*). The default
+   is the repo's own mode: in `solo`, each clean PR merges under the gate as its cycle ends — that
+   is what solo means, and it keeps the tempo. (b) holds the clean PRs for one question at the end;
+   (c) hands everything over. What a run never does is follow a policy the human did not confirm.
 2. **The review phase runs on FRESH CONTEXT.** The gate is a conjunction: the script owns the
    mechanics, the model owns *"no Blocker, no Major"* — and in an unattended run that judgment half
    is produced by the same session that just built the thing, under maximum completion pressure,
    with no human between the verdict and the merge. So the review runs as a **fresh-context
-   reviewer**: hand it the diff, the issue/plan and the catalog — **never the session transcript**.
-   If the harness cannot dispatch one, **say so and merge nothing**: hand the PRs over instead. An
-   in-session self-review is a legitimate review to *read*; it is not a licence to *merge
-   unattended*. (The failure it guards against is documented: PR #50's review had to open by
-   declaring itself a self-review, because it was one.)
+   reviewer**: hand it the diff, the issue/plan and the catalog — **never the session transcript** —
+   and its review comment names it (`Reviewed by: fresh-context reviewer`), so a later reader can
+   tell a fresh review from a self-review. If the harness cannot dispatch one, **say so and merge
+   nothing**: hand the PRs over instead. An in-session self-review is a legitimate review to
+   *read*; it is not a licence to *merge unattended*. (The failure it guards against is
+   documented: PR #50's review had to open by declaring itself a self-review, because it was one.)
 
 **What this does not change.** The excluded-domain floor, the Blocker/Major decision point, the
 fail-closed `UNKNOWN`, and the absolute rule that skills never approve a PR all hold exactly as
-before, attended or not. This section only decides **when a green gate is allowed to become a
-merge without a human**.
+before, attended or not. This section only decides **who reviews, and what the human confirmed a
+green gate may do**.
 
 ## Autonomous integration (opt-in, bounded)
 
 Three integration modes, and they are **not** interchangeable:
 
-- **solo** — the default in a solo repo. Clean, non-excluded PRs merge under the normal gate;
-  everything else joins the decision list. **Inside this skill the run is unattended, so the
-  say-so above applies to that merge** — the affirmed allowlist, or the human's end-of-run answer.
-  `solo` names who reviews, not who consents.
+- **solo** — the default in a solo repo. Clean, non-excluded PRs merge under the normal gate as
+  each cycle ends — with the review on fresh context — unless the kickoff merge policy is (b) or
+  (c); everything else joins the decision list.
 - **team** — the default in a `team` repo. Skills never approve, so nothing merges inside the
   run: every PR ends *auto-merge armed, waiting for another human's approval*.
 - **autonomous** — opt-in, bounded, and **never a default**. Even here the skill issues **no**
-  merge command of its own. Now that *every* unattended run carries the allowlist floor, what this
-  mode still adds is the rest of the lane: the **serial `post-merge-verify.sh` barrier** between
-  merges, the **drain of PRs that piled up outside this run**, and `autonomous-merge-report.sh` as
-  the audit trail. The floor is no longer what distinguishes it — the barrier and the drain are.
+  merge command of its own. What it adds is the lane beyond the run: the **drain of PRs that piled
+  up outside it**, behind the **allowlist floor** below, the **serial `post-merge-verify.sh`
+  barrier** between merges, and `autonomous-merge-report.sh` as the audit trail.
 
 **The eligibility floor is an ALLOWLIST, not a blocklist.** A PR enters the autonomous drain
 only when *all four* hold: (a) `merge-gate.sh` returns **GO**; (b) the review found **no
@@ -322,6 +322,12 @@ append-only gate ledger and the git log — never narrated from memory.
 **Mandate:** [issue set · decision handling · budget · integration mode]
 **Run started:** [UTC timestamp]
 **Result:** [N merged · M on the decision list · K parked/failed]
+**Merge policy:** [(a) the repo's own mode | (b) decide at the end | (c) hand over — as confirmed at kickoff]
+
+### Held for your answer   (merge policy (b) only — the one question)
+- PR #P — #N [title] · gate GO · review: no Blocker/Major · reviewed by: fresh-context reviewer · touches: [paths]
+
+**Merge these?** (In a `team` repo: arm these?) — no answer is a no.
 
 ### Autonomously merged   (autonomous mode only — from autonomous-merge-report.sh)
 - #N [title] → PR #P · merged [ts] · post-merge-verify green · [1 line what shipped]
@@ -338,8 +344,8 @@ append-only gate ledger and the git log — never narrated from memory.
 ### Withheld from autonomy — held for you
 - #N / PR #P — [why: path not in AUTONOMY_SAFE_PATHS · excluded domain · Blocker/Major · UNKNOWN]
 
-### Blocked — waiting on an approval (team mode)
-- #N — depends on #X, whose PR #P is armed but not yet approved · not started
+### Blocked — waiting on a blocker that has not merged (team mode, or merge policy (b)/(c))
+- #N — depends on #X, whose PR #P is armed but not yet approved, or held for the end of the run · not started
 
 ### Skipped — claimed by someone else
 - #N — [assignee/branch owner] · not built, to avoid duplicate work

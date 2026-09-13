@@ -118,8 +118,8 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    verification + idempotent credit/debit (`PAY-2`/`PAY-3`/`PAY-4`), digital-goods rule (`PAY-8`).
    Close with one line naming **the strongest reason a reviewer would reject this** — if you
    cannot name one, you reviewed your intent, not your diff. This is only the short form; the
-   fresh-context review is `wai-pr-review`'s, and it is **not** made optional by this one having
-   run.
+   full review is `wai-pr-review`'s — on fresh context whenever `wai-team` runs it — and it is
+   **not** made optional by this one having run.
 
 6. **Prove it — no "done" without fresh output.** Name the one command that proves this change
    works, run it **now** (not from memory of a run earlier in the session), and keep its output.
@@ -178,7 +178,7 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    continuation: they close the gap first, then run testing.
 
    **Two cases where you plant nothing:**
-   - **An autopilot run** (`wai-team` working a batch): nobody is at the keyboard to close the
+   - **An autopilot run** (`wai-team`, any number of issues): nobody is at the keyboard to close the
      gap. Skip it — planting resumes with the next interactive phase.
    - **Anything else still runs on this branch in this same turn** (you're chaining straight into
      `wai-testing` or `wai-pr-review` yourself). A gap is deliberately *red*; hand a red tree to
