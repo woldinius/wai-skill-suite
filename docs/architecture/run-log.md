@@ -67,3 +67,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-13T15:33Z | wai-implementation | #64 — merge-gate.sh books before output, a row is a line | fix + 6 cases with a measured counterproof (old 3/3 red, new 3/3 green); PR #65, EX-GUARD so the human merges |
 | 2026-09-13T15:54Z | wai-pr-review | PR #65 | NO-GO |
 | 2026-09-13T16:47Z | wai-team | backlog scan | 10 open issues |
+| 2026-09-13T20:05Z | wai-pr-review | PR #71 | NO-GO |

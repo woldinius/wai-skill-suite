@@ -97,3 +97,4 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-09-13T14:12Z | 62 | MOOT | PR already merged before the gate ran | |
 | 2026-09-13T14:43Z | 63 | NO-GO | ✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd; ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo | |
 | 2026-09-13T15:54Z | 65 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
+| 2026-09-13T20:05Z | 71 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GDPR EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
