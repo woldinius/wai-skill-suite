@@ -14,7 +14,8 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   SIGPIPE — **between the two writers** — and a field repo's pairing guard read the orphaned
   ledger row as tampering, in a PR that had nothing to do with it. Now the verdict is booked first,
   on the normal path and on the MOOT short-circuit, and the `note:` is printed last; a caller can
-  trim as much as it likes. Second half, found by #63's review: both writers now restore a missing
+  trim as much as it likes without losing a book (the exit code was and is meaningful only from an
+  un-piped run). Second half, found by #63's review: both writers now restore a missing
   trailing newline before appending — tagging the last row's outcome with a tool that trimmed it
   had glued the next verdict onto that row (13 fields on one line), invisible to `gate-stats.sh`.
   Six cases in `tests/run.sh` pin both, in the two shapes that actually fail against the old order

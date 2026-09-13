@@ -426,11 +426,9 @@ fi
 # emit_ledger() (defined near the top, and also called on the MOOT short-circuit).
 # BOOKS BEFORE OUTPUT. The verdict is final here; nothing below changes it. Both books are written
 # before anything reaches stdout, so a caller who trims the output (`| head -6`) and thereby closes
-# the pipe cannot kill this script BETWEEN the two writers. It could, when the writers ran after the
-# VERDICT line: the note between them hit the closed pipe, the script died of SIGPIPE, and a field
-# repo's pairing guard read the orphaned ledger row as tampering. "Call it correctly" is not the
-# fix — a side effect that depends on whether the caller trims the output is the silent failure
-# class the ledger exists to catch. Why: docs/rationale/merge-gate.md § Books before output
+# the pipe cannot kill this script BETWEEN the two writers. emit_ledger therefore writes nothing to
+# stdout; its note: is printed last. Why (a field report of 2026-09-12; reproduced here the next
+# day): docs/rationale/merge-gate.md § Books before output
 # PLAIN case — NOT `_v=$(case … esac)`. A case inside $() is a syntax error in bash 3.2, which is
 # what /bin/sh IS on macOS; shellcheck passes it, the shell does not. This is the FOURTH artefact in
 # the suite to relearn that (ADR-0002), and tests/run.sh caught it on the first run — as designed.

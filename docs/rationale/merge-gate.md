@@ -185,12 +185,16 @@ the MOOT row onto that line — 13 pipe-fields where a row has 7 — and `gate-s
 recognises a row by its leading `| YYYY-`, counted the file as unchanged. An emitted verdict the
 denominator could not see, in a session that had run the gate to prove the denominator.
 
-Two rules, both in `emit_ledger`/`run-log.sh` at the line and pinned by `tests/run.sh`:
+Two rules — the first at the call sites in `merge-gate.sh`, the second inside `emit_ledger` and
+`run-log.sh` — both pinned by `tests/run.sh`:
 
 - **Both books are written before the first line of output.** The verdict is final when the
   checks end; printing it never changes it. Order was habit, not a constraint. `trap '' PIPE`
   alone would not do: under `set -e` a failing `echo` still exits the script — with the echo's
-  status, not the verdict's. Writing first makes the rest of the output free to fail.
+  status, not the verdict's. Writing first makes the rest of the output free to fail *without
+  losing a book*. It does not make the exit status independent of the output: a failed write
+  still sets it, so the exit code is meaningful only from an un-piped run — through `| head` a
+  caller reads `head`'s status anyway, before and after this change.
 - **A row is a line.** Before appending, a writer restores a missing trailing newline. The
   append-only rule protects rows from *edits*; this protects them from *each other*.
 
