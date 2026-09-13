@@ -18,10 +18,12 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   mode required a human-affirmed `AUTONOMY_SAFE_PATHS` allowlist, while `solo` mode inside a team
   run merged every clean PR with nobody watching and no affirmed surface. Cardinality was never the
   safety property — **attendance is**. A run of one is exactly as unattended as a run of eight. So
-  any merge inside this skill now sits behind the allowlist floor regardless of `n` or mode; with no
-  affirmed surface the run merges nothing and ends with approval-ready PRs plus the decision list
-  (fail-closed, and a legitimate outcome). **This is stricter than `solo` used to be** — affirm the
-  allowlist once via `wai-init` to get in-run merging back.
+  any merge inside this skill now needs the human's say-so regardless of `n` or mode — and the run
+  **asks for it** instead of failing silently. At kickoff, when no allowlist is affirmed, it offers
+  three answers: affirm one now (via `wai-init`), decide at the end, or hand everything over. At the
+  end, the clean PRs it held (gate GO, no Blocker/Major, no excluded domain) are put to the human in
+  one question and, on a yes, merged serially through the merge queue. Stricter than `solo` used to
+  be — but asked, not imposed.
   **And the review phase runs on fresh context.** The gate is a conjunction: the script owns the
   mechanics, the model owns *"no Blocker, no Major"*. Unattended, that judgment half was being made
   by the same session that had just built the thing, under maximum completion pressure, with no

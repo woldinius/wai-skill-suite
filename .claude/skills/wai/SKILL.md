@@ -62,8 +62,9 @@ COMMISSIONED (mandated — one issue or many, run without a gap between phases)
   wai-team                   → works one or more issues through the per-requirement cycle,
                                     one branch+PR per issue, integrated via the merge queue;
                                     Blocker/Major & contract merges collect in your decision list.
-                                    UNATTENDED at any n: review on fresh context, and merging
-                                    sits behind the affirmed autonomy allowlist
+                                    UNATTENDED at any n: review on fresh context, and nothing
+                                    merges without your say-so — an allowlist at kickoff, or
+                                    one question over the clean PRs at the end
 
 PERIODIC (after a few features/refactors, or on security triggers)
   wai-architecture-audit     → whole-codebase STRUCTURAL health: decoupling/modularity, drift,
@@ -100,7 +101,8 @@ PERIODIC (after a few features/refactors, or on security triggers)
   ("work the backlog", "process #12–#18") → `wai-team` — needs your mandate (issue set, decision
   handling, budget); for one issue that is a single confirmation. What you buy is the removal of
   the hand-backs between the phases; what it costs is that the run is **unattended**, so the review
-  runs on fresh context and merging needs an affirmed allowlist. Drive the phases yourself instead
+  runs on fresh context and nothing merges without your say-so — an allowlist affirmed at kickoff,
+  or one answer over the clean PRs at the end. Drive the phases yourself instead
   and the lifecycle skills behave exactly as before. One requirement split across several issues is
   still **planning's** job, not the team's.
 - **A clear, already-scoped change / bug / refactor** → `wai-implementation` directly

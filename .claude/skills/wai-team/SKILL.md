@@ -6,8 +6,9 @@ description: >-
   integrated serially through the merge queue, with no human gap between the phases. Requires an
   explicit mandate (which issues, and how decision points are handled) and hands back one collected
   decision list. Invoked without a named issue set, it scans the backlog and proposes — it proposes,
-  the human mandates. Because the run is UNATTENDED, merging inside it sits behind the affirmed
-  autonomy allowlist and the review runs on fresh context. Use it whenever issues are commissioned
+  the human mandates. Because the run is UNATTENDED, the review runs on fresh context and nothing
+  merges without the human's say-so — an affirmed allowlist asked for at kickoff, or one question
+  over the clean PRs at the end. Use it whenever issues are commissioned
   rather than driven phase by phase: "run the cycle on #42", "work the backlog", "process issues
   #12–#18", "burn down the tier", "wai-team". Not for a change with no issue behind it
   (wai-implementation) or a finished PR (wai-pr-review).
@@ -63,8 +64,17 @@ The mandate fixes:
 **For a single issue the mandate collapses to one confirmation, it does not disappear.** The four
 dimensions still resolve — the set is that issue, decision handling and stop budget take their
 defaults, and the integration mode follows the repo — but they are read back in one line and
-confirmed once ("`#42`, collect decisions, solo, merge behind the allowlist — go?"). Autonomy is a
-commission; what scales down for a small run is the ceremony, never the consent.
+confirmed once ("`#42`, collect decisions, solo, merge policy: decide at the end — go?"). Autonomy
+is a commission; what scales down for a small run is the ceremony, never the consent.
+
+**The merge policy is asked at kickoff — the run never decides it alone.** An unattended run merges
+only on the human's say-so. If `docs/architecture/coordination.conf` carries an affirmed
+`AUTONOMY_SAFE_PATHS`, that *is* the say-so for PRs wholly inside it. If not, the mandate asks, with
+three answers: **(a) affirm an allowlist now** — hand to `wai-init`, which writes it dated and
+hashed; **(b) decide at the end** — the run holds every clean PR and puts them to the human in one
+question in the report (step 7); **(c) hand over** — nothing merges in this run. The default is
+**(b)**: it costs the human one answer instead of one per PR, and it asks when there is something
+concrete to look at.
 
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
 (`date -u +%FT%TZ`). It bounds the cross-issue digest (step 6) and the autonomous-merge report.
@@ -189,6 +199,13 @@ this skill adds orchestration, **not** new authority.
 7. **Report** — end the run with the team report (format below): autonomously merged (if any),
    merged, verified-nothing-to-fix, decision list, withheld, cross-issue notes, parked/failed,
    issues filed. The decision list is the deliverable the mandate promised — never bury it.
+   **Merge policy (b) — decide at the end:** the report opens with the clean PRs the run held —
+   each with its gate verdict (GO), its review (no Blocker, no Major) and the paths it touches —
+   and asks **one** question: merge these? Two yes-answers exist: *merge them now* (this run only),
+   or *affirm their paths as the allowlist and merge* (handed to `wai-init`, persisted). On a yes,
+   `wai-pr-review` merges them **serially** through the merge queue, with the post-merge barrier
+   between merges. A PR touching an excluded domain is never in this batch — it stays an
+   individual human merge. No answer is a no: the PRs stay approval-ready.
    (The run-log row for this skill is written by `backlog-scan.sh` itself — do not log it again.)
    **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (from this skill's
    directory — a sibling path), paste its output verbatim beneath the ▶ Recommended next block,
@@ -217,13 +234,15 @@ now the suite inferred one from the other.
 
 Two consequences, and they are the whole point of this section:
 
-1. **Merging inside an unattended run sits behind the allowlist floor** — the same one defined
-   below, for the same reason: nobody reads the review before the merge lands. No affirmed
-   `AUTONOMY_SAFE_PATHS`, or an empty/unaffirmed surface → **nothing merges in this run**; it ends
-   with approval-ready PRs and the decision list. That is fail-closed, and it is a legitimate
-   outcome, not a failure. **This is stricter than `solo` mode used to be inside a team run** — a
-   solo batch previously merged every clean PR with nobody watching and no affirmed surface. Say so
-   in the report when it bites, and point at `wai-init` to affirm the allowlist once.
+1. **Nothing merges inside an unattended run without the human's say-so** — nobody reads the
+   review before the merge lands, so the say-so has to come from somewhere else. It comes from one
+   of two places, both *asked for* rather than assumed (merge policy, under *Mandate first*): the
+   **affirmed allowlist** — the floor defined below, for PRs wholly inside `AUTONOMY_SAFE_PATHS` —
+   or the human's **answer at the end of the run** over the clean PRs the run held (step 7).
+   Without either — policy (c), or no answer — **nothing merges**; the run ends with approval-ready
+   PRs and the decision list. That is fail-closed and a legitimate outcome. **This is stricter than
+   `solo` mode used to be inside a team run**, where a batch merged every clean PR with nobody
+   watching — but it is asked, at kickoff and at the end, never imposed silently.
 2. **The review phase runs on FRESH CONTEXT.** The gate is a conjunction: the script owns the
    mechanics, the model owns *"no Blocker, no Major"* — and in an unattended run that judgment half
    is produced by the same session that just built the thing, under maximum completion pressure,
@@ -243,10 +262,10 @@ merge without a human**.
 
 Three integration modes, and they are **not** interchangeable:
 
-- **solo** — the default in a solo repo. Clean, non-excluded PRs merge under the normal gate as
-  each cycle ends; everything else joins the decision list. **Inside this skill the run is
-  unattended, so the allowlist floor above applies to that merge** — `solo` names who reviews, not
-  whether the surface was affirmed.
+- **solo** — the default in a solo repo. Clean, non-excluded PRs merge under the normal gate;
+  everything else joins the decision list. **Inside this skill the run is unattended, so the
+  say-so above applies to that merge** — the affirmed allowlist, or the human's end-of-run answer.
+  `solo` names who reviews, not who consents.
 - **team** — the default in a `team` repo. Skills never approve, so nothing merges inside the
   run: every PR ends *auto-merge armed, waiting for another human's approval*.
 - **autonomous** — opt-in, bounded, and **never a default**. Even here the skill issues **no**
