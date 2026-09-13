@@ -279,8 +279,9 @@ Three integration modes, and they are **not** interchangeable:
   barrier** between merges, and `autonomous-merge-report.sh` as the audit trail.
 
 **The eligibility floor is an ALLOWLIST, not a blocklist.** A PR enters the autonomous drain
-only when *all four* hold: (a) `merge-gate.sh` returns **GO**; (b) the review found **no
-Blocker and no Major**; (c) the excluded-domain **blocklist is CLEAR**; and (d) **every touched
+only when *all four* hold: (a) `merge-gate.sh` returns **GO**; (b) the review — **on fresh
+context**, as every review inside this skill — found **no Blocker and no Major**; (c) the
+excluded-domain **blocklist is CLEAR**; and (d) **every touched
 path is inside the human-affirmed `AUTONOMY_SAFE_PATHS` set**. `excluded-domains.sh --autonomy`
 returns **eligible** for (c) and (d) together — fail-closed on an empty or unaffirmed exclusion
 surface; (a) and (b) come from the gate and the review. Anything not provably safe — a path

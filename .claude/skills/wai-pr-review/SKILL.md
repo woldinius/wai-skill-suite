@@ -171,11 +171,12 @@ necessary aspects as findings.
      it, `--auto` would merge *immediately* while your report claimed to be waiting for a human.
    - **Inside a `wai-team` run** (see `wai-team` §*Mandate first*), the merge policy confirmed at
      kickoff decides. Under **(a)** the rules above apply — **only if this review ran on fresh
-     context**; a same-session review inside a `wai-team` run posts its verdict and **merges
-     nothing**. Under **(b)** → **merge nothing and arm nothing until the human's end-of-run yes**:
-     post the review and the gate result, then hand back; on the yes, `wai-team` step 7 sends the
-     held PRs through merge-queue mode, and this clause no longer holds them. Under **(c)** →
-     merge nothing and arm nothing; the run hands over.
+     context**; a same-session review inside a `wai-team` run posts its verdict, **merges nothing
+     and arms nothing**. Under **(b)** → **merge nothing and arm nothing until the human's
+     end-of-run yes**: post the review and the gate result, then hand back; on the yes, `wai-team`
+     step 7 sends the held PRs — each with a fresh-context review, per its step 7 — through
+     merge-queue mode, and this clause no longer holds them. Under **(c)** → merge nothing and arm
+     nothing; the run hands over.
 
    **Once per run, before relying on `Closes #N` or reporting any merge as done:** check that the
    merge target is the repository's **default branch** (`gh repo view --json defaultBranchRef`).
@@ -324,7 +325,7 @@ Use exactly this structure:
 
 **Classification:** [change type(s) · surface(s)/repo · affected components]
 **Lens:** [null-hypothesis | adversarial | breadth (| several)] — [requested, or the rule that selected it]
-**Reviewed by:** [fresh-context reviewer | same session] — required inside a `wai-team` run, optional elsewhere
+**Reviewed by:** [fresh-context reviewer | same session]
 **Recommendation:** [Merge | Changes required | Blocked]
 
 ### Blocker
@@ -355,10 +356,15 @@ Use exactly this structure:
   Blocker/Major → **your decision point**: fix now (wai-implementation on the same branch,
   then re-review), file as issues, or block — with my recommendation first.
   Contract-domain / flagged / no enforced approval rule / merge denied by the environment →
-  **left for your merge** (labelled `ready-to-merge`) with the risk note and what was missing.]
+  **left for your merge** (labelled `ready-to-merge`) with the risk note and what was missing.
+  Inside a `wai-team` run under merge policy (b) or (c) → **held for the end of the run**
+  (`wai-team` step 7), nothing merged and nothing armed here.]
 ```
 
-Omit empty sections. If no blockers/majors exist, make that clear in the recommendation.
+Omit empty sections. If no blockers/majors exist, make that clear in the recommendation. The
+**`Reviewed by`** line is **required inside a `wai-team` run** (its literal is what `wai-team`
+§*Attended or unattended* asks for) and optional elsewhere; it names who produced the judgment half,
+so a later reader can tell a fresh-context review from a same-session one.
 
 ## Principles
 

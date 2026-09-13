@@ -18,8 +18,10 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   `autonomous` mandated (the drain *is* the merge; (b)/(c) cannot be mandated with it) and no
   longer describes a held dependent as "waiting on approval" when it waits for the end of the run.
   `wai-learning-gap` stops calling a `wai-team` run a batch. Also riding here: the install examples
-  pinned to `v0.3.3`, the gate and run-log rows from #62, and the human's `ok` tags on the four
-  rows that were open.
+  pinned to `v0.3.3`, the gate and run-log rows from #62 (its GO, and the MOOT of a later gate run
+  — whose run-log row is a marked reconstruction: that run was piped into `head` to reproduce a
+  field report's SIGPIPE finding, and the script died between its two writers), and the human's
+  `ok` tags on the three open #58 rows and on #62's GO row.
 
 ## [0.3.3] — 2026-09-13
 
