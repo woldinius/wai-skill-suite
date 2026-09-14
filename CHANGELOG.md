@@ -15,9 +15,10 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   the existing coverage line is re-defined over the judgeable rows (total minus MOOT — no new
   metric, the same line with the denominator the header implies), and a *tagged* MOOT row is a
   data-quality line — the tag has no rate to enter (this repo's ledger has one). Q1 in
-  `docs/open-questions.md` follows: 4 untagged, 2 MOOT blank by rule. Six cases in `tests/run.sh`,
-  red against the previous script — including a MOOT row tagged `fn`, which the old counter routed
-  into the fn-on-NO-GO line. Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so
+  `docs/open-questions.md` follows (at 57 verdicts: 4 untagged, 2 MOOT blank by rule). Seven cases in
+  `tests/run.sh` (net — one old assertion re-pinned to the new coverage line), red against the
+  previous script — including a MOOT row tagged `fn`, which the old counter routed into the
+  fn-on-NO-GO line, and a ledger of only MOOT rows, whose coverage has nothing to divide by. Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so
   it is not untagged*.
 
 - **The classifier's three text channels read with one reach** (#67). `excluded-domains.sh` read

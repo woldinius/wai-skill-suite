@@ -511,6 +511,9 @@ assert "--report reproduces the fp rate with raw counts beside it" 0 "$rc" "$rep
   'false positives: 8 of 52 judged NO-GOs = 15% \(ok 44 · fp 8\)'
 assert "--report: verdict totals GO/NO-GO/UNKNOWN/MOOT, substring-proof" 0 "$rc" "$rep" \
   'verdicts: 60 — GO 2 · NO-GO 56 · UNKNOWN 0 · MOOT 2' 'GO 58'
+assert "--report: period covered is first to last row date" 0 "$rc" "$rep" '2026-07-22 → 2026-08-12'
+assert "--report: top exclusion reasons, counted position-independently" 0 "$rc" "$rep" \
+  'top exclusion reasons: EX-GDPR 7 · EX-GUARD 7'
 # A TAG ON A MOOT ROW ENTERS NO RATE — proven with tags that USED to leak, not with `ok` (which never
 # reached a rate in the first place; the fresh-context review of #73 showed a mutant restoring the old
 # MOOT buckets stayed green on the fixture above). One misfiled `fn` on a NO-GO, one `fn` and one `nil`
@@ -523,9 +526,15 @@ N=$((N+1)); MT="$TMP/moot$N.md"
 out="$(sh "$STATS" "$MT" 2>&1)"; rc=$?
 assert "gate-stats: an fn tag on a MOOT row does NOT join the fn-on-NO-GO line (1, not 2) — it is a MOOT tag" 0 "$rc" "$out" '1 fn tag\(s\) on NO-GO rows' '2 fn tag'
 assert "  · and a nil on a MOOT row is not a nil-tagged verdict: both land on the MOOT data-quality line" 0 "$rc" "$out" '2 tag\(s\) on MOOT row\(s\)' 'nil-tagged row'
-assert "--report: period covered is first to last row date" 0 "$rc" "$rep" '2026-07-22 → 2026-08-12'
-assert "--report: top exclusion reasons, counted position-independently" 0 "$rc" "$rep" \
-  'top exclusion reasons: EX-GDPR 7 · EX-GUARD 7'
+# A LEDGER OF ONLY MOOT ROWS has no judgeable row: the coverage line must say 0 of 0 and print no
+# percentage. The guard that makes that true had no test — putting the old `total > 0` guard back
+# left the suite green and --report dying mid-line on exactly this ledger (re-review of #73).
+N=$((N+1)); AM="$TMP/allmoot$N.md"
+{ printf '| when | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-03T00:00Z | 3 | MOOT | merged before the gate ran | |\n'
+  printf '| 2026-08-04T00:00Z | 4 | MOOT | merged before the gate ran | fn |\n'; } > "$AM"
+out="$(sh "$STATS" --report "$AM" 2>&1)"; rc=$?
+assert "--report on a ledger of only MOOT rows → exit 0, 0 of 0 judgeable, no percentage, no division" 0 "$rc" "$out" 'outcome coverage: 0 of 0 judgeable rows tagged · 0 untagged · MOOT 1 blank by rule' 'division|judgeable rows tagged \('
 out="$(sh "$STATS" --report "$TMP/absent-ledger.md" 2>&1)"; rc=$?
 assert "--report with no ledger → exit 2, never 0 with empty output" 2 "$rc" "$out" 'no ledger'
 
