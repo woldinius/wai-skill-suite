@@ -1,22 +1,25 @@
 # Field report: 259 gate verdicts over 2026-07-22 → 2026-09-05 — precision 90.5 %, zero false negatives, and a gate the owner switched off anyway
 
-**Field repo:** `fr-06287b7fb053` — the game repo of the two earlier reports, `solo` mode: the
-[30-run report](2026-08-06-thirty-runs-zero-false-negatives.md) and the [three-weeks
-report](2026-08-12-three-weeks-of-ledger.md) **Suite version:** vendored under `.claude/skills/` —
-the suite's own earlier reports on this repo record the vendored copy at more than one version
-(2026-08-06, 2026-08-12) and a ledger lost to an update, which is why a fix kept in the vendored
-copy cannot be relied on (Part B, finding 1) **Window:** gate ledger 2026-07-22 (start per the
-2026-08-12 report) → 2026-09-05 (259 verdicts) · run log 2026-08-14 → 2026-09-05 (242 rows) ·
-invocation log 2026-08-20 → 2026-09-06 (87 rows) · 283 merged PRs over the project's life **What
-ran:** the full lifecycle. Hook-counted invocations (87, a floor — Part B, finding 4):
+**Field repo:** `fr-06287b7fb053` — the game repo of the three earlier reports, `solo` mode: the
+[30-run report](2026-08-06-thirty-runs-zero-false-negatives.md), the [merged-but-not-on-main
+report](2026-08-06-merged-but-not-on-main.md) and the [three-weeks
+report](2026-08-12-three-weeks-of-ledger.md)
+**Suite version:** vendored under `.claude/skills/` — the suite's own earlier reports on this repo
+record the vendored copy at more than one version (2026-08-06, 2026-08-12) and a ledger lost to an
+update, which is why a fix kept in the vendored copy cannot be relied on (Part B, finding 1)
+**Window:** gate ledger 2026-07-22 (start per the 2026-08-12 report) → 2026-09-05 (259 verdicts) ·
+run log 2026-08-14 → 2026-09-05 (242 rows) · invocation log 2026-08-20 → 2026-09-06 (87 rows) · 283
+merged PRs over the project's life
+**What ran:** the full lifecycle. Hook-counted invocations (87, a floor — Part B, finding 4):
 `wai-pr-review` 28 · `wai-testing` 25 · `wai-implementation` 15 · `wai-requirements-planning` 11 ·
 `wai-retro` 3 · `wai-team` 2 · `wai-learning-gap` 1 · `wai-architecture-audit` 1 · `wai` (router)
 1. Self-reported run-log rows (242): `wai-pr-review` 147 · `wai-implementation` 40 · `wai-testing`
 39 · `wai-requirements-planning` 10 · `wai-retro` 3 · `wai-architecture-audit` 2 · without a skill
 1. The balance reads the distribution as reliable and the absolute counts as an undercount.
-**Corpus:** 259 gate verdicts, 246 of them GO/NO-GO, **229 judged** *(The repo's own balance of
-2026-09-06, read together with § 1c of its defect report of 2026-08-31; landed here as the dated
-record, translated on intake. Numbers are the repo's; nothing was re-measured here.)*
+**Corpus:** 259 gate verdicts, 246 of them GO/NO-GO, **229 judged**
+*(The repo's own balance of 2026-09-06, read together with § 1c of its defect report of 2026-08-31;
+landed here as the dated record, translated on intake. Numbers are the repo's; nothing was
+re-measured here.)*
 
 > **Outcome note (added on intake — the findings below keep their original voice, and are true as
 > of the window):** finding 1 (the citation channel, 12 of 14 false positives) is the classifier
@@ -107,8 +110,7 @@ test as the only brake. **Proposal:** the change belongs upstream, not in a vend
 
 Six rows' only reason was a required check still `IN_PROGRESS`. Correct by the rules, useless as a
 verdict: it said nothing about the PR. **Proposal (the suite's, on intake — the balance makes
-none):** none for the gate — it must not guess a running check green (that is the skip-to-green
-class it was hardened against); the lesson is for the caller, and the ledger's `nil` tag exists for
+none):** none for the gate — it must not guess a running check green (the same evasion class as skip-to-green, which it was hardened against); the lesson is for the caller, and the ledger's `nil` tag exists for
 exactly these rows.
 
 ### Finding 3 · Three `fn` tags on NO-GO rows — an instrument finding
