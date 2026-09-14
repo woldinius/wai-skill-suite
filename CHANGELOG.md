@@ -27,11 +27,11 @@ statements in added code lines decide as before (#67).
   the existing coverage line is re-defined over the judgeable rows (total minus MOOT — no new
   metric, the same line with the denominator the header implies), and a *tagged* MOOT row is a
   data-quality line — the tag has no rate to enter (this repo's ledger has one). Q1 in
-  `docs/open-questions.md` follows (at 57 verdicts: 4 untagged, 2 MOOT blank by rule). Seven cases in
-  `tests/run.sh` (net — one old assertion re-pinned to the new coverage line), red against the
+  `docs/open-questions.md` follows (at 57 verdicts: 4 untagged, 2 MOOT blank by rule). Seven cases
+  in `tests/run.sh` (net — one old assertion re-pinned to the new coverage line), red against the
   previous script — including a MOOT row tagged `fn`, which the old counter routed into the
-  fn-on-NO-GO line, and a ledger of only MOOT rows, whose coverage has nothing to divide by. Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so
-  it is not untagged*.
+  fn-on-NO-GO line, and a ledger of only MOOT rows, whose coverage has nothing to divide by.
+  Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so it is not untagged*.
 
 - **The classifier's three text channels read with one reach** (#67). `excluded-domains.sh` read
   text in three places with three different reaches: the erasure regex read *added* lines from
@@ -129,8 +129,8 @@ statements in added code lines decide as before (#67).
   — the MOOT path books its row before `$CONF` exists. Eleven cases in `tests/run.sh` (no PR →
   note; open PR → silence, and `--repo` passed on; `LEDGER_HOME=main` → the old note; an unknown
   value → said, on the default branch too; the key set twice → said which wins, an empty first
-  value included; detached HEAD → loose; a `gh` that hangs and a caller that kills the gate → both
-  books still written; default branch → silence).
+  value included; detached HEAD → loose; a `gh` that hangs and a caller that kills the gate →
+  both books still written; default branch → silence).
 
 - **The second review of #58, closed out (#61).** Three Minors, two Nits and two open questions,
   all wording, none of them lowering the gate. `wai-pr-review` step 6's clause for a `wai-team`
