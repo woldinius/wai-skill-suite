@@ -308,7 +308,11 @@ else
     # bash 3.2 (macOS /bin/sh) mis-parses a case inside $( ), and it scans the content of $( ) for
     # quotes before it knows that a # started a comment — an apostrophe in a comment swallowed the
     # rest of the loop and left WT_HITS unassigned. The suite has relearned the first half six
-    # times; the second half was new. Rows are compared on their first cells (cut -f1-4).
+    # times; the second half was new. Rows are compared on their first cells (cut -f1-4), and they
+    # are COUNTED, not matched as a set: two identical rows here against one on the base is one row
+    # only here. A set comparison dropped every copy of a key the base holds, and printed none over
+    # a real row (fresh-context review of #72). The base file is read with getline, so an empty or
+    # absent base book still counts every row of the worktree.
     WT_HITS="$(printf '%s\n' "$WT_ALL" | while IFS= read -r w; do
         [ -n "$w" ] || continue
         parts=""
@@ -316,7 +320,7 @@ else
           f="$w/docs/architecture/$book.md"; [ -f "$f" ] || continue
           _b="$(mktemp 2>/dev/null)" || continue
           git show "$WT_BASE:docs/architecture/$book.md" 2>/dev/null | grep -E '^\| *[0-9]{4}-' | cut -d'|' -f1-4 > "$_b" 2>/dev/null
-          extra="$(grep -E '^\| *[0-9]{4}-' "$f" 2>/dev/null | cut -d'|' -f1-4 | grep -vxF -f "$_b" 2>/dev/null | grep -c .)"
+          extra="$(grep -E '^\| *[0-9]{4}-' "$f" 2>/dev/null | cut -d'|' -f1-4 | awk -v B="$_b" 'BEGIN { while ((getline l < B) > 0) c[l]++ } { if (c[$0] > 0) c[$0]--; else n++ } END { print n + 0 }')"
           rm -f "$_b"
           [ -n "$extra" ] || extra=0
           [ "$extra" -gt 0 ] 2>/dev/null && parts="$parts${parts:+, }$book +$extra"

@@ -69,7 +69,7 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   where its row lands in a linked worktree and names its override (`MERGE_GATE_LEDGER`, `RUN_LOG`,
   `INVOCATION_LOG`); `doctor.sh` says so once, in a linked worktree only; `invocation-log.sh
   --snippet` says why the opt-in is repo-local and when a global hook with an absolute path is the
-  alternative. Nine cases across `tests/scripts.sh` and `tests/run.sh`. Rationale:
+  alternative. Fourteen cases across `tests/scripts.sh` and `tests/run.sh` — rows are counted, not matched as a set. Rationale:
   `docs/rationale/open-items.md` § *Rows only in a worktree*.
 
 ### Changed
@@ -88,10 +88,7 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   the fresh-context review). The ledger header, the path comment and the conf template say the new
   rule; the rationale records both decisions with their measurements; the 2026-08-18 retrospective
   gets a dated note, not a rewrite. The key is read from the repo root, not `$CONF` — the MOOT path
-  books its row before `$CONF` exists. Seven cases in `tests/run.sh` (no PR → note; open PR →
-  silence, and `--repo` passed on; `LEDGER_HOME=main` → the old note; an unknown value → said;
-  detached HEAD → loose; a `gh` that hangs and a caller that kills the gate → both books still
-  written; default branch → silence).
+  books its row before `$CONF` exists. Ten cases in `tests/run.sh` (no PR → note; open PR → silence, and `--repo` passed on; `LEDGER_HOME=main` → the old note; an unknown value → said, on the default branch too; the key set twice → said which wins; detached HEAD → loose; a `gh` that hangs and a caller that kills the gate → both books still written; default branch → silence).
 
 - **The second review of #58, closed out (#61).** Three Minors, two Nits and two open questions,
   all wording, none of them lowering the gate. `wai-pr-review` step 6's clause for a `wai-team`

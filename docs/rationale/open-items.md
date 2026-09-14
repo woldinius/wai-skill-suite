@@ -58,7 +58,7 @@ So this script derives it, in the footer every hand-back pastes: for every workt
 list` knows — this one included — the rows in its three books that are not on the base ref, per
 book, with counts (`rows only in a worktree (not on origin/main …): <worktree path>: gate-ledger
 +1`). Rows are compared on their first three cells (when, PR, verdict), so a row the human *tagged*
-or whose reason was edited on the base is not reported as new. Fail-open in the script's usual
+or whose reason was edited on the base is not reported as new. Rows are counted, not matched as a set: two identical rows in a worktree against one on the base are one row only in the worktree (a set comparison once printed *none* there). What stays undetectable is a row identical in text to a different event's row already on the base — the row format carries no id. Fail-open in the script's usual
 shape: no base ref, or no worktree listed → *not checked*, named in the summary, never *none*. Each
 writer's header now says in one sentence where its row lands in a linked worktree and names its
 override (`MERGE_GATE_LEDGER`, `RUN_LOG`, `INVOCATION_LOG`); `doctor.sh` says so once, in a linked

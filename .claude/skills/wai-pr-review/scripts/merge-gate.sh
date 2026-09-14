@@ -200,30 +200,41 @@ derive_ledger_note() {
   _cur="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
   _def="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')" || true
   [ -n "$_def" ] || _def=main
-  if [ -z "$_cur" ]; then
-    LEDGER_NOTE="note: this ledger row landed on a detached HEAD — no branch, so no PR can carry it to $_def; the row is loose until it is committed on a branch that has one (rows ride the PR that produced them)."
-    return 0
-  fi
-  [ "$_cur" != "$_def" ] || return 0
-  _home="$(sed -n 's/^LEDGER_HOME=//p' "${REPO_ROOT:-.}/docs/architecture/merge-gate.conf" 2>/dev/null | tr -d '"' | head -1)"
+  # The key is parsed FIRST, so a wrong value is said on every path — the default branch and a
+  # detached HEAD included. Set more than once, the first wins (as for every key in this conf), and
+  # the note says so: the template ships the key as an active line, so appending a second one is the
+  # natural wrong edit. Both quote styles are stripped. (Review of #72.)
+  _homes="$(sed -n 's/^LEDGER_HOME=//p' "${REPO_ROOT:-.}/docs/architecture/merge-gate.conf" 2>/dev/null | tr -d "\"'")"
+  _home="$(printf '%s\n' "$_homes" | head -1)"
+  _nhome="$(printf '%s\n' "$_homes" | grep -c . || true)"
   _mode=branch
   case "$_home" in
     ''|branch) : ;;
     main)      _mode=main ;;
     *)         LEDGER_NOTE="note: LEDGER_HOME='$_home' in merge-gate.conf is not branch|main — treated as branch." ;;
   esac
+  if [ "${_nhome:-0}" -gt 1 ]; then
+    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: LEDGER_HOME is set $_nhome times in merge-gate.conf — the first ($_home) wins."
+  fi
+  if [ -z "$_cur" ]; then
+    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: this ledger row landed on a detached HEAD — no branch, so no PR can carry it to $_def; the row is loose until it is committed on a branch."
+    return 0
+  fi
+  [ "$_cur" != "$_def" ] || return 0
   if [ "$_mode" = main ]; then
-    LEDGER_NOTE="note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (LEDGER_HOME=main). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
+    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (LEDGER_HOME=main). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
     return 0
   fi
   _open=""
   if command -v gh >/dev/null 2>&1; then
     if [ -n "${REPO:-}" ]; then
-      _open="$(gh pr list --repo "$REPO" --head "$_cur" --state open --json number --jq '.[].number' 2>/dev/null || true)"
+      _open="$(gh pr list --repo "$REPO" --head "$_cur" --state open --json number --jq '.[].number' 2>/dev/null)" || _open=""
     else
-      _open="$(gh pr list --head "$_cur" --state open --json number --jq '.[].number' 2>/dev/null || true)"
+      _open="$(gh pr list --head "$_cur" --state open --json number --jq '.[].number' 2>/dev/null)" || _open=""
     fi
   fi
+  # An error body on stdout is not a PR number — the gate's own rule for the PR id, applied here.
+  case "$_open" in *[!0-9[:space:]]*) _open="" ;; esac
   [ -n "$_open" ] || LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: this ledger row landed on branch '$_cur', which has no open PR (or gh could not tell) — the row is loose until a PR from this branch carries it to $_def (rows ride the PR that produced them; LEDGER_HOME=branch)."
   return 0
 }
@@ -286,7 +297,7 @@ if [ "$STATE" = "MERGED" ]; then
   echo "  Nothing is left to prevent. Any review findings are FOLLOW-UPS, not gate conditions."
   echo "  If you authored this code, this is a self-review of your own just-merged work."
   echo "VERDICT: MOOT — the PR was merged before the gate ran; the human owns any follow-up."
-  [ -z "$LEDGER_NOTE" ] || echo "$LEDGER_NOTE"
+  [ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
   exit 2
 fi
 
@@ -487,6 +498,6 @@ case "$VERDICT" in
   1) echo "VERDICT: NO-GO — a precondition failed. Leave the PR for the human." ;;
   2) echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human." ;;
 esac
-[ -z "$LEDGER_NOTE" ] || echo "$LEDGER_NOTE"
+[ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
 
 exit "$VERDICT"
