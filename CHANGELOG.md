@@ -4,7 +4,13 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
-## [Unreleased]
+## [0.4.0] — 2026-09-14
+
+The field's second dataset turned into five fixes: the classifier stops reading mentions as acts,
+the gate stops telling every branch that its row belongs elsewhere, rows that exist only in a
+worktree become visible, `gate-stats.sh` counts a MOOT row as what the header says it is, and the
+report behind all of it is in the record. Every PR of this cut was reviewed on fresh context and
+carries its own gate row.
 
 ### Fixed
 
