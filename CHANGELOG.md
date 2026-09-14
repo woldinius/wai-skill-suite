@@ -9,8 +9,12 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 The field's second dataset turned into five fixes: the classifier stops reading mentions as acts,
 the gate stops telling every branch that its row belongs elsewhere, rows that exist only in a
 worktree become visible, `gate-stats.sh` counts a MOOT row as what the header says it is, and the
-report behind all of it is in the record. Every PR of this cut was reviewed on fresh context and
-carries its own gate row.
+report behind all of it is in the record — on top of two entries already on `main` since v0.3.3:
+the gate books both ledgers before it prints (#64) and the close-out of #58's second review (#61).
+Every PR of this cut was reviewed on fresh context and carries its own gate row. **Upgrade
+consequence:** a change whose only excluded-domain contact was a catalog citation in a prose file,
+a context line or the PR text now gets GO where it got NO-GO — the citation is reported as
+advisory and still holds `--autonomy`; paths and code statements decide as before (#67).
 
 ### Fixed
 
