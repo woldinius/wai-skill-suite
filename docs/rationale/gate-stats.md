@@ -44,7 +44,7 @@ The ledger header `merge-gate.sh` writes into every new ledger says of a `MOOT` 
 outcome blank and do not count it in fp/fn* — a review that ran after the merge decided nothing,
 and the row's value is that it records the gate ran too late rather than never. This counter
 contradicted its own header: every blank MOOT row went into `untagged`, and `untagged` is the
-number the weekly review is asked to drive to zero. In this repo that put 5 rows under *untagged*
+number the weekly review is asked to drive to zero. In this repo that put 6 rows under *untagged*
 of which 2 were MOOT blanks; the field balance of 2026-09-06 kept its 10 MOOT rows out of the
 confusion matrix for exactly the header's reason; and `open-items.sh` had already learned to exclude
 them — two readers of one file disagreeing about the same rows (#69).

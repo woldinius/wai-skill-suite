@@ -477,7 +477,7 @@ assert "gate-stats: NO-GO causes split mechanically into setup/checks/domain/oth
 assert "gate-stats: MOOT is a printed verdict total, and NO-GO never counts toward GO" 0 "$rc" "$out" \
   'GO 2 · NO-GO 56 · UNKNOWN 0 · MOOT 2' 'GO 58'
 # MOOT IS BLANK BY RULE (#69). The ledger header merge-gate.sh writes says "leave its outcome blank";
-# the counter nevertheless reported every blank MOOT as untagged — this repo's Q1 carried 5 untagged
+# the counter nevertheless reported every blank MOOT as untagged — this repo's Q1 carried 6 untagged
 # of which 2 were MOOT blanks, and open-items.sh already excluded them. The fixture has one blank MOOT
 # (row 194) and one TAGGED (row 193, `ok`): the blank is not untagged (2 — rows 190 and 192 — not 3),
 # and the tag is a data-quality finding, because a MOOT tag has no rate to enter.
@@ -511,7 +511,18 @@ assert "--report reproduces the fp rate with raw counts beside it" 0 "$rc" "$rep
   'false positives: 8 of 52 judged NO-GOs = 15% \(ok 44 · fp 8\)'
 assert "--report: verdict totals GO/NO-GO/UNKNOWN/MOOT, substring-proof" 0 "$rc" "$rep" \
   'verdicts: 60 — GO 2 · NO-GO 56 · UNKNOWN 0 · MOOT 2' 'GO 58'
-assert "--report: outcome coverage over judgeable rows, MOOT named beside it (#69: was '57 of 60 tagged · 3 untagged')" 0 "$rc" "$rep" '56 of 58 judgeable rows tagged \(97%\) · 2 untagged · MOOT 1 blank by rule'
+# A TAG ON A MOOT ROW ENTERS NO RATE — proven with tags that USED to leak, not with `ok` (which never
+# reached a rate in the first place; the fresh-context review of #73 showed a mutant restoring the old
+# MOOT buckets stayed green on the fixture above). One misfiled `fn` on a NO-GO, one `fn` and one `nil`
+# on MOOT rows: the old counter reported 2 fn-on-NO-GO and 1 nil; now 1 and none, and 2 tags on MOOT.
+N=$((N+1)); MT="$TMP/moot$N.md"
+{ printf '| when | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | NO-GO | x | fn |\n'
+  printf '| 2026-08-02T00:00Z | 2 | MOOT | merged before the gate ran | fn |\n'
+  printf '| 2026-08-03T00:00Z | 3 | MOOT | merged before the gate ran | nil |\n'; } > "$MT"
+out="$(sh "$STATS" "$MT" 2>&1)"; rc=$?
+assert "gate-stats: an fn tag on a MOOT row does NOT join the fn-on-NO-GO line (1, not 2) — it is a MOOT tag" 0 "$rc" "$out" '1 fn tag\(s\) on NO-GO rows' '2 fn tag'
+assert "  · and a nil on a MOOT row is not a nil-tagged verdict: both land on the MOOT data-quality line" 0 "$rc" "$out" '2 tag\(s\) on MOOT row\(s\)' 'nil-tagged row'
 assert "--report: period covered is first to last row date" 0 "$rc" "$rep" '2026-07-22 → 2026-08-12'
 assert "--report: top exclusion reasons, counted position-independently" 0 "$rc" "$rep" \
   'top exclusion reasons: EX-GDPR 7 · EX-GUARD 7'

@@ -10,12 +10,15 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 - **`gate-stats.sh` no longer counts a blank MOOT row as untagged** (#69). The ledger header says
   a MOOT row's outcome stays blank and enters no rate; the counter put every blank MOOT under
-  *untagged* anyway — in this repo 5 untagged of which 2 were MOOT blanks, while `open-items.sh`
+  *untagged* anyway — in this repo 6 untagged of which 2 were MOOT blanks, while `open-items.sh`
   already excluded them. Now a blank MOOT is reported beside *untagged* as `MOOT n blank by rule`,
-  coverage is over the judgeable rows (total minus MOOT), and a *tagged* MOOT row is a data-quality
-  line — the tag has no rate to enter (this repo's ledger has one). Q1 in `docs/open-questions.md`
-  follows: 4 untagged, 2 MOOT blank by rule. Five cases in `tests/run.sh`, red against the previous
-  script. Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so it is not untagged*.
+  the existing coverage line is re-defined over the judgeable rows (total minus MOOT — no new
+  metric, the same line with the denominator the header implies), and a *tagged* MOOT row is a
+  data-quality line — the tag has no rate to enter (this repo's ledger has one). Q1 in
+  `docs/open-questions.md` follows: 4 untagged, 2 MOOT blank by rule. Six cases in `tests/run.sh`,
+  red against the previous script — including a MOOT row tagged `fn`, which the old counter routed
+  into the fn-on-NO-GO line. Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so
+  it is not untagged*.
 
 - **The classifier's three text channels read with one reach** (#67). `excluded-domains.sh` read
   text in three places with three different reaches: the erasure regex read *added* lines from
