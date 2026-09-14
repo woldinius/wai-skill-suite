@@ -300,6 +300,10 @@ else
   else
     WT_ALL="$(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')"
     nwt="$(printf '%s\n' "$WT_ALL" | grep -c .)"
+    # A "none" over zero worktrees would be the empty-list-reads-as-coverage claim rule 1 forbids.
+    if [ "$nwt" -eq 0 ]; then
+      nline "rows only in a worktree" worktree-rows "git worktree list returned nothing"
+    else
     # NOTHING FANCY INSIDE THE SUBSTITUTION BELOW: no case statement, no comment, no apostrophe.
     # bash 3.2 (macOS /bin/sh) mis-parses a case inside $( ), and it scans the content of $( ) for
     # quotes before it knows that a # started a comment — an apostrophe in a comment swallowed the
@@ -323,6 +327,7 @@ else
       line "rows only in a worktree: none — every ledger/run-log/invocation-log row in $nwt worktree(s) is on $WT_BASE$BASE_NOTE"
     else
       line "rows only in a worktree (not on $WT_BASE — they reach it with that branch's PR): $(printf '%s\n' "$WT_HITS" | cap_join)$BASE_NOTE"
+    fi
     fi
   fi
 fi

@@ -70,16 +70,21 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 - **The gate's ledger note fires only when a row is loose** (#66). The 2026-08-18 rule — rows
   belong on main, collect loose rows into a chore PR — was printed on every run from a branch, and
   both repos using the suite had moved to the opposite practice: a row rides the PR that produced
-  it (here since 2026-08-20; in a field repo since 2026-08-21, where the collection path had cost
-  three row-only PRs, two near-losses and about sixteen duplicate rows in one sweep). New conf key
-  `LEDGER_HOME=branch|main`, default `branch` and what an absent key means: the note prints only
-  when the branch has no open PR (`gh pr list --head`, fail-open toward the note) and says the row
-  is loose until a PR carries it; `LEDGER_HOME=main` restores the older note. The ledger header,
-  the path comment and the conf template say the new rule; the rationale records both decisions
-  with their measurements; the 2026-08-18 retrospective gets a dated note, not a rewrite. The key
-  is read from the repo root, not `$CONF` — the MOOT path books its row before `$CONF` exists.
-  Four cases in `tests/run.sh` (no PR → note; open PR → silence; `LEDGER_HOME=main` → the old
-  note; default branch → silence).
+  it (here since 2026-08-27, when the last row-only chore PR was closed unmerged with the rule; in
+  a field repo since 2026-08-21, where the collection path had cost three row-only PRs, two
+  near-losses and almost sixteen duplicate rows). New conf key `LEDGER_HOME=branch|main`, default
+  `branch` and what an absent key means: the note prints only when the branch has no open PR
+  (`gh pr list --head`, fail-open toward the note) or HEAD is detached, and says the row is loose
+  until a PR carries it; `LEDGER_HOME=main` restores the older note; any other value is treated as
+  `branch` and said. The note is derived **after both books are written** — `gh pr list` is a
+  network call, and between the two writers it would have re-opened the window #64 closed (found by
+  the fresh-context review). The ledger header, the path comment and the conf template say the new
+  rule; the rationale records both decisions with their measurements; the 2026-08-18 retrospective
+  gets a dated note, not a rewrite. The key is read from the repo root, not `$CONF` — the MOOT path
+  books its row before `$CONF` exists. Seven cases in `tests/run.sh` (no PR → note; open PR →
+  silence, and `--repo` passed on; `LEDGER_HOME=main` → the old note; an unknown value → said;
+  detached HEAD → loose; a `gh` that hangs and a caller that kills the gate → both books still
+  written; default branch → silence).
 
 - **The second review of #58, closed out (#61).** Three Minors, two Nits and two open questions,
   all wording, none of them lowering the gate. `wai-pr-review` step 6's clause for a `wai-team`

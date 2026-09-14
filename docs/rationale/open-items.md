@@ -56,11 +56,15 @@ What was missing was **visibility** (#68).
 
 So this script derives it, in the footer every hand-back pastes: for every worktree `git worktree
 list` knows — this one included — the rows in its three books that are not on the base ref, per
-book, with counts (`rows only in a worktree … oi-wtrows: gate-ledger +1`). Rows are compared on
-their first cells only, so a row the human *tagged* on the base is not reported as new. Fail-open in
-the script's usual shape: no base ref → *not checked*, named in the summary, never *none*. Each
+book, with counts (`rows only in a worktree (not on origin/main …): <worktree path>: gate-ledger
++1`). Rows are compared on their first three cells (when, PR, verdict), so a row the human *tagged*
+or whose reason was edited on the base is not reported as new. Fail-open in the script's usual
+shape: no base ref, or no worktree listed → *not checked*, named in the summary, never *none*. Each
 writer's header now says in one sentence where its row lands in a linked worktree and names its
 override (`MERGE_GATE_LEDGER`, `RUN_LOG`, `INVOCATION_LOG`); `doctor.sh` says so once, in a linked
-worktree only; and `invocation-log.sh --snippet` says *why* the opt-in is repo-local and when the
-global alternative is the better one. A repo that wants one consolidated ledger has a named path —
-the overrides — instead of a copy step nobody watches.
+worktree only; and `invocation-log.sh --snippet` says *why* the opt-in is repo-local, names the gap
+that comes with it — an untracked settings file exists only in the checkout where it was written,
+so a linked worktree runs no hook, which is how the same field repo counted about a fifth of its
+invocations until it moved the hook to `~/.claude/settings.json` on 2026-09-03 — and says when that
+global hook is the better choice. A repo that wants one consolidated ledger has a named path — the
+overrides — instead of a copy step nobody watches.
