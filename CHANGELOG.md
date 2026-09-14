@@ -22,16 +22,20 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   **prose** file (`.md .markdown .txt .rst .adoc .rdoc .textile` — an extension nobody listed, or
   none, counts as code; `.mdx` and `.org` are code because they can execute) reports a citation or
   an erasure statement as **advisory**: visible in the verdict and the ledger row, holding the
-  unattended drain, not gating. A file header is read only *between* hunks — the fresh-context
-  review of the PR found that an added content line beginning with `++ b/x.md` looked like one and
-  relabelled the rest of a code file as prose — and a failed or missing awk is UNKNOWN, never clean.
-  `widen()` names its tag in the anchored detail line. Unchanged: the path channel, `EX-GUARD`,
-  `EX-MIG`, the dial's anchoring (#30) and `--autonomy`'s hold on the advisory set. Twenty-one cases
-  in `tests/run.sh`, the fixtures carrying `+++ b/<file>` headers; the nine shapes this fix changes
-  were run against the previous script and fail there, and the six holes the review found fail
-  against the fix's own first head. The `gh` stub now serves labels and, for that counterproof
-  only, a title/body — the classifier's test asserts neither is ever requested.
-  Rationale: `docs/rationale/excluded-domains.md` § *Three text channels, one reach*.
+  unattended drain, not gating. Where a file begins is read so that no content line can forge it —
+  the fresh-context reviews of the PR found an added line beginning with `++ b/x.md` relabelling
+  the rest of a code file as prose, first inside a hunk and then through git's
+  `diff.suppressBlankEmpty`: in a git-format diff the boundary is the `diff --git` line itself,
+  and a bare diff latches to code on any desync. A failed or missing awk, or no work directory, is
+  UNKNOWN, never clean. `CMakeLists.txt` counts as code although `.txt` is prose. `widen()` names
+  its tag in the anchored detail line. Unchanged: the path channel, `EX-GUARD`, `EX-MIG`, the
+  dial's anchoring (#30) and `--autonomy`'s hold on the advisory set. Thirty-two cases in
+  `tests/run.sh`, the fixtures carrying `+++ b/<file>` headers; the nine shapes this fix changes
+  fail against the previous script, and the holes the two review rounds found fail against the
+  heads they were found on — six against the first, eight against the second. The `gh` stub now
+  serves labels and, for that counterproof only, a title/body — the classifier's test asserts
+  neither is ever requested. Rationale: `docs/rationale/excluded-domains.md` § *Three text
+  channels, one reach*.
 
 - **`merge-gate.sh` writes both books before it prints a line** (#64). The ledger row and the
   run-log row used to be written *after* the `VERDICT:` line, with the `note:` line printed between

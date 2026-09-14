@@ -81,13 +81,22 @@ a finding in itself** — and one rule about their reach:
 
 1. **The citation scan decides from added code lines only.** Not a context line, not a removed
    line, not the title or body. `added_code_lines()` tracks the current file from the diff's
-   `+++ b/<path>` header; a diff captured without headers is all code. A header is recognised only
-   *between* hunks — inside one, every line is content, and an added line whose text begins with
-   `++ b/x.md` looks exactly like a header. Read as one, it relabelled the rest of a code file as
-   prose and turned a `DELETE FROM users` two lines later into an advisory; the fresh-context review
-   of #71 found that hole in the first head, and the hunk's own `@@ -o,l +n,m @@` counts now bound
-   what is content. awk, the one tool this split adds to the deciding path, fails closed: a
-   non-zero exit, or no awk at all, is UNKNOWN — a text channel that did not run is not a clean one.
+   `+++ b/<path>` header; a diff captured without headers is all code. Where a file *begins* is the
+   one question a content line must never answer: an added line whose text begins with `++ b/x.md`
+   renders exactly like a header, and read as one it relabelled the rest of a code file as prose and
+   turned a `DELETE FROM users` two lines later into an advisory. The fresh-context reviews of #71
+   found that hole twice — first inside a hunk, then through a blank context line that git's
+   `diff.suppressBlankEmpty` writes as an empty line, which desynced the hunk counting built to close
+   the first. The second fix does not count harder. In a **git-format** diff (every `gh pr diff`
+   and `git diff`) the file boundary is the `diff --git` line itself, which no content line can
+   start with because every content line carries a one-character prefix; the `+++` header is read
+   only between that line and the file's first `@@`. Only a **bare** diff (`diff -u`, the test
+   fixtures) still relies on hunk counts, and there every desync the parser can see — a line that
+   fits no rule inside a hunk, an `@@` while counts remain, a content-shaped line between hunks —
+   latches the rest of the diff to code. A diff whose counts lie can still confuse the split; it
+   can no longer confuse it toward prose. awk, the one tool this split adds to the deciding path,
+   fails closed: a non-zero exit, no awk at all, or no work directory to record the failure in is
+   UNKNOWN — a text channel that did not run is not a clean one.
 2. **Prose is a deny-list, and its incompleteness points at the gate.** `.md .markdown .txt .rst
    .adoc .rdoc .textile` are prose; an extension nobody listed — and a file with none — is **code**,
    so the channel keeps reading it and keeps widening. An allow-list of code extensions would fail

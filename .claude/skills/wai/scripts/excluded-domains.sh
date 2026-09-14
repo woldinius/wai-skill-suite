@@ -226,44 +226,65 @@ added_lines() { grep '^+' "$DIFF_FILE" 2>/dev/null | grep -v '^+++' ; }
 # scanned and still gates), where an allow-list of code extensions would fail away from it. `.mdx`
 # and `.org` are NOT on it although the field's list carried them: MDX embeds JSX and org files run
 # babel blocks — a format that can execute is code here.
-# The current file is tracked from the `+++ b/<path>` header, and a header is recognised ONLY
-# BETWEEN hunks: inside a hunk every line is content, and an added line whose text begins with
-# `++ b/x.md` renders as `+++ b/x.md` — read as a header it would relabel the rest of a code file as
-# prose and turn a DELETE FROM users two lines later into an advisory (found by the fresh-context
-# review of #71). The hunk is bounded by the counts in its own `@@ -o,l +n,m @@` line, so the parser
-# needs no `diff --git` marker and reads `gh pr diff`, `diff -u` and the fixtures' bare
-# `--- / +++ / @@` shape alike. A diff captured without any header (a bare `+line` stream) is all
-# code — the fail-closed default again.
+# WHERE A FILE BEGINS is the one question a content line must never be able to answer. An added
+# line whose text begins with `++ b/x.md` renders as `+++ b/x.md`; read as a header, it relabels the
+# rest of a code file as prose and turns a DELETE FROM users two lines later into an advisory. The
+# fresh-context reviews of #71 found that hole twice — once inside a hunk, once through a blank
+# context line that `diff.suppressBlankEmpty` writes as an empty line. Two formats, two rules:
+#  · GIT FORMAT (the diff holds a `diff --git` line — every `gh pr diff` and `git diff`): the file
+#    boundary IS that line, and no content line can start with it, because every content line
+#    carries a one-character prefix. The `+++ b/<path>` header is read only between that line and
+#    the file's first `@@`. Blank-context style and hunk counts no longer matter.
+#  · BARE FORMAT (no `diff --git` line: `diff -u`, the fixtures' `--- / +++ / @@` shape): the hunk's
+#    own `@@ -o,l +n,m @@` counts bound its content, an empty line inside a hunk is blank context,
+#    a `+++ ` header counts only right after a `--- ` line, and ANY desync the parser can see — a
+#    line that fits no rule inside a hunk, an `@@` while counts remain, a content-shaped line
+#    between hunks — LATCHES every later line to code. A diff whose counts lie can still confuse
+#    the split; it can no longer confuse it toward prose.
+# A diff captured without any header (a bare `+line` stream) is all code — the fail-closed default.
+# `CMakeLists.txt` is code although `.txt` is prose: a build file that runs commands.
 # awk is the one tool this split adds to the deciding path, so its failure must not read as "no
-# text": a non-zero exit leaves a marker in $WORK that the run turns into UNKNOWN, never CLEAR.
+# text": a non-zero exit leaves a marker in $WORK that the run turns into UNKNOWN, never CLEAR —
+# and classify() refuses to run without a work directory to hold that marker.
 PROSE_EXT="md markdown txt rst adoc rdoc textile"
+CODE_NAMES="cmakelists.txt"
 added_lines_of() {   # $1 = code | prose → the added lines of files of that kind, header lines dropped
-  awk -v prose="$PROSE_EXT" -v want="$1" '
+  _gitfmt=0; grep -q '^diff --git ' "$DIFF_FILE" 2>/dev/null && _gitfmt=1
+  awk -v prose="$PROSE_EXT" -v codenames="$CODE_NAMES" -v want="$1" -v gitfmt="$_gitfmt" '
+    function kind_of(line,   f, base, ext) {
+      f = line; sub(/^\+\+\+ /, "", f); sub(/\r$/, "", f); sub(/\t.*/, "", f)
+      sub(/^"/, "", f); sub(/"$/, "", f)
+      base = f; sub(/.*\//, "", base)
+      if (tolower(base) in iscode) return "code"
+      if (base ~ /\./) { ext = base; sub(/.*\./, ".", ext); if (tolower(ext) in isprose) return "prose" }
+      return "code" }
+    function latch() { latched = 1; kind = "code" }
     BEGIN { n = split(prose, p, " "); for (i = 1; i <= n; i++) isprose["." p[i]] = 1
-            kind = "code"; ro = 0; rn = 0 }
-    # A hunk header: remember how many old and new lines it announces (a missing count means 1).
+            n = split(codenames, q, " "); for (i = 1; i <= n; i++) iscode[q[i]] = 1
+            kind = "code"; ro = 0; rn = 0; hdr = 0; pm = 0; latched = 0 }
+    # GIT FORMAT
+    gitfmt && /^diff --git / { kind = "code"; hdr = 1; next }
+    gitfmt && hdr { if ($0 ~ /^@@ /) hdr = 0; else if ($0 ~ /^\+\+\+ /) kind = kind_of($0); next }
+    gitfmt { if (substr($0, 1, 1) == "+" && kind == want) print; next }
+    # BARE FORMAT
     /^@@ -[0-9]+(,[0-9]+)? \+[0-9]+(,[0-9]+)? @@/ {
+      if (ro > 0 || rn > 0) latch()
       ro = 1; rn = 1; split($0, h, " ")
       if (index(h[2], ",")) ro = substr(h[2], index(h[2], ",") + 1) + 0
       if (index(h[3], ",")) rn = substr(h[3], index(h[3], ",") + 1) + 0
-      next }
-    # Inside a hunk every line is CONTENT, whatever it begins with.
+      pm = 0; next }
     (ro > 0 || rn > 0) {
       c = substr($0, 1, 1)
+      if ($0 == "" || $0 == "\r") { ro--; rn--; next }
       if (c == "+")  { rn--; if (kind == want) print; next }
       if (c == "-")  { ro--; next }
       if (c == " ")  { ro--; rn--; next }
-      if (c == "\\") { next }                      # "\ No newline at end of file"
-      ro = 0; rn = 0 }                             # not content: the hunk ended early — read on
-    # Between hunks: the +++ header names the file whose added lines follow (git quotes non-ASCII
-    # names, diff -u appends a tab and a timestamp, a CRLF diff carries a trailing CR — all stripped).
-    /^\+\+\+ / { f = $0; sub(/^\+\+\+ /, "", f); sub(/\r$/, "", f); sub(/\t.*/, "", f)
-                 sub(/^"/, "", f); sub(/"$/, "", f)
-                 base = f; sub(/.*\//, "", base); kind = "code"
-                 if (base ~ /\./) { ext = base; sub(/.*\./, ".", ext); ext = tolower(ext)
-                                    if (ext in isprose) kind = "prose" }
-                 next }
-    /^\+/ { if (kind == want) print; next }
+      if (c == "\\") { next }
+      latch(); ro = 0; rn = 0 }
+    /^--- / { pm = 1; next }
+    /^\+\+\+ / { if (pm && !latched) kind = kind_of($0); else latch(); pm = 0; next }
+    /^[-+ ]/ { latch(); pm = 0; if (substr($0, 1, 1) == "+" && want == "code") print; next }
+    { pm = 0 }
   ' "$DIFF_FILE" 2>/dev/null || { [ -n "$WORK" ] && : > "$WORK/awk-failed" 2>/dev/null; true; }
 }
 added_code_lines()  { added_lines_of code; }
@@ -383,6 +404,13 @@ classify() {
   # Materialise $WORK in THIS shell first: added_lines_of runs inside $(…) subshells, and its
   # awk-failed marker needs a directory the parent can check afterwards.
   mktmp .work >/dev/null 2>&1 || true
+  # No work directory, no marker: a failing awk would then read as "no text" and the verdict as
+  # CLEAR (fresh-context review of #71). A classifier that cannot record its own failure holds.
+  if [ -z "$WORK" ] || [ ! -d "$WORK" ]; then
+    echo "excluded-domains: UNKNOWN — no work directory (mktemp failed); the text channels cannot run" >&2
+    echo "VERDICT: UNKNOWN — could not scan the diff; held for the human."
+    exit 2
+  fi
   FILES="$(cat "$FILES_FILE" 2>/dev/null)"
 
   # --- EX-GUARD — the floor ---------------------------------------------------------------------
