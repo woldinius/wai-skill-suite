@@ -5,7 +5,8 @@
 [three-weeks report](2026-08-12-three-weeks-of-ledger.md)
 **Suite version:** vendored under `.claude/skills/`, updated through the window — which is why a fix
 kept in the vendored copy cannot be relied on (Part B, finding 1)
-**Window:** gate ledger 2026-07-22 → 2026-09-05 (259 verdicts) · run log 2026-08-14 → 2026-09-05
+**Window:** gate ledger 2026-07-22 (start per the 2026-08-12 report) → 2026-09-05 (259 verdicts) ·
+run log 2026-08-14 → 2026-09-05
 (242 rows) · invocation log 2026-08-20 → 2026-09-06 (87 rows) · 283 merged PRs over the project's life
 **What ran:** the full lifecycle. Hook-counted invocations (87, a floor — Part B, finding 4):
 `wai-pr-review` 28 · `wai-testing` 25 · `wai-implementation` 15 · `wai-requirements-planning` 11 ·
@@ -104,7 +105,7 @@ a folder the next suite update overwrites, with a red test as the only brake.
 ### Finding 2 · Six NO-GOs measured the caller, not the PR
 
 Six rows' only reason was a required check still `IN_PROGRESS`. Correct by the rules, useless as a
-verdict: the same PR, re-run once the check had finished, was GO. **Proposal:** none for the gate — it must not guess a
+verdict: it said nothing about the PR. **Proposal:** none for the gate — it must not guess a
 running check green (that is the skip-to-green class it was hardened against); the lesson is for the
 caller, and the ledger's `nil` tag exists for exactly these rows.
 
@@ -114,7 +115,7 @@ Three NO-GO rows from 2026-08-10 and 2026-08-11, all with the same reason (*main
 required status checks*), carry the tag `fn`. By the ledger's definition (`fn` = *a GO that should
 have blocked*) a NO-GO cannot be one; the three are either early mis-tags or meant *"blocked for
 the wrong reason"*. They are not counted as slips above, and the zero stands under this reservation.
-`gate-stats.sh` prints them as a data-quality line since v0.1.0 (PR #17, 2026-08-06); the balance
+`gate-stats.sh` prints them as a data-quality line since v0.2.0 (PR #17, 2026-08-12); the balance
 notes that **the column that matters most was the one maintained least carefully**. (The 2026-08-12
 report gave `test=IN_PROGRESS` as these rows' reason; the balance gives the required-checks reason —
 a question for the source, not re-measured here.)
@@ -139,8 +140,7 @@ hook-counted PR-review invocations against 147 run-log rows for the same skill; 
    it in `/hooks`.
 
 **Proposal:** an outside cross-check for every counter (here: hook rows against merged PRs, which
-showed the defect in one line), and a snippet that says *why* the opt-in lives where it lives and
-*when* the global file is the right place.
+showed the defect in one line).
 
 ### Finding 5 · One review, several rows
 
