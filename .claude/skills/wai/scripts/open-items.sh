@@ -282,7 +282,61 @@ else
   fi
 fi
 
-# ── 8. Asked, unanswered — NOT derived, and printed as exactly that ──────────────────────────────
+# ── 8. Rows that exist only in a worktree ────────────────────────────────────────────────────────
+# The three append-only books (gate ledger, run log, invocation log) are written with
+# --show-toplevel: in a linked worktree a row lands in THAT worktree's copy and reaches the default
+# branch only with that branch's PR. A field repo lost 11 run-log and 16 invocation-log rows when its
+# PR assembly copied the three files from the main checkout over a worktree's — the loss was in the
+# copy, not in the writer, and nothing had shown that the rows were there. This line shows it: per
+# worktree (this one included), the rows in its copy that are not on the base ref. Rows are compared
+# on their first cells only, so a row the human TAGGED on the base is not reported as new.
+# Why: docs/rationale/open-items.md § Rows only in a worktree
+if [ "$GIT_OK" != yes ]; then
+  nline "rows only in a worktree" worktree-rows "not a git repository"
+else
+  WT_BASE="$(first_base_ref || true)"
+  if [ -z "$WT_BASE" ]; then
+    nline "rows only in a worktree" worktree-rows "no origin ref to compare the books against"
+  else
+    WT_ALL="$(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')"
+    nwt="$(printf '%s\n' "$WT_ALL" | grep -c .)"
+    # A "none" over zero worktrees would be the empty-list-reads-as-coverage claim rule 1 forbids.
+    if [ "$nwt" -eq 0 ]; then
+      nline "rows only in a worktree" worktree-rows "git worktree list returned nothing"
+    else
+    # NOTHING FANCY INSIDE THE SUBSTITUTION BELOW: no case statement, no comment, no apostrophe.
+    # bash 3.2 (macOS /bin/sh) mis-parses a case inside $( ), and it scans the content of $( ) for
+    # quotes before it knows that a # started a comment — an apostrophe in a comment swallowed the
+    # rest of the loop and left WT_HITS unassigned. The suite has relearned the first half six
+    # times; the second half was new. Rows are compared on their first cells (cut -f1-4), and they
+    # are COUNTED, not matched as a set: two identical rows here against one on the base is one row
+    # only here. A set comparison dropped every copy of a key the base holds, and printed none over
+    # a real row (fresh-context review of #72). The base file is read with getline, so an empty or
+    # absent base book still counts every row of the worktree.
+    WT_HITS="$(printf '%s\n' "$WT_ALL" | while IFS= read -r w; do
+        [ -n "$w" ] || continue
+        parts=""
+        for book in gate-ledger run-log invocation-log; do
+          f="$w/docs/architecture/$book.md"; [ -f "$f" ] || continue
+          _b="$(mktemp 2>/dev/null)" || continue
+          git show "$WT_BASE:docs/architecture/$book.md" 2>/dev/null | grep -E '^\| *[0-9]{4}-' | cut -d'|' -f1-4 > "$_b" 2>/dev/null
+          extra="$(grep -E '^\| *[0-9]{4}-' "$f" 2>/dev/null | cut -d'|' -f1-4 | awk -v B="$_b" 'BEGIN { while ((getline l < B) > 0) c[l]++ } { if (c[$0] > 0) c[$0]--; else n++ } END { print n + 0 }')"
+          rm -f "$_b"
+          [ -n "$extra" ] || extra=0
+          [ "$extra" -gt 0 ] 2>/dev/null && parts="$parts${parts:+, }$book +$extra"
+        done
+        [ -n "$parts" ] && printf '%s: %s\n' "$w" "$parts"
+      done)"
+    if [ -z "$WT_HITS" ]; then
+      line "rows only in a worktree: none — every ledger/run-log/invocation-log row in $nwt worktree(s) is on $WT_BASE$BASE_NOTE"
+    else
+      line "rows only in a worktree (not on $WT_BASE — they reach it with that branch's PR): $(printf '%s\n' "$WT_HITS" | cap_join)$BASE_NOTE"
+    fi
+    fi
+  fi
+fi
+
+# ── 9. Asked, unanswered — NOT derived, and printed as exactly that ──────────────────────────────
 # No artifact exists for a question that went unanswered in chat. Printing "none" here would be the
 # empty-list-reads-as-coverage bias this script exists to remove, so the gap is stated instead.
 echo "  · asked, unanswered: not derived — no artifact exists"
@@ -291,7 +345,7 @@ echo "  · asked, unanswered: not derived — no artifact exists"
 echo
 sk="${SKIPPED# }";    [ -n "$sk" ] || sk="none"
 nc="${NOTCHECKED# }"; [ -n "$nc" ] || nc="none"
-echo "SUMMARY: derived $DERIVED of 7 checkable classes · skipped (artifact absent): $sk · not checked (tool/ref unavailable): $nc"
+echo "SUMMARY: derived $DERIVED of 8 checkable classes · skipped (artifact absent): $sk · not checked (tool/ref unavailable): $nc"
 echo "         'asked, unanswered' has no artifact and is never derived — carry open questions yourself."
 echo "FACTS ONLY (ADR-0002): what to do next is judgment and stays the model's ▶ Recommended next line."
 

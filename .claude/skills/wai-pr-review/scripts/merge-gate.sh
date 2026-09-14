@@ -70,8 +70,12 @@ done
 # So the default base is the enclosing git worktree; an explicit argument or env override still
 # wins, and outside any repo the cwd stays the base (fixtures and bare dirs keep working).
 # Deliberately --show-toplevel, NOT the --git-common-dir parent: rows belong to the worktree that
-# produced them — consolidating across worktrees changes WHERE state lands, which was the ledger-home
-# question's contested half (decided 2026-08-18: rows stay per-worktree, collected to main), not this fix's.
+# produced them. In a LINKED worktree the row therefore lands in THAT worktree's
+# docs/architecture/gate-ledger.md — its branch is the PR that carries the row to the default branch
+# (#68); MERGE_GATE_LEDGER overrides the path. Consolidating across worktrees would change WHERE
+# state lands, which was the ledger-home question's contested half — decided 2026-08-18 (rows stay
+# per-worktree, collected to main), revised in #66 (a row rides the PR that produced it;
+# LEDGER_HOME=main restores the collection path) — not this fix's.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 CATALOG="${REPO_ROOT:-.}/docs/architecture/quality-attributes.md"
 
@@ -136,9 +140,11 @@ A `MOOT` row is a review that ran AFTER the PR was merged — the gate could pre
 not a decision; leave its outcome blank and do not count it in fp/fn. Its value is the opposite of
 a missing row: it records that the gate *ran and was too late*, rather than reading as never-checked.
 
-**Rows belong on the default branch (ledger-home decision, 2026-08-18).** The gate writes its row wherever it runs; a row left
-on a feature branch rides that branch's stale copy of this file, and a later squash-merge has
-deleted such rows twice. Collect loose rows into a small chore PR promptly.
+**A row rides the PR that produced it (`LEDGER_HOME=branch`, the default — #66).** The gate writes its
+row wherever it runs; the branch's PR carries it to the default branch, and a squash keeps it. A row
+on a branch with no open PR is loose — the gate says so when it lands one. The older practice
+(decided 2026-08-18: collect loose rows into a small chore PR) is `LEDGER_HOME=main` in
+`merge-gate.conf`.
 
 **Weekly:** read the GO rows you merged. Any you would now block → tag `fn`. Do not skip this; the
 `fn` count is the whole reason the ledger exists.
@@ -170,21 +176,67 @@ LEDGER_HDR
   # the newline is restored first. Why (this repo, 2026-09-13): docs/rationale/merge-gate.md § Books before output
   [ -s "$_led" ] && [ -n "$(tail -c 1 "$_led" 2>/dev/null)" ] && printf '\n' >> "$_led" 2>/dev/null || true
   printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
-  # THE ROW BELONGS ON MAIN (the ledger-home decision, 2026-08-18). The ledger stays IN-REPO — numbers-lint
-  # re-measures the repo's published ledger claims in CI, and a ledger in ~/.claude would break
-  # that loop — but an append-only file written on whatever branch is checked out has LOST a row
-  # twice in squash races (#28, #31), and one field repo invented this rule by hand in its
-  # CLAUDE.md. So the script says it, every time it lands a row anywhere but the default branch:
-  # collect loose rows into a small chore PR promptly. Fail-open: no git answer, no note.
-  # SAID LATER, NOT HERE: this function writes nothing to stdout. The note is stored and printed
-  # after emit_runlog has run, so a caller who closed the pipe cannot kill the script between the
-  # two writers — the incident § Books before output records.
+}
+
+# derive_ledger_note — WHERE A ROW LIVES (the ledger-home decision, 2026-08-18, revised in #66).
+# The ledger stays IN-REPO — numbers-lint re-measures the repo's published ledger claims in CI, and
+# a ledger in ~/.claude would break that loop. The 2026-08-18 rule was "rows belong on main; collect
+# loose rows into a chore PR", after two squash-race losses (#28, #31). Both repos that use the
+# suite then moved to the opposite practice — A ROW RIDES THE PR THAT PRODUCED IT: the collection
+# path cost own PRs, near-losses and duplicate rows, and the note had to be overruled on every run.
+# So with LEDGER_HOME=branch (the default, and what an absent key means) the note fires only when
+# the row is genuinely LOOSE — the branch has no open PR, gh could not tell (fail-open toward the
+# note), or HEAD is detached and no PR can carry it. LEDGER_HOME=main restores the older note; any
+# other value is treated as branch and SAID, never silently. Why, with both measurements:
+# docs/rationale/merge-gate.md § Where a row lives
+# CALLED AFTER BOTH WRITERS, NEVER FROM emit_ledger: the `gh pr list` below is a network round-trip
+# with no timeout. Between the two book writers it would re-open the window § Books before output
+# closed — a Ctrl-C on a hanging gh there leaves a ledger row with no run-log partner (the fresh-
+# context review of #72 reproduced exactly that). So the note is derived once both rows are on
+# disk, stored, and printed last. READ FROM REPO_ROOT, NOT $CONF: the MOOT path runs before $CONF is
+# defined, and under set -eu that reference would abort the very path that must still write its row.
+derive_ledger_note() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0     # no repo, no branch to name
   _cur="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
   _def="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')" || true
   [ -n "$_def" ] || _def=main
-  if [ -n "$_cur" ] && [ "$_cur" != "$_def" ]; then
-    LEDGER_NOTE="note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (ledger-home decision). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
+  # The key is parsed FIRST, so a wrong value is said on every path — the default branch and a
+  # detached HEAD included. Set more than once, the first wins (as for every key in this conf), and
+  # the note says so: the template ships the key as an active line, so appending a second one is the
+  # natural wrong edit. Both quote styles are stripped. (Review of #72.)
+  _homes="$(sed -n 's/^LEDGER_HOME=//p' "${REPO_ROOT:-.}/docs/architecture/merge-gate.conf" 2>/dev/null | tr -d "\"'")"
+  _home="$(printf '%s\n' "$_homes" | head -1)"
+  _nhome="$(grep -c '^LEDGER_HOME=' "${REPO_ROOT:-.}/docs/architecture/merge-gate.conf" 2>/dev/null || true)"
+  _mode=branch
+  case "$_home" in
+    ''|branch) : ;;
+    main)      _mode=main ;;
+    *)         LEDGER_NOTE="note: LEDGER_HOME='$_home' in merge-gate.conf is not branch|main — treated as branch." ;;
+  esac
+  if [ "${_nhome:-0}" -gt 1 ]; then
+    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: LEDGER_HOME is set $_nhome times in merge-gate.conf — the first ('$_home') wins."
   fi
+  if [ -z "$_cur" ]; then
+    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: this ledger row landed on a detached HEAD — no branch, so no PR can carry it to $_def; the row is loose until it is committed on a branch."
+    return 0
+  fi
+  [ "$_cur" != "$_def" ] || return 0
+  if [ "$_mode" = main ]; then
+    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: this ledger row landed on branch '$_cur' — ledger rows belong on $_def (LEDGER_HOME=main). Collect loose rows into a small chore PR promptly: a stale branch copy has deleted rows in a squash race twice (#28, #31)."
+    return 0
+  fi
+  _open=""
+  if command -v gh >/dev/null 2>&1; then
+    if [ -n "${REPO:-}" ]; then
+      _open="$(gh pr list --repo "$REPO" --head "$_cur" --state open --json number --jq '.[].number' 2>/dev/null)" || _open=""
+    else
+      _open="$(gh pr list --head "$_cur" --state open --json number --jq '.[].number' 2>/dev/null)" || _open=""
+    fi
+  fi
+  # An error body on stdout is not a PR number — the gate's own rule for the PR id, applied here.
+  case "$_open" in *[!0-9[:space:]]*) _open="" ;; esac
+  [ -n "$_open" ] || LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: this ledger row landed on branch '$_cur', which has no open PR (or gh could not tell) — the row is loose until a PR from this branch carries it to $_def (rows ride the PR that produced them; LEDGER_HOME=branch)."
+  return 0
 }
 
 # emit_runlog LABEL — ONE attendance row beside the verdict (issue #11: the record measures side
@@ -240,11 +292,12 @@ if [ "$STATE" = "MERGED" ]; then
   # Books first, output second — the verdict block below says why.
   emit_ledger MOOT "PR already merged before the gate ran"
   emit_runlog MOOT
+  derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
   echo "merge-gate: PR #$PR ($REPO → $BASE) is already MERGED — this gate is MOOT."
   echo "  Nothing is left to prevent. Any review findings are FOLLOW-UPS, not gate conditions."
   echo "  If you authored this code, this is a self-review of your own just-merged work."
   echo "VERDICT: MOOT — the PR was merged before the gate ran; the human owns any follow-up."
-  [ -z "$LEDGER_NOTE" ] || echo "$LEDGER_NOTE"
+  [ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
   exit 2
 fi
 
@@ -435,6 +488,7 @@ fi
 case "$VERDICT" in 0) _v=GO ;; 1) _v=NO-GO ;; 2) _v=UNKNOWN ;; *) _v='?' ;; esac
 emit_ledger "$_v" "$REASONS"
 emit_runlog "$_v"
+derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
 
 # --- Verdict ------------------------------------------------------------------------------------
 echo "merge-gate: PR #$PR ($REPO → $BASE, mode: $MODE)"
@@ -444,6 +498,6 @@ case "$VERDICT" in
   1) echo "VERDICT: NO-GO — a precondition failed. Leave the PR for the human." ;;
   2) echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human." ;;
 esac
-[ -z "$LEDGER_NOTE" ] || echo "$LEDGER_NOTE"
+[ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
 
 exit "$VERDICT"

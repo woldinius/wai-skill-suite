@@ -48,6 +48,16 @@ Add to .claude/settings.local.json (per-developer opt-in — NOT settings.json):
     ]
   }
 }
+Why the repo-local file: the command path is repo-relative and the log it writes is THIS repo's
+denominator, so the hook belongs where the repo is — settings.local.json is per developer and
+never committed. The gap that comes with it: an untracked file exists only in the checkout where
+you wrote it, so a linked worktree (git worktree add) has no hook and its sessions log nothing —
+a field repo counted about a fifth of its invocations that way until it moved the hook. So:
+ONE checkout → this repo-local file. LINKED WORKTREES, or several suite repos → one hook in
+~/.claude/settings.json with an ABSOLUTE command path; it fires in every repo, and the row still
+lands in the repo of the current worktree (the script resolves the repo root, not the cwd).
+In a linked worktree the row lands in that worktree's docs/architecture/invocation-log.md — its
+branch is the PR that carries it; INVOCATION_LOG overrides the path.
 SNIP
       exit 0 ;;
     *) echo "invocation-log: unknown argument '$1' (hook mode reads stdin; --snippet prints the opt-in)" >&2; exit 2 ;;
@@ -70,6 +80,9 @@ case "$SKILL" in
 esac
 
 # Default path is REPO-relative, not cwd-relative (merge-gate.sh carries the incident; same rule).
+# --show-toplevel on purpose: in a LINKED worktree the row lands in THAT worktree's
+# docs/architecture/invocation-log.md — its branch is the PR that carries the row to the default
+# branch (#68); INVOCATION_LOG overrides the path.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 LOG="${INVOCATION_LOG:-${REPO_ROOT:-.}/docs/architecture/invocation-log.md}"
 

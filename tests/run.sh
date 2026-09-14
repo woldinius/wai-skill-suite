@@ -233,18 +233,77 @@ else bad "  · and NOTHING was planted inside .claude/skills/" "stray tree: $D/.
 # Outside any git repo the cwd stays the base — every other fixture in this file IS that case
 # (gfix dirs are plain directories), so the fallback is pinned by the whole suite around this.
 
-# ROWS BELONG ON MAIN (the ledger-home decision, 2026-08-18). The gate writes its row wherever it runs; that
-# row has been squash-deleted twice (#28, #31) when it rode a feature branch's stale ledger copy.
-# The decision: the ledger stays in-repo (numbers-lint re-measures its claims in CI), and the
-# script SAYS where the row belongs every time it lands one off the default branch.
+# WHERE A ROW LIVES (ledger-home decision 2026-08-18, revised in #66). The gate writes its row wherever
+# it runs; that row was squash-deleted twice (#28, #31) when it rode a feature branch's stale ledger
+# copy, and the 2026-08-18 rule said "rows belong on main — collect loose rows into a chore PR".
+# Both repos that use the suite then moved to the opposite practice — a row RIDES THE PR that
+# produced it — and the note, printed on every branch run, was overruled on every branch run. Now
+# (LEDGER_HOME=branch, the default) it fires only when the row is genuinely loose: no open PR for the
+# branch. The gh stub answers `pr list` from the `pr-list` fixture; no fixture = no open PR.
 gfix
 ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
 out="$(gate)"; rc=$?
-assert "a gate run on a feature branch → verdict unchanged, and the row-belongs-on-main note prints" 0 "$rc" "$out" "landed on branch 'feature-x' — ledger rows belong on main"
+assert "a feature branch with NO open PR → verdict unchanged, and the loose-row note prints" 0 "$rc" "$out" "landed on branch 'feature-x', which has no open PR" 'ledger rows belong on main'
+gfix
+( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
+printf '1\n' > "$D/pr-list"
+out="$(gate)"; rc=$?
+assert "  · the same branch WITH an open PR → no note at all: the row rides that PR (#66)" 0 "$rc" "$out" 'VERDICT: GO' 'note: this ledger row'
+gfix
+( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
+printf '1\n' > "$D/pr-list"; printf 'LEDGER_HOME="main"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · LEDGER_HOME=main restores the collection-path note, open PR or not" 0 "$rc" "$out" 'ledger rows belong on main \(LEDGER_HOME=main\)'
 gfix
 ( cd "$D" && git init -q -b main . ) 2>/dev/null
 out="$(gate)"; rc=$?
-assert "  · on the default branch itself, no note — a warning on every run is one nobody reads" 0 "$rc" "$out" 'VERDICT: GO' 'ledger rows belong on'
+assert "  · on the default branch itself, no note — a warning on every run is one nobody reads" 0 "$rc" "$out" 'VERDICT: GO' 'note: this ledger row'
+# The open-PR question is asked about the RIGHT repository — the gate's resolved --repo is passed on
+# (the "advertised, never passed on" class the classifier delegation re-found).
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"
+out="$(gate)"; rc=$?
+if grep -q 'pr list --repo acme/repo --head feature-x' "$D/gh-calls.log" 2>/dev/null; then ok "  · and gh pr list is asked with --repo acme/repo (the resolved repo, not the local remote)"
+else bad "  · and gh pr list is asked with --repo acme/repo" "$(grep 'pr list' "$D/gh-calls.log" 2>&1)"; fi
+# An unknown LEDGER_HOME value is treated as branch AND said — never silently (review of #72).
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"; printf 'LEDGER_HOME="bogus"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · LEDGER_HOME=bogus → treated as branch, and the note says so; verdict unchanged" 0 "$rc" "$out" "LEDGER_HOME='bogus' in merge-gate.conf is not branch.main — treated as branch"
+# A DETACHED HEAD is the loosest a row can be — no branch, so no PR can ever carry it. Said as such.
+gfix; ( cd "$D" && git init -q -b main . && git -c user.email=f@example.invalid -c user.name=F -c commit.gpgsign=false commit -q --allow-empty -m base && git checkout -q --detach ) 2>/dev/null
+out="$(gate)"; rc=$?
+assert "  · a detached HEAD → the loose-row note names it (no branch, no PR)" 0 "$rc" "$out" 'landed on a detached HEAD'
+# THE NOTE IS DERIVED AFTER BOTH BOOKS. `gh pr list` is a network call; derived inside emit_ledger it
+# sat between the two writers and re-opened the window § Books before output closed — a Ctrl-C on a
+# hanging gh left a ledger row with no run-log partner (fresh-context review of #72, reproduced).
+# A gh that answers `pr list` after 6 s, the gate killed at 2 s: both rows must already be on disk.
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
+SLOWGH="$TMP/slowgh$N"; mkdir -p "$SLOWGH"
+printf '#!/bin/sh\ncase "$*" in "pr list"*) : > "$GH_FIXTURE/in-pr-list"; sleep 6 ;; esac\nexec "%s/gh" "$@"\n' "$STUB" > "$SLOWGH/gh"; chmod +x "$SLOWGH/gh"
+( cd "$D" && PATH="$SLOWGH:$PATH" GH_FIXTURE="$D" exec sh "$GATE" 1 >/dev/null 2>&1 ) & _gp=$!
+# Kill it the moment it is INSIDE the wait (the stub marks entry), not after a fixed sleep: a fixed
+# sleep is a race a slow runner loses (review of #72); the marker makes the shape deterministic.
+_w=0; while [ ! -f "$D/in-pr-list" ] && [ "$_w" -lt 100 ]; do sleep 0.1; _w=$((_w+1)); done
+kill "$_gp" 2>/dev/null; wait "$_gp" 2>/dev/null
+_lr="$(grep -c '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null || echo 0)"; _rr="$(grep -c '^| 20' "$D/docs/architecture/run-log.md" 2>/dev/null || echo 0)"
+# The marker must have appeared: without it the kill never landed inside the wait, and the rows
+# would prove nothing (a gate that stopped asking `gh pr list` would pass here on the timeout).
+if [ -f "$D/in-pr-list" ] && [ "$_lr" = 1 ] && [ "$_rr" = 1 ]; then ok "a gh that hangs on pr list, gate killed mid-wait → BOTH books already written (note derived last)"
+elif [ ! -f "$D/in-pr-list" ]; then bad "a gh that hangs on pr list, gate killed mid-wait → both books written" "the stub was never reached — the test no longer exercises the wait"
+else bad "a gh that hangs on pr list, gate killed mid-wait → both books written" "ledger rows: $_lr run-log rows: $_rr"; fi
+# The key is parsed before any early return (review of #72): a wrong value is said on the default
+# branch too, and a key set twice says which one won — the template ships it as an active line.
+gfix; ( cd "$D" && git init -q -b main . ) 2>/dev/null; printf 'LEDGER_HOME="bogus"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · LEDGER_HOME=bogus on the DEFAULT branch → still said; verdict unchanged" 0 "$rc" "$out" "LEDGER_HOME='bogus' in merge-gate.conf is not branch.main — treated as branch"
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"
+printf 'LEDGER_HOME="branch"\nLEDGER_HOME="main"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · LEDGER_HOME set twice → the note says the first wins, and branch mode stays silent" 0 "$rc" "$out" 'LEDGER_HOME is set 2 times in merge-gate.conf — the first \(.branch.\) wins' 'belong on main'
+# …and an EMPTY first value counts as a line too: it wins (branch mode) and the note says so.
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"
+printf 'LEDGER_HOME=""\nLEDGER_HOME="main"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · an empty first LEDGER_HOME still counts: set 2 times, the empty first wins, said" 0 "$rc" "$out" 'LEDGER_HOME is set 2 times in merge-gate.conf — the first \(..\) wins' 'belong on main'
 # Outside a git repo (every other fixture here) there is no branch to name — the note stays off;
 # those fixtures all assert exact verdict output and double as the pin.
 
@@ -633,6 +692,17 @@ mkdir -p "$DD/.claude/skills/wai"
 ( cd "$DD" && git init -q . ) 2>/dev/null
 out="$( cd "$DD/.claude/skills/wai" && sh "$DOCTOR" 2>&1 )"; rc=$?
 assert "no-arg doctor from the skill dir audits the REPO, not the folder (no false clean)" 0 "$rc" "$out" 'merge gate is configured'
+
+# A LINKED WORKTREE writes its own books (#68): the three writers resolve --show-toplevel, so a row
+# produced there lands in that worktree's docs/architecture/ and reaches the default branch with its
+# branch's PR. doctor says so there — and only there: the main checkout gets no such line, because
+# an advisory printed everywhere is one nobody reads.
+( cd "$DD" && git -c user.email=f@example.invalid -c user.name=F -c commit.gpgsign=false add -A >/dev/null 2>&1 && git -c user.email=f@example.invalid -c user.name=F -c commit.gpgsign=false commit -q -m base ) 2>/dev/null
+DWT="$TMP/doc-wt$N"; git -C "$DD" worktree add "$DWT" -b side-doc >/dev/null 2>&1
+out="$(sh "$DOCTOR" "$DWT" 2>&1)"; rc=$?
+assert "doctor in a LINKED worktree says so, and where the rows land" 0 "$rc" "$out" 'this checkout is a linked worktree of .*rows land HERE'
+out="$(sh "$DOCTOR" "$DD" 2>&1)"; rc=$?
+assert "  · the main checkout gets no worktree line (no advisory where it does not apply)" 0 "$rc" "$out" 'merge gate is configured' 'linked worktree'
 
 # A repo not set up at all (no catalog) → not drift; nothing can drift before setup.
 docdir; out="$(sh "$DOCTOR" "$DD" 2>&1)"; rc=$?

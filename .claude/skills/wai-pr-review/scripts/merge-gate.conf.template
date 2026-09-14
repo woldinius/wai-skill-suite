@@ -78,6 +78,15 @@ MIGRATION_PATHS=""
 # and a hard-delete.
 ERASURE_PATHS=""
 
+# Where a gate-ledger row lives when the gate runs on a branch (#66). `branch` — the default, and
+# what an absent key means: a row rides the PR that produced it, and the gate prints a note only
+# when the branch has no open PR (the row is loose until one carries it). `main` — the older
+# practice: every row landed off the default branch is announced as belonging on it, to be
+# collected into a small chore PR. Both repos that measured the collection path moved away from it
+# (row-only PRs, near-losses, duplicate rows); it stays available for a repo that wants one ledger
+# history on its default branch only. Any other value is treated as `branch` — and the gate says so.
+LEDGER_HOME="branch"
+
 # ---------------------------------------------------------------------------------------------
 # Example — a TypeScript backend+web monorepo. Delete this block; it is not a default.
 #
