@@ -33,9 +33,10 @@ protects the suite's OWN files, which is exactly what makes this invisible: the 
 sensible things about `.claude/**` while the repo's real contract surface is unguarded.
 
 ERASURE_PATHS empty is an ADVISORY, and the difference is a real one, not a softening: the
-classifier's EX-GDPR check greps the WHOLE diff for erasure statements whether or not the key is
-set, so an ad-hoc `DELETE FROM users` is still caught by the backstop. Empty here degrades a
-primary anchor to a grep; empty CONTRACT_PATHS degrades a check to nothing.
+classifier's EX-GDPR check greps every added code line of the diff for erasure statements whether
+or not the key is set, so an ad-hoc `DELETE FROM users` is still caught by the backstop (in a prose
+file it is reported, not gated — #67). Empty here degrades a primary anchor to a grep; empty
+CONTRACT_PATHS degrades a check to nothing.
 
 MIGRATION_PATHS is deliberately NOT judged. Empty is the common, honest answer (no database), and
 the destructive-DDL escalation it gates is scoped to migration files by construction.

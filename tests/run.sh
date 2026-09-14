@@ -841,6 +841,12 @@ edrun() {   # classify the fixture's captured file-list + diff; $@ = extra flags
   EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" \
   sh "$ED" --files "$ED_D/files" --diff "$ED_D/diff" "$@" 2>&1
 }
+# The same fixture via --pr 1 against the gh stub — the only mode with a label channel.
+edrun_pr() {
+  EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" \
+  EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" \
+  PATH="$STUB:$PATH" GH_FIXTURE="$ED_D" sh "$ED" --pr 1 --repo acme/repo 2>&1
+}
 
 echo
 echo "excluded-domains.sh"
@@ -865,11 +871,12 @@ out="$(edrun)"; rc=$?
 assert "a billing path → EX-PAY, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
 
 # THE HOLE THE OLD GATE LEFT OPEN — and the EX-GDPR regression (was CLEAR/GO, now EXCLUDED). A
-# `DELETE FROM users` in an ordinary code file, OUTSIDE any migration/erasure path, was never caught:
-# the old §6 only grepped INSIDE MIGRATION_PATHS, so a path-only check said clean → GO. The whole-diff
-# erasure grep now trips EX-GDPR. It is NOT EX-MIG — no migration file is touched, so the AND-gated
-# migration check cannot be what caught it. (The merge-gate.sh INTEGRATION of this — §5-6 delegating
-# here — is blueprint I1 and lands with that script; this pins the classifier the gate delegates to.)
+# `DELETE FROM users` in an ordinary code file, OUTSIDE any migration/erasure path, was never
+# caught: the old §6 only grepped INSIDE MIGRATION_PATHS, so a path-only check said clean → GO. The
+# added-lines erasure grep now trips EX-GDPR (over added CODE lines since #67 — a header-less
+# fixture is all code). It is NOT EX-MIG — no migration file is touched, so the AND-gated migration
+# check cannot be what caught it. (The merge-gate.sh INTEGRATION of this — §5-6 delegating here —
+# is blueprint I1 and lands with that script; this pins the classifier the gate delegates to.)
 edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
 printf '+  await db.query("DELETE FROM users WHERE id = $1");\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
@@ -943,14 +950,266 @@ assert "--autonomy: an advisory citation is HELD, not waved through (autonomy er
 gfix; printf 'benw\n' > "$D/login" 2>/dev/null || true
 printf '+| SEC-7 | unchanged |\n' > "$D/diff"
 out="$(gate)"; rc=$?
-assert "gate on a CLEAR-with-advisory diff → GO, and the advisory rides the verdict output" 0 "$rc" "$out" 'advisory \(not gating, citation dial\): EX-SEC'
-if grep -q 'advisory (not gating, citation dial): EX-SEC' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
+assert "gate on a CLEAR-with-advisory diff → GO, and the advisory rides the verdict output" 0 "$rc" "$out" 'advisory \(not gating\): EX-SEC'
+if grep -q 'advisory (not gating): EX-SEC' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
   ok "  · and the ledger row carries it (visible where the tags are audited)"
 else bad "  · and the ledger row carries it" "$(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
 
 # An input that cannot be read is HELD, never CLEAR — the fail-closed rule the whole suite rests on.
 edfix; out="$(EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" sh "$ED" --files "$ED_D/files" --diff "$ED_D/does-not-exist" 2>&1)"; rc=$?
 assert "an unreadable diff → UNKNOWN, exit 2 (fail-closed, never CLEAR)" 2 "$rc" "$out" 'UNKNOWN' 'VERDICT: CLEAR'
+
+# ── ONE REACH FOR THE TEXT CHANNELS (#67) ───────────────────────────────────────────────────────
+# Field-measured over 64 merged PRs: 9 of 10 EX-GDPR verdicts came through the citation scan, none
+# of them touched an erasure path, and in 6 the citation was the ONLY reason — from CONTEXT lines
+# the author never touched, from added lines of prose files, once from the PR body alone. The cause
+# was two greps with different reach, fourteen lines apart in the classifier: the erasure regex
+# read added lines, the citation scan read the whole diff file plus title and body. Now the citation
+# scan DECIDES from added CODE lines (plus labels) only; an added PROSE line — a citation or an
+# erasure statement —
+# is ADVISORY: visible, not gating. The fixtures below carry `+++ b/<file>` headers on purpose:
+# a header-less diff is all code (the fail-closed default the older fixtures above rely on).
+# Counterproof: the classifier as of origin/main before this change says EXCLUDED on every case
+# marked ✗ below and prints no tag in the widen detail; the cases marked = must NOT change.
+
+# ✗ A catalog ID in a CONTEXT line — this PR did not write it and did not add it.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1,3 +1,3 @@\n // PAY-2 applies here\n-old\n+new\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in a CONTEXT line → CLEAR, no advisory (the field's context-line hits)" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-PAY'
+
+# ✗ … in a REMOVED line — the PR deletes the citation; it cannot be widening anything.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1,2 +1,1 @@\n-// PAY-2 applies here\n+new\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in a REMOVED line → CLEAR, no advisory" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-PAY'
+
+# ✗ … in an added line of a PROSE file — a document cites in order to document. Advisory: visible
+# in the verdict, not gating, even though PAY IS anchored in this fixture.
+edfix; printf 'docs/notes.md\n' > "$ED_D/files"
+printf -- '--- a/docs/notes.md\n+++ b/docs/notes.md\n@@ -1 +1,2 @@\n x\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in an added .md line → CLEAR with an ADVISORY, even where PAY is anchored" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+assert "  · and the detail says WHY it is advisory (prose, not code)" 0 "$rc" "$out" 'advisory only \(EX-PAY cited in prose, not code\)'
+
+# = … in an added CODE line: unchanged — anchored decides, unanchored reports. The two guards that
+# prove the narrowing did not go one step too far.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n x\n+// PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a PAY id in an added CODE line → still EXCLUDED (anchored; the field's one real code hit)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+assert "  · ✗ and widen() now NAMES the tag in its detail line" 1 "$rc" "$out" 'EX-PAY  widened by a cited PAY- family id'
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n x\n+// SEC-7 unchanged\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a SEC id in an added CODE line → still advisory (unanchored; the dial is untouched)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-SEC' 'EXCLUDED-DOMAINS'
+
+# = The deny-list is a DENY-list: an extension nobody listed is code, and the channel still reads it.
+edfix; printf 'notes.wtf\n' > "$ED_D/files"
+printf -- '--- a/notes.wtf\n+++ b/notes.wtf\n@@ -1 +1,2 @@\n x\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "an UNKNOWN extension counts as code → the id still widens (the list fails toward the gate)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+
+# ✗ The erasure regex gets the same split: a DELETE FROM users in a runbook is a sentence …
+edfix; printf 'docs/runbook.md\n' > "$ED_D/files"
+printf -- '--- a/docs/runbook.md\n+++ b/docs/runbook.md\n@@ -1 +1,2 @@\n x\n+DELETE FROM users WHERE id = 1\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "DELETE FROM users in an added .md line → CLEAR with an EX-GDPR ADVISORY (prose, not code)" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-GDPR' 'EXCLUDED-DOMAINS'
+# = … and in a .sql file it is a statement. The self-merge hole stays closed.
+edfix; printf 'scripts/cleanup.sql\n' > "$ED_D/files"
+printf -- '--- a/scripts/cleanup.sql\n+++ b/scripts/cleanup.sql\n@@ -1 +1,2 @@\n x\n+DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "DELETE FROM users in an added .sql line → EX-GDPR, exit 1 (code gates as before)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# ✗ The PR TITLE AND BODY widen nothing any more — and are not even read. --pr mode against the gh
+# stub is the only mode with that channel; gh-calls.log records what the classifier asked for.
+edfix; printf 'This review found nothing under SEC-3; PAY-3 unchanged.\n' > "$ED_D/body"
+out="$(edrun_pr)"; rc=$?
+assert "SEC-3 and PAY-3 in the PR body → CLEAR, no advisory, no widening (the body is a description)" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-SEC|EX-PAY'
+if grep -Eq 'title|body' "$ED_D/gh-calls.log" 2>/dev/null; then bad "  · and neither title nor body was ever requested from gh" "$(grep -E 'title|body' "$ED_D/gh-calls.log")"
+else ok "  · and neither title nor body was ever requested from gh"; fi
+
+# = LABELS still widen — a label is a declaration. GDPR is anchored here (ERASURE_PATHS declared).
+edfix; printf 'gdpr\n' > "$ED_D/labels"
+out="$(edrun_pr)"; rc=$?
+assert "a label 'gdpr' → EX-GDPR widened, exit 1 (labels are the declaration channel that stays)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+assert "  · and the detail calls it a label — because now it IS one" 1 "$rc" "$out" 'EX-GDPR  widened by a gdpr/erasure label'
+
+# ── THE HOLES THE FRESH-CONTEXT REVIEW OF #71 FOUND IN THE FIRST HEAD (90e9b7a) ──────────────────
+# Each ✗ below is CLEAR or advisory on that commit and EXCLUDED/UNKNOWN now; the = case is the
+# direction the fix must not break.
+
+# ✗ A HEADER IS READ BETWEEN HUNKS ONLY. An added CONTENT line whose text begins with `++ b/notes.md`
+# renders as `+++ b/notes.md`. Read as a file header, it relabelled the rest of a code file as prose
+# — and a DELETE FROM users two lines later became an advisory: exit 0, agent-mergeable, with one
+# crafted comment. The hunk's own `@@ -o,l +n,m @@` counts bound the hunk, so this line is content.
+edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/services/reports.ts b/src/services/reports.ts\n--- a/src/services/reports.ts\n+++ b/src/services/reports.ts\n@@ -1 +1,6 @@\n export {}\n+/*\n+++ b/notes.md\n+*/\n+  await db.query("DELETE FROM users WHERE id = $1");\n+// PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a content line that LOOKS like a +++ header cannot relabel a code file → EX-GDPR still gates" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+assert "  · and the anchored PAY citation in the same file still decides" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+
+# = …while a REAL header after a finished hunk is honoured: a prose file first, then a code file —
+# the code file's citation decides. (Were the second header swallowed as content, the code file
+# would inherit "prose" and the gate would fail open the other way.)
+edfix; printf 'docs/notes.md\nsrc/util/format.ts\n' > "$ED_D/files"
+printf -- '--- a/docs/notes.md\n+++ b/docs/notes.md\n@@ -1 +1,2 @@\n x\n+PAY-2 in prose\n--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n y\n+// PAY-2 in code\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "prose file, then a code file: the second +++ header is honoured — the code citation decides" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+
+# ✗ A FORMAT THAT EXECUTES IS CODE. The field's deny-list carried `.mdx` and `.org`; MDX embeds JSX
+# and org files run babel blocks, so a deleteAccount() wired into a docs page is a statement, not a
+# sentence. Both are off the list — the fail-closed direction.
+edfix; printf 'docs/Admin.mdx\n' > "$ED_D/files"
+printf -- '--- a/docs/Admin.mdx\n+++ b/docs/Admin.mdx\n@@ -1 +1,3 @@\n # Admin\n+import { deleteAccount } from "../api"\n+<button onClick={() => deleteAccount(user.id)}>Delete</button>\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert ".mdx is code, not prose: deleteAccount() in a docs page → EX-GDPR, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# ✗ A git-QUOTED file name (non-ASCII → `+++ "b/caf\303\251.md"`) is still a .md — the quotes are
+# stripped before the extension is read, so the false-positive class does not return for those names.
+edfix; printf 'docs/caf\303\251.md\n' > "$ED_D/files"
+printf -- '--- "a/docs/caf\303\251.md"\n+++ "b/docs/caf\303\251.md"\n@@ -1 +1,2 @@\n x\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a git-quoted non-ASCII .md name is still prose → advisory, not EXCLUDED" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+
+# ✗ AWK FAILS CLOSED. The file-kind split is the one tool this fix added to the deciding path; a
+# broken awk must read as "could not scan", never as "no text found" — the first head said CLEAR.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n x\n+  DELETE FROM users WHERE id = 1\n' > "$ED_D/diff"
+BADAWK="$TMP/badawk$N"; mkdir -p "$BADAWK"; printf '#!/bin/sh\necho "awk: broken" >&2\nexit 2\n' > "$BADAWK/awk"; chmod +x "$BADAWK/awk"
+out="$( PATH="$BADAWK:$PATH"; export PATH; edrun )"; rc=$?
+assert "a failing awk → UNKNOWN, exit 2 — a text channel that did not run is not a clean one" 2 "$rc" "$out" 'VERDICT: UNKNOWN' 'VERDICT: CLEAR'
+# …and a MISSING awk is refused up front, like a missing gh or git. A PATH with the toolbox minus awk.
+NOAWK="$TMP/noawk$N"; mkdir -p "$NOAWK"
+for _t in sh git grep sed tr sort head tail cat mktemp rm mkdir date; do
+  _p="$(command -v "$_t" 2>/dev/null)"; [ -n "$_p" ] && ln -s "$_p" "$NOAWK/$_t" 2>/dev/null
+done
+out="$( PATH="$NOAWK"; export PATH; edrun )"; rc=$?
+assert "no awk on PATH → UNKNOWN, exit 2, and the reason names awk" 2 "$rc" "$out" 'awk is not installed' 'VERDICT: CLEAR'
+
+# ── THE SECOND FRESH-CONTEXT REVIEW OF #71 (head e05ec6c) ─────────────────────────────────────────
+# The hunk counting that closed the first hole desynced on a blank context line that git's
+# diff.suppressBlankEmpty writes as an EMPTY line — and "read on" after a desync trusted `+++ `
+# again, so the hole reopened. Now a git-format diff (any `diff --git` line) takes the file boundary
+# from that line alone, and a bare diff latches to code on every desync. Each ✗ is CLEAR on e05ec6c.
+
+# ✗ Git format, blank context written as an empty line, then the `++ b/notes.md` comment.
+edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/services/reports.ts b/src/services/reports.ts\nindex 1111111..2222222 100644\n--- a/src/services/reports.ts\n+++ b/src/services/reports.ts\n@@ -1,3 +1,7 @@\n export {}\n\n x\n+/*\n+++ b/notes.md\n+*/\n+  await db.query("DELETE FROM users WHERE id = $1");\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "git format + suppressBlankEmpty's empty context line: no relabel → EX-GDPR gates" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# ✗ The same as a bare diff (no git header lines): the empty line is blank context now.
+edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
+printf -- '--- a/src/services/reports.ts\n+++ b/src/services/reports.ts\n@@ -1,3 +1,7 @@\n export {}\n\n x\n+/*\n+++ b/notes.md\n+*/\n+  await db.query("DELETE FROM users WHERE id = $1");\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "bare diff, an empty line inside a hunk is blank context → EX-GDPR still gates" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# ✗ Bare diffs whose counts lie: every desync the parser can see latches the rest to code.
+edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
+printf -- '--- a/src/services/reports.ts\n+++ b/src/services/reports.ts\n@@ -1 +1 @@\n export {}\n+++ b/notes.md\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "bare diff, counts too small: a +++ line after the hunk is no header → EX-GDPR gates" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'docs/n.md\nsrc/r.ts\n' > "$ED_D/files"
+printf -- '--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1 +1,9 @@\n x\n+note\n--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1,2 @@\n y\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "bare diff, counts too large: an @@ while counts remain latches to code → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/services/reports.ts\n' > "$ED_D/files"
+printf -- '--- a/src/services/reports.ts\n+++ b/src/services/reports.ts\n@@ -1 +1\n export {}\n+++ b/notes.md\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "bare diff, truncated @@ header: content outside a hunk latches to code → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# = `\ No newline at end of file` stays pinned: in a bare prose diff it must not latch, so the
+#   citation after it is still prose. (A missing rule would now fail closed, not open.)
+edfix; printf 'docs/notes.md\n' > "$ED_D/files"
+printf -- '--- a/docs/notes.md\n+++ b/docs/notes.md\n@@ -1 +1,2 @@\n-old\n\\ No newline at end of file\n+new\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "bare .md diff with a No-newline marker mid-hunk → the citation after it stays advisory" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+
+# ✗ No work directory → UNKNOWN. A failing mktemp left $WORK empty: the awk-failed marker had
+#   nowhere to go, so a failing awk read CLEAR — and an anchored citation in code was lost too.
+edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1 +1,2 @@\n x\n+  DELETE FROM users WHERE id = 1\n' > "$ED_D/diff"
+NOMKT="$TMP/nomktemp$N"; mkdir -p "$NOMKT"; printf '#!/bin/sh\nexit 1\n' > "$NOMKT/mktemp"; chmod +x "$NOMKT/mktemp"
+BADAWK2="$TMP/badawk2$N"; mkdir -p "$BADAWK2"; printf '#!/bin/sh\nexit 2\n' > "$BADAWK2/awk"; chmod +x "$BADAWK2/awk"
+out="$( PATH="$NOMKT:$BADAWK2:$PATH"; export PATH; edrun )"; rc=$?
+assert "mktemp fails AND awk fails → UNKNOWN, exit 2 (was CLEAR)" 2 "$rc" "$out" 'VERDICT: UNKNOWN' 'VERDICT: CLEAR'
+edfix; printf '+// PAY-2 applies here\n' > "$ED_D/diff"
+out="$( PATH="$NOMKT:$PATH"; export PATH; edrun )"; rc=$?
+assert "mktemp fails alone → UNKNOWN, exit 2 (an anchored citation in code was silently lost)" 2 "$rc" "$out" 'no work directory' 'VERDICT: CLEAR'
+
+# = .org is code (babel blocks run) — pinned beside .mdx.
+edfix; printf 'docs/run.org\n' > "$ED_D/files"
+printf -- '--- a/docs/run.org\n+++ b/docs/run.org\n@@ -1 +1,3 @@\n * Ops\n+#+begin_src sh\n+psql -c "DELETE FROM users WHERE id = 1"\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert ".org is code: a DELETE FROM users in a babel block → EX-GDPR, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# ✗ CMakeLists.txt is a build file that runs commands — code, although .txt is prose.
+edfix; printf 'CMakeLists.txt\n' > "$ED_D/files"
+printf -- '--- a/CMakeLists.txt\n+++ b/CMakeLists.txt\n@@ -1 +1,2 @@\n project(x)\n+execute_process(COMMAND psql -c "DELETE FROM users")\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "CMakeLists.txt counts as code: DELETE FROM users in execute_process → EX-GDPR, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# = A CRLF .md diff is still prose — the CR is stripped before the extension is read.
+edfix; printf 'docs/notes.md\n' > "$ED_D/files"
+printf -- '--- a/docs/notes.md\r\n+++ b/docs/notes.md\r\n@@ -1 +1,2 @@\r\n x\r\n+PAY-2 applies here\r\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a CRLF .md diff is still prose → advisory, not EXCLUDED" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+
+# ── THE THIRD FRESH-CONTEXT REVIEW OF #71 (head f65fd0a) ───────────────────────────────────────────
+# ✗ A `diff -u` section appended to a `git diff` (untracked files added to a local capture) has no
+#   `diff --git` line: its `+++` header sat outside any git header region, the new code file
+#   inherited the previous file's kind — prose — and a DELETE FROM users read CLEAR. A `+++ ` line
+#   outside a header region now turns the rest of that file to code.
+edfix; printf 'notes.md\nsrc/new.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/notes.md b/notes.md\nindex 1111111..2222222 100644\n--- a/notes.md\n+++ b/notes.md\n@@ -1 +1,2 @@\n a\n+see the runbook\n--- /dev/null\n+++ src/new.ts\n@@ -0,0 +1,2 @@\n+export {}\n+  await db.query("DELETE FROM users WHERE id = $1");\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "git diff + an appended diff -u section: the new code file is code → EX-GDPR gates" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# ✗ A coloured diff (color.ui=always in the caller's git config) matches no line shape at all — an
+#   anchored citation in code read CLEAR. It is UNKNOWN now: could not read, not clean.
+edfix; printf '\033[32m+// PAY-2 applies here\033[m\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a diff with terminal colour codes → UNKNOWN, exit 2, never CLEAR" 2 "$rc" "$out" 'colour codes' 'VERDICT: CLEAR'
+# ✗ …but an ESC byte INSIDE content is content (a CLI fixture, a snapshot file): the guard reads
+#   only a line that BEGINS with an escape sequence (fourth review of #71 — through `--pr` the
+#   unanchored guard turned a readable PR UNKNOWN, with a remedy that could not apply).
+edfix; printf 'src/term.ts\n' > "$ED_D/files"
+printf -- '--- a/src/term.ts\n+++ b/src/term.ts\n@@ -1,2 +1,3 @@\n export const RED = "\033[31m";\n export const a = 1;\n+export const b = 2;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "an ESC byte in a context line is content → CLEAR, not UNKNOWN" 0 "$rc" "$out" 'VERDICT: CLEAR' 'UNKNOWN'
+edfix; printf 'src/term.ts\n' > "$ED_D/files"
+printf -- '--- a/src/term.ts\n+++ b/src/term.ts\n@@ -1,2 +1,3 @@\n export const RED = "\033[31m";\n export const a = 1;\n+  await db.query("DELETE FROM users WHERE id = 1");\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "  · and the same diff with a DELETE FROM users still gates → EX-GDPR, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+
+# = EACH PARSER RULE HAS A CASE THAT GOES RED WITHOUT IT. The review deleted six rules one at a time
+#   and the suite stayed green: the earlier cases were caught by a different rule than their name.
+#   Every input below reads CLEAR with its one rule removed; with the rule, EX-GDPR gates.
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/r.ts b/src/r.ts\n--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — git-format detection: a forged triple inside a git diff is no header → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'docs/n.md\nsrc/r.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/docs/n.md b/docs/n.md\n--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1 +1,2 @@\n x\n+note\ndiff --git a/src/r.ts b/src/r.ts\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — kind resets at diff --git: a header-less code file after prose → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1,9 @@\n x\n+y\nOnly in a: z\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — a line that fits no rule inside a hunk latches to code → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — a +++ line not right after --- is no header → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n+y\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — the latch is sticky: a later ---/+++ pair cannot relabel → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1\n x\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — content between hunks latches to code → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# = Precision: an empty line and a lone CR inside a bare prose hunk are blank context — a latch
+#   there would turn the prose citation after them into a gating one.
+edfix; printf 'docs/n.md\n' > "$ED_D/files"
+printf -- '--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1,2 +1,3 @@\n x\n\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — an empty line in a bare prose hunk is blank context → the citation stays advisory" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+edfix; printf 'docs/n.md\n' > "$ED_D/files"
+printf -- '--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1,2 +1,3 @@\n x\n\r\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — a lone CR in a bare prose hunk is blank context too → advisory" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
 
 # ── excluded-domains.sh --autonomy (the ALLOWLIST eligibility gate) ──────────────────────────────
 # The blocklist above is UNDER-inclusive by construction — it cannot know a risky path idiom no rule

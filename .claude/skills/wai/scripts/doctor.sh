@@ -137,7 +137,7 @@ fi
 #   · CONTRACT_PATHS empty is DRIFT (✗): no path is contract-domain, so a billing PR classifies
 #     CLEAN and is agent-mergeable. The hardcoded GUARDRAIL floor still protects the suite's own
 #     files, which is exactly what makes this invisible.
-#   · ERASURE_PATHS empty is an ADVISORY (·): the EX-GDPR whole-diff grep still runs as a backstop.
+#   · ERASURE_PATHS empty is an ADVISORY (·): the EX-GDPR added-code-line grep still runs as a backstop.
 #   · MIGRATION_PATHS is deliberately NOT judged — empty is the honest answer for a repo with no DB.
 # Why: docs/rationale/doctor.md § A present conf is not a configured conf
 if [ -f "$CONF" ]; then
@@ -151,7 +151,7 @@ if [ -f "$CONF" ]; then
     else
       drift "CONTRACT_PATHS is empty (or absent) in $CONF → the classifier SKIPS the contract-domain test entirely, so a billing/auth/API PR is classified CLEAN and stays agent-mergeable. The conf exists, so every presence check passes while the check itself does nothing. Name this repo's contract paths (wai-init proposes them)."
     fi
-    [ -n "$EP" ] || note "ERASURE_PATHS is empty in $CONF — the EX-GDPR check falls back to its whole-diff erasure grep alone (a backstop, not an anchor). Name the erasure module if this repo has one."
+    [ -n "$EP" ] || note "ERASURE_PATHS is empty in $CONF — the EX-GDPR check falls back to its added-code-line erasure grep alone (a backstop, not an anchor). Name the erasure module if this repo has one."
   fi
 fi
 

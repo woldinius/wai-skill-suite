@@ -156,12 +156,21 @@ EXCLUDED DOMAINS = contract domain   (EX-PAY ∪ EX-AUTH ∪ EX-API ∪ EX-SEC �
 | `EX-API` | API contract | `CONTRACT_PATHS` (contract/DTO globs) | labels; `API-` family prefix |
 | `EX-SEC` | security | `CONTRACT_PATHS` (security globs) | labels; `SEC-` family prefix |
 | `EX-MIG` | destructive migration | `MIGRATION_PATHS` + a destructive-statement grep | labels |
-| `EX-GDPR` | erasure / data-deletion | `ERASURE_PATHS` + an erasure grep **over the whole diff** | labels; `GDPR-` family prefix |
+| `EX-GDPR` | erasure / data-deletion | `ERASURE_PATHS` + an erasure grep **over every added code line of the diff** | labels; `GDPR-` family prefix |
 
 `EX-GDPR` closes an everyday self-merge hole. An ad-hoc `DELETE FROM users`, an `ON DELETE CASCADE`,
 or a `deleteAccount()` that lands **outside** any migration file used to slip through, because
-migration detection only watched `MIGRATION_PATHS`. The erasure grep runs over the **whole** diff,
-so erasure is caught wherever it is written, not only inside a migration.
+migration detection only watched `MIGRATION_PATHS`. The erasure grep runs over every **added code
+line** of the diff, so erasure is caught wherever it is written, not only inside a migration. The
+same statement in an added line of a **prose** file (`.md`, `.txt`, `.rst` and the like — an
+extension nobody listed counts as code) is reported as **advisory**: visible in the verdict, holding
+the unattended drain, not gating (#67).
+
+**What the widening channels read (#67).** A family prefix widens only when it is cited in an
+**added code line** — never from a context line the author did not touch, a removed line, or the PR
+title and body; cited in an added prose line it is advisory. **Labels** widen by their words. The
+suite requires a catalog ID in every review finding, so reading the PR's description as a signal
+made the gate trip on its own mandatory citation: a label is a declaration, a description is not.
 
 Why the guardrails (`EX-GUARD`) are in the set at all is worth stating, because it is the one domain
 with no config knob. The floor covers both what *defines* the standard (the quality catalog, the
@@ -173,7 +182,7 @@ is judged against — or to the machinery that checks it — does not have a gua
 suggestion. `merge-gate.sh` enforces this floor and **no repo config can lower it.**
 
 **Detection is ID-agnostic (ADR-0003).** Paths and diff statements are authoritative; a catalog ID
-that appears in the PR's own text is read **only** as a family-prefix widening *hint*. So a
+that appears in the PR's own added code lines is read **only** as a family-prefix widening *hint*. So a
 repo-local ID in the `PAY-` family (minted at ≥100) still trips `EX-PAY` — it shares that family — and **no bare number is
 ever resolved against a catalog or copied across a repo boundary**: a "GDPR-3" or "GDPR-6" is never
 matched as such, and erasure granularity comes from `ERASURE_PATHS` and the grep, not from a number.

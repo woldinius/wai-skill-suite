@@ -137,9 +137,11 @@ domains*, cannot drift against itself.
   in the floor's new home, not reopened here. `EX-PAY`/`AUTH`/`API`/`SEC`, `EX-MIG` and the new
   `EX-GDPR` live there too.
 - **`EX-GDPR` is the hole that refactor closed.** The classifier reads an `ERASURE_PATHS` key *and*
-  greps the whole diff for erasure — so an ad-hoc `DELETE FROM users`, `ON DELETE CASCADE` or
-  `deleteAccount()` dropped outside any migration file is caught. A path-only check let that
-  self-merge through; a whole-diff grep does not.
+  greps every added code line of the diff for erasure — so an ad-hoc `DELETE FROM users`,
+  `ON DELETE CASCADE` or `deleteAccount()` dropped outside any migration file is caught. A path-only
+  check let that self-merge through; an added-lines grep does not. (Since #67 the grep decides from
+  code lines only; the same statement in an added prose line is reported as advisory — the
+  classifier's rationale carries the measurement.)
 - **§4 (team-mode approval enforcement) did not move, and must not.** It is a fact about branch
   *protection*, not about the diff's domain — a different question with a different source of truth.
 
