@@ -476,6 +476,17 @@ assert "gate-stats: NO-GO causes split mechanically into setup/checks/domain/oth
   'setup 48 · checks 1 · domain 7 · other 0'
 assert "gate-stats: MOOT is a printed verdict total, and NO-GO never counts toward GO" 0 "$rc" "$out" \
   'GO 2 · NO-GO 56 · UNKNOWN 0 · MOOT 2' 'GO 58'
+# MOOT IS BLANK BY RULE (#69). The ledger header merge-gate.sh writes says "leave its outcome blank";
+# the counter nevertheless reported every blank MOOT as untagged — this repo's Q1 carried 6 untagged
+# of which 2 were MOOT blanks, and open-items.sh already excluded them. The fixture has one blank MOOT
+# (row 194) and one TAGGED (row 193, `ok`): the blank is not untagged (2 — rows 190 and 192 — not 3),
+# and the tag is a data-quality finding, because a MOOT tag has no rate to enter.
+assert "gate-stats: a blank MOOT row is blank by rule — NOT untagged (2 untagged, not 3)" 0 "$rc" "$out" '2 still untagged' '3 still untagged'
+assert "  · and it is printed as its own line, so the blank is visibly deliberate" 0 "$rc" "$out" '1 MOOT row\(s\) blank by rule'
+assert "  · a TAG on a MOOT row is a data-quality finding, not a judged outcome" 0 "$rc" "$out" '1 tag\(s\) on MOOT row\(s\) — MOOT is blank by rule'
+out="$(sh "$STATS" --report "$FLD" 2>&1)"; rc=$?
+assert "  · --report: coverage is over JUDGEABLE rows (total minus MOOT), MOOT named beside it" 0 "$rc" "$out" 'outcome coverage: 56 of 58 judgeable rows tagged \(97%\) · 2 untagged · MOOT 1 blank by rule'
+assert "  · --report: the tagged MOOT row gets its data-quality line" 0 "$rc" "$out" 'data quality: 1 tag\(s\) on MOOT rows'
 
 # A tag the parser cannot place is COUNTED AND PRINTED — a statistic that drops rows must say so —
 # and `nil` (the verdict says nothing about the code) stays out of the fp/fn math entirely.
@@ -500,10 +511,30 @@ assert "--report reproduces the fp rate with raw counts beside it" 0 "$rc" "$rep
   'false positives: 8 of 52 judged NO-GOs = 15% \(ok 44 · fp 8\)'
 assert "--report: verdict totals GO/NO-GO/UNKNOWN/MOOT, substring-proof" 0 "$rc" "$rep" \
   'verdicts: 60 — GO 2 · NO-GO 56 · UNKNOWN 0 · MOOT 2' 'GO 58'
-assert "--report: outcome coverage tagged vs untagged" 0 "$rc" "$rep" '57 of 60 tagged \(95%\) · 3 untagged'
 assert "--report: period covered is first to last row date" 0 "$rc" "$rep" '2026-07-22 → 2026-08-12'
 assert "--report: top exclusion reasons, counted position-independently" 0 "$rc" "$rep" \
   'top exclusion reasons: EX-GDPR 7 · EX-GUARD 7'
+# A TAG ON A MOOT ROW ENTERS NO RATE — proven with tags that USED to leak, not with `ok` (which never
+# reached a rate in the first place; the fresh-context review of #73 showed a mutant restoring the old
+# MOOT buckets stayed green on the fixture above). One misfiled `fn` on a NO-GO, one `fn` and one `nil`
+# on MOOT rows: the old counter reported 2 fn-on-NO-GO and 1 nil; now 1 and none, and 2 tags on MOOT.
+N=$((N+1)); MT="$TMP/moot$N.md"
+{ printf '| when | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | NO-GO | x | fn |\n'
+  printf '| 2026-08-02T00:00Z | 2 | MOOT | merged before the gate ran | fn |\n'
+  printf '| 2026-08-03T00:00Z | 3 | MOOT | merged before the gate ran | nil |\n'; } > "$MT"
+out="$(sh "$STATS" "$MT" 2>&1)"; rc=$?
+assert "gate-stats: an fn tag on a MOOT row does NOT join the fn-on-NO-GO line (1, not 2) — it is a MOOT tag" 0 "$rc" "$out" '1 fn tag\(s\) on NO-GO rows' '2 fn tag'
+assert "  · and a nil on a MOOT row is not a nil-tagged verdict: both land on the MOOT data-quality line" 0 "$rc" "$out" '2 tag\(s\) on MOOT row\(s\)' 'nil-tagged row'
+# A LEDGER OF ONLY MOOT ROWS has no judgeable row: the coverage line must say 0 of 0 and print no
+# percentage. The guard that makes that true had no test — putting the old `total > 0` guard back
+# left the suite green and --report dying mid-line on exactly this ledger (re-review of #73).
+N=$((N+1)); AM="$TMP/allmoot$N.md"
+{ printf '| when | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-03T00:00Z | 3 | MOOT | merged before the gate ran | |\n'
+  printf '| 2026-08-04T00:00Z | 4 | MOOT | merged before the gate ran | fn |\n'; } > "$AM"
+out="$(sh "$STATS" --report "$AM" 2>&1)"; rc=$?
+assert "--report on a ledger of only MOOT rows → exit 0, 0 of 0 judgeable, no percentage, no division" 0 "$rc" "$out" 'outcome coverage: 0 of 0 judgeable rows tagged · 0 untagged · MOOT 1 blank by rule' 'division|judgeable rows tagged \('
 out="$(sh "$STATS" --report "$TMP/absent-ledger.md" 2>&1)"; rc=$?
 assert "--report with no ledger → exit 2, never 0 with empty output" 2 "$rc" "$out" 'no ledger'
 

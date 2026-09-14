@@ -82,6 +82,11 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
       else                                                cause_other++
     }
 
+    # MOOT is blank BY RULE — the ledger header merge-gate.sh writes says: leave its outcome blank,
+    # count it in no rate. A blank MOOT is therefore not "not yet judged", and a TAGGED one is a
+    # data-quality finding: the tag has no rate to enter. Until #69 this counter contradicted its own
+    # header and reported every MOOT row as untagged. Why: docs/rationale/gate-stats.md § MOOT is blank by rule
+    if (v == "MOOT") { if (o == "") moot_blank++; else moot_tagged++; next }
     if (o == "") { untagged++; next }         # emitted, not yet judged by the human
     tagged++
     p = substr(o, 1, 2)                       # the tag is the FIRST TWO characters — see header
@@ -101,12 +106,13 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
     }
   }
   END {
-    nil_total   = nilc["GO"] + nilc["NO-GO"] + nilc["UNKNOWN"] + nilc["MOOT"]
+    nil_total   = nilc["GO"] + nilc["NO-GO"] + nilc["UNKNOWN"]
+    judgeable   = total - (verdict["MOOT"] + 0)    # MOOT rows are blank by rule — not in any coverage
     nogo_ok     = okc["NO-GO"] + 0; nogo_fp = fpc["NO-GO"] + 0
     nogo_judged = nogo_ok + nogo_fp
     go_judged   = okc["GO"] + fpc["GO"] + fnc["GO"]
     fn          = fnc["GO"] + 0               # fn is DEFINED on GO rows only (issue #10, finding 4)
-    fn_misfiled = fnc["NO-GO"] + fnc["UNKNOWN"] + fnc["MOOT"]
+    fn_misfiled = fnc["NO-GO"] + fnc["UNKNOWN"]    # a tag on a MOOT row is counted above, as moot_tagged
 
     if (report) {
       # ── the paste-ready extract docs/open-questions.md asks field users for ────────────────────
@@ -116,9 +122,11 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
       print ""
       printf "- verdicts: %d — GO %d · NO-GO %d · UNKNOWN %d · MOOT %d\n", \
              total, verdict["GO"] + 0, verdict["NO-GO"] + 0, verdict["UNKNOWN"] + 0, verdict["MOOT"] + 0
-      printf "- outcome coverage: %d of %d tagged", tagged + 0, total
-      if (total > 0) printf " (%d%%)", pct(tagged, total)
-      printf " · %d untagged\n", untagged + 0
+      printf "- outcome coverage: %d of %d judgeable rows tagged", tagged + 0, judgeable
+      if (judgeable > 0) printf " (%d%%)", pct(tagged, judgeable)
+      printf " · %d untagged · MOOT %d blank by rule\n", untagged + 0, moot_blank + 0
+      if (moot_tagged > 0)
+        printf "- data quality: %d tag(s) on MOOT rows — MOOT is blank by rule; the tag enters no rate\n", moot_tagged
       if (unmatched > 0)
         printf "- %d unmatched tag(s): %s — these rows are in NO rate below\n", unmatched, umlist
       if (nil_total > 0)
@@ -165,6 +173,10 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
            verdict["GO"] + 0, verdict["NO-GO"] + 0, verdict["UNKNOWN"] + 0, verdict["MOOT"] + 0
     if (untagged > 0)
       printf "     %d still untagged — a ratio over untagged rows is not yet a ratio\n", untagged
+    if (moot_blank > 0)
+      printf "     %d MOOT row(s) blank by rule — not untagged, not judged\n", moot_blank
+    if (moot_tagged > 0)
+      printf "     %d tag(s) on MOOT row(s) — MOOT is blank by rule; the tag enters no rate\n", moot_tagged
     if (unmatched > 0)
       printf "     %d unmatched tag(s): %s — these rows are in NO ratio below; a statistic that drops rows must say so\n", \
              unmatched, umlist
