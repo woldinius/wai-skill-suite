@@ -71,6 +71,18 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ### Added
 
+- **Field report: 259 gate verdicts over 2026-07-22 → 2026-09-05** (#70) —
+  [`docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md`](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md).
+  The largest dataset yet from the field repo behind the 2026-08-06 and 2026-08-12 reports:
+  precision 90.5 %, recall 100 %, **zero false negatives** of 81 judged GO rows, 14 false alarms
+  of which 12 share one root (mentions read as acts — #67, PR #71), eleven blocks tagged *correct
+  but unwanted*, six that measured the caller's patience, three `fn` tags on NO-GO rows as an
+  instrument finding, a denominator hook that counted about a fifth of invocations — chiefly
+  because it lived only in the main checkout — and per-skill invocation counts, the first Q9 has
+  seen; and the owner's decision of 2026-09-06 to switch the gate role off until publication. Q3,
+  Q9, K3 and the "Too opinionated" row carry the numbers; the learnings index has the row.
+  Translated on intake, numbers unchanged.
+
 - **Rows that exist only in a worktree are visible** (#68). The three append-only writers keep
   `--show-toplevel` — a row belongs to the worktree that produced it, and reaches the default
   branch with that branch's PR. A field repo lost 11 run-log and 16 invocation-log rows when its
