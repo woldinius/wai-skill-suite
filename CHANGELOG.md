@@ -9,12 +9,14 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 The field's second dataset turned into five fixes: the classifier stops reading mentions as acts,
 the gate stops telling every branch that its row belongs elsewhere, rows that exist only in a
 worktree become visible, `gate-stats.sh` counts a MOOT row as what the header says it is, and the
-report behind all of it is in the record — on top of two entries already on `main` since v0.3.3:
-the gate books both ledgers before it prints (#64) and the close-out of #58's second review (#61).
-Every PR of this cut was reviewed on fresh context and carries its own gate row. **Upgrade
-consequence:** a change whose only excluded-domain contact was a catalog citation in a prose file,
-a context line or the PR text now gets GO where it got NO-GO — the citation is reported as
-advisory and still holds `--autonomy`; paths and code statements decide as before (#67).
+report behind all of it is in the record — on top of two entries merged to `main` after v0.3.3:
+the gate writes both books (ledger and run log) before it prints (#64), and the close-out of #58's
+second review (#61). Every PR of this cut was reviewed on fresh context and carries its own gate
+row. **Upgrade consequence:** a change whose only excluded-domain contact was a catalog citation or
+an erasure statement in an added line of a prose file now gets GO where it got NO-GO — reported as
+advisory, still holding `--autonomy`; a citation in a context or removed line, or in the PR title
+or body, is no longer read at all, so it neither gates nor holds; paths, labels, and citations and
+statements in added code lines decide as before (#67).
 
 ### Fixed
 
@@ -141,7 +143,7 @@ advisory and still holds `--autonomy`; paths and code statements decide as befor
   longer describes a held dependent as "waiting on approval" when it waits for the end of the run.
   `wai-learning-gap` stops calling a `wai-team` run a batch. Also riding here: the install examples
   pinned to `v0.3.3`, the gate and run-log rows from #62 (its GO, and the MOOT of a later gate run
-  — whose run-log row is a marked reconstruction: that run was piped into `head` to reproduce a
+  — whose run-log row was rebuilt from its ledger row: that run was piped into `head` to reproduce a
   field report's SIGPIPE finding, and the script died between its two writers), and the human's
   `ok` tags on the three open #58 rows and on #62's GO row.
 
