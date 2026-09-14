@@ -4,7 +4,19 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
-## [Unreleased]
+## [0.4.0] — 2026-09-14
+
+The field's second dataset turned into five fixes: the classifier stops reading mentions as acts,
+the gate stops telling every branch that its row belongs elsewhere, rows that exist only in a
+worktree become visible, `gate-stats.sh` counts a MOOT row as what the header says it is, and the
+report behind all of it is in the record — on top of two entries merged to `main` after v0.3.3:
+the gate writes both books (ledger and run log) before it prints (#64), and the close-out of #58's
+second review (#61). Every PR of this cut was reviewed on fresh context and has its own gate
+row. **Upgrade consequence:** a change whose only excluded-domain contact was a catalog citation or
+an erasure statement in an added line of a prose file now gets GO where it got NO-GO — reported as
+advisory, still holding `--autonomy`; a citation in a context or removed line, or in the PR title
+or body, is no longer read at all, so it neither gates nor holds; paths, labels, and citations and
+statements in added code lines decide as before (#67).
 
 ### Fixed
 
@@ -15,11 +27,11 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   the existing coverage line is re-defined over the judgeable rows (total minus MOOT — no new
   metric, the same line with the denominator the header implies), and a *tagged* MOOT row is a
   data-quality line — the tag has no rate to enter (this repo's ledger has one). Q1 in
-  `docs/open-questions.md` follows (at 57 verdicts: 4 untagged, 2 MOOT blank by rule). Seven cases in
-  `tests/run.sh` (net — one old assertion re-pinned to the new coverage line), red against the
+  `docs/open-questions.md` follows (at 57 verdicts: 4 untagged, 2 MOOT blank by rule). Seven cases
+  in `tests/run.sh` (net — one old assertion re-pinned to the new coverage line), red against the
   previous script — including a MOOT row tagged `fn`, which the old counter routed into the
-  fn-on-NO-GO line, and a ledger of only MOOT rows, whose coverage has nothing to divide by. Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so
-  it is not untagged*.
+  fn-on-NO-GO line, and a ledger of only MOOT rows, whose coverage has nothing to divide by.
+  Rationale: `docs/rationale/gate-stats.md` § *MOOT is blank by rule, so it is not untagged*.
 
 - **The classifier's three text channels read with one reach** (#67). `excluded-domains.sh` read
   text in three places with three different reaches: the erasure regex read *added* lines from
@@ -46,7 +58,7 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   anchored detail line. Unchanged: the path channel, `EX-GUARD`, `EX-MIG`, the dial's anchoring
   (#30) and `--autonomy`'s hold on the advisory set. Forty-four cases in `tests/run.sh`, the
   fixtures carrying `+++ b/<file>` headers; the nine shapes this fix changes fail against the
-  previous script, the holes three review rounds found fail against the heads they were found on —
+  previous script, the holes four reviews found fail against the heads they were found on —
   six against the first, eight against the second, two against the third, two against the fourth —
   and eight more pin parser rules a deletion could otherwise remove unnoticed. The `gh` stub now
   serves labels and, for that counterproof only, a title/body — the classifier's test asserts
@@ -117,8 +129,8 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   — the MOOT path books its row before `$CONF` exists. Eleven cases in `tests/run.sh` (no PR →
   note; open PR → silence, and `--repo` passed on; `LEDGER_HOME=main` → the old note; an unknown
   value → said, on the default branch too; the key set twice → said which wins, an empty first
-  value included; detached HEAD → loose; a `gh` that hangs and a caller that kills the gate → both
-  books still written; default branch → silence).
+  value included; detached HEAD → loose; a `gh` that hangs and a caller that kills the gate →
+  both books still written; default branch → silence).
 
 - **The second review of #58, closed out (#61).** Three Minors, two Nits and two open questions,
   all wording, none of them lowering the gate. `wai-pr-review` step 6's clause for a `wai-team`
@@ -131,8 +143,8 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   longer describes a held dependent as "waiting on approval" when it waits for the end of the run.
   `wai-learning-gap` stops calling a `wai-team` run a batch. Also riding here: the install examples
   pinned to `v0.3.3`, the gate and run-log rows from #62 (its GO, and the MOOT of a later gate run
-  — whose run-log row is a marked reconstruction: that run was piped into `head` to reproduce a
-  field report's SIGPIPE finding, and the script died between its two writers), and the human's
+  — whose run-log row was rebuilt from its ledger row: that run was piped into `head` to reproduce
+  a field report's SIGPIPE finding, and the script died between its two writers), and the human's
   `ok` tags on the three open #58 rows and on #62's GO row.
 
 ## [0.3.3] — 2026-09-13

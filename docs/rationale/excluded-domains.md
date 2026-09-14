@@ -96,7 +96,8 @@ a finding in itself** — and one rule about their reach:
    latches the rest of the diff to code. A bare diff is trusted as far as its generator's counts. A
    `+++` line outside a git header region (a `diff -u` section appended to a `git diff`) turns that
    line and the rest of that file to code, and a diff whose lines begin with terminal colour codes
-   is UNKNOWN — an escape byte inside content is content (the third review of #71 found both). awk,
+   is UNKNOWN — an escape byte inside content is content (the third review of #71 found both; the
+   fourth anchored the colour check to the start of a line). awk,
    the one tool this split adds to the deciding path, fails closed: a non-zero exit, no awk at all,
    or no work directory to record the failure in is UNKNOWN — a text channel that did not run is
    not a clean one.

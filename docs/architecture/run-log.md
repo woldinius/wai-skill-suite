@@ -61,7 +61,6 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-13T12:44Z | wai-pr-review | PR #58 | NO-GO |
 | 2026-09-13T13:11Z | wai-pr-review | PR #58 | NO-GO |
 | 2026-09-13T13:19Z | wai-pr-review | PR #62 | GO |
-<!-- reconstructed 2026-09-13, not from memory: the gate run behind the ledger's 14:12Z MOOT row on #62 was piped into `head -3` to reproduce a field report's finding — the script died of SIGPIPE between emit_ledger and emit_runlog, so the ledger row exists and this row was never written. Rebuilt from that ledger row; the defect is filed from PR #63's review. -->
 | 2026-09-13T14:12Z | wai-pr-review | PR #62 | MOOT |
 | 2026-09-13T14:43Z | wai-pr-review | PR #63 | NO-GO |
 | 2026-09-13T15:33Z | wai-implementation | #64 — merge-gate.sh books before output, a row is a line | fix + 6 cases with a measured counterproof (old 3/3 red, new 3/3 green); PR #65, EX-GUARD so the human merges |
@@ -71,3 +70,8 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-14T05:11Z | wai-pr-review | PR #72 | NO-GO |
 | 2026-09-14T06:52Z | wai-pr-review | PR #73 | NO-GO |
 | 2026-09-14T07:11Z | wai-pr-review | PR #75 | NO-GO |
+| 2026-09-14T07:27Z | wai-pr-review | PR #76 | GO |
+| 2026-09-14T20:47Z | wai-pr-review | PR #71 | NO-GO |
+| 2026-09-14T20:56Z | wai-pr-review | PR #79 | NO-GO |
+| 2026-09-14T21:00Z | wai-pr-review | PR #73 | NO-GO |
+| 2026-09-14T21:06Z | wai-pr-review | PR #75 | NO-GO |
