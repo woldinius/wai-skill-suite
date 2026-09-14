@@ -39,9 +39,9 @@
 #   file (a citation, or an erasure statement) is reported as ADVISORY: visible in the verdict, it
 #   holds the unattended drain, it does not gate. Labels still widen: a label is a declaration, a
 #   description is not. The prose deny-list is exactly PROSE_EXT below; an extension nobody listed
-#   counts as CODE, so the list's incompleteness fails toward the gate, not away from it. A file
-#   header is read only BETWEEN hunks (inside one, a content line can look exactly like a header),
-#   and a failed or missing awk is UNKNOWN, never clean. Why the reach was narrowed, with the numbers:
+#   counts as CODE, so the list's incompleteness fails toward the gate, not away from it. Where a
+#   file begins is read so that no content line can forge it (see added_lines_of); a failed or
+#   missing awk, no work directory, or a coloured diff is UNKNOWN, never clean. Why, with numbers:
 #   docs/rationale/excluded-domains.md § Three text channels, one reach
 #
 # EXIT CODES — fail closed, because this is a gate:
@@ -239,8 +239,13 @@ added_lines() { grep '^+' "$DIFF_FILE" 2>/dev/null | grep -v '^+++' ; }
 #    own `@@ -o,l +n,m @@` counts bound its content, an empty line inside a hunk is blank context,
 #    a `+++ ` header counts only right after a `--- ` line, and ANY desync the parser can see — a
 #    line that fits no rule inside a hunk, an `@@` while counts remain, a content-shaped line
-#    between hunks — LATCHES every later line to code. A diff whose counts lie can still confuse
-#    the split; it can no longer confuse it toward prose.
+#    between hunks — LATCHES every later line to code. Every desync the parser can SEE fails toward
+#    code; a bare diff is trusted as far as its generator's counts (a hand-crafted one with lying
+#    counts and a forged second file can still pass as prose — no real caller writes one).
+#  · MIXED: a `+++ ` line outside a git header region — a `diff -u` section appended to a `git diff`,
+#    or an added line that starts with `++ ` — turns the rest of that file to code (third review of
+#    #71). A diff carrying terminal colour codes matches no line shape at all: UNKNOWN (see
+#    acquire_inputs).
 # A diff captured without any header (a bare `+line` stream) is all code — the fail-closed default.
 # `CMakeLists.txt` is code although `.txt` is prose: a build file that runs commands.
 # awk is the one tool this split adds to the deciding path, so its failure must not read as "no
@@ -265,6 +270,7 @@ added_lines_of() {   # $1 = code | prose → the added lines of files of that ki
     # GIT FORMAT
     gitfmt && /^diff --git / { kind = "code"; hdr = 1; next }
     gitfmt && hdr { if ($0 ~ /^@@ /) hdr = 0; else if ($0 ~ /^\+\+\+ /) kind = kind_of($0); next }
+    gitfmt && /^\+\+\+ / { kind = "code" }
     gitfmt { if (substr($0, 1, 1) == "+" && kind == want) print; next }
     # BARE FORMAT
     /^@@ -[0-9]+(,[0-9]+)? \+[0-9]+(,[0-9]+)? @@/ {
@@ -353,6 +359,11 @@ acquire_inputs() {
     [ -f "$FILES_ARG" ] || { INPUT_UNKNOWN=1; INPUT_REASON="file list '$FILES_ARG' is not readable"; return; }
     [ -f "$DIFF_ARG" ]  || { INPUT_UNKNOWN=1; INPUT_REASON="diff '$DIFF_ARG' is not readable"; return; }
     FILES_FILE="$FILES_ARG"; DIFF_FILE="$DIFF_ARG"; LABELS_FILE=""
+  fi
+  # A coloured diff (color.ui=always in the caller's git config) matches no line shape the parser
+  # knows, so every added line would be read as nothing: that is "could not read", not "clean".
+  if [ "$INPUT_UNKNOWN" -eq 0 ] && grep -q "$(printf '\033')\[" "$DIFF_FILE" 2>/dev/null; then
+    INPUT_UNKNOWN=1; INPUT_REASON="the diff carries terminal colour codes — capture it with --no-color"
   fi
 }
 

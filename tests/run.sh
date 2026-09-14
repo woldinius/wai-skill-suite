@@ -1147,6 +1147,59 @@ printf -- '--- a/docs/notes.md\r\n+++ b/docs/notes.md\r\n@@ -1 +1,2 @@\r\n x\r\n
 out="$(edrun)"; rc=$?
 assert "a CRLF .md diff is still prose → advisory, not EXCLUDED" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
 
+# ── THE THIRD FRESH-CONTEXT REVIEW OF #71 (head f65fd0a) ───────────────────────────────────────────
+# ✗ A `diff -u` section appended to a `git diff` (untracked files added to a local capture) has no
+#   `diff --git` line: its `+++` header sat outside any git header region, the new code file
+#   inherited the previous file's kind — prose — and a DELETE FROM users read CLEAR. A `+++ ` line
+#   outside a header region now turns the rest of that file to code.
+edfix; printf 'notes.md\nsrc/new.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/notes.md b/notes.md\nindex 1111111..2222222 100644\n--- a/notes.md\n+++ b/notes.md\n@@ -1 +1,2 @@\n a\n+see the runbook\n--- /dev/null\n+++ src/new.ts\n@@ -0,0 +1,2 @@\n+export {}\n+  await db.query("DELETE FROM users WHERE id = $1");\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "git diff + an appended diff -u section: the new code file is code → EX-GDPR gates" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# ✗ A coloured diff (color.ui=always in the caller's git config) matches no line shape at all — an
+#   anchored citation in code read CLEAR. It is UNKNOWN now: could not read, not clean.
+edfix; printf '\033[32m+// PAY-2 applies here\033[m\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a diff with terminal colour codes → UNKNOWN, exit 2, never CLEAR" 2 "$rc" "$out" 'colour codes' 'VERDICT: CLEAR'
+
+# = EACH PARSER RULE HAS A CASE THAT GOES RED WITHOUT IT. The review deleted six rules one at a time
+#   and the suite stayed green: the earlier cases were caught by a different rule than their name.
+#   Every input below reads CLEAR with its one rule removed; with the rule, EX-GDPR gates.
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/r.ts b/src/r.ts\n--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — git-format detection: a forged triple inside a git diff is no header → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'docs/n.md\nsrc/r.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/docs/n.md b/docs/n.md\n--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1 +1,2 @@\n x\n+note\ndiff --git a/src/r.ts b/src/r.ts\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — kind resets at diff --git: a header-less code file after prose → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1,9 @@\n x\n+y\nOnly in a: z\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — a line that fits no rule inside a hunk latches to code → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — a +++ line not right after --- is no header → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n+y\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — the latch is sticky: a later ---/+++ pair cannot relabel → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1\n x\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — content between hunks latches to code → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# = Precision: an empty line and a lone CR inside a bare prose hunk are blank context — a latch
+#   there would turn the prose citation after them into a gating one.
+edfix; printf 'docs/n.md\n' > "$ED_D/files"
+printf -- '--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1,2 +1,3 @@\n x\n\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — an empty line in a bare prose hunk is blank context → the citation stays advisory" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+edfix; printf 'docs/n.md\n' > "$ED_D/files"
+printf -- '--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1,2 +1,3 @@\n x\n\r\n+PAY-2 applies here\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "rule pin — a lone CR in a bare prose hunk is blank context too → advisory" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+
 # ── excluded-domains.sh --autonomy (the ALLOWLIST eligibility gate) ──────────────────────────────
 # The blocklist above is UNDER-inclusive by construction — it cannot know a risky path idiom no rule
 # was written for. Trusting "blocklist CLEAR" to authorise an unattended merge fails OPEN on exactly
