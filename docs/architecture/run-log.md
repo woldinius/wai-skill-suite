@@ -71,3 +71,7 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-14T06:52Z | wai-pr-review | PR #73 | NO-GO |
 | 2026-09-14T07:11Z | wai-pr-review | PR #75 | NO-GO |
 | 2026-09-14T07:27Z | wai-pr-review | PR #76 | GO |
+| 2026-09-14T20:47Z | wai-pr-review | PR #71 | NO-GO |
+| 2026-09-14T20:56Z | wai-pr-review | PR #79 | NO-GO |
+| 2026-09-14T21:00Z | wai-pr-review | PR #73 | NO-GO |
+| 2026-09-14T21:06Z | wai-pr-review | PR #75 | NO-GO |
