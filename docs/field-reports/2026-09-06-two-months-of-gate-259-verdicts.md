@@ -1,12 +1,18 @@
-# Field report: two months of gate ledger, 259 verdicts — precision 90.5 %, zero false negatives, and a gate the owner switched off anyway
+# Field report: 259 gate verdicts over 2026-07-22 → 2026-09-05 — precision 90.5 %, zero false negatives, and a gate the owner switched off anyway
 
-**Field repo:** `fr-06287b7fb053` — a browser game (JavaScript, deterministic simulation), `solo`
-mode; the same repo as the [30-run report](2026-08-06-thirty-runs-zero-false-negatives.md) and the
+**Field repo:** `fr-06287b7fb053` — the game repo of the two earlier reports, `solo` mode: the
+[30-run report](2026-08-06-thirty-runs-zero-false-negatives.md) and the
 [three-weeks report](2026-08-12-three-weeks-of-ledger.md)
-**Suite version:** vendored under `.claude/skills/`, updated through the window — which is why the
-repo's own fix to the classifier did not survive (Part B, finding 1)
-**Window:** gate ledger to 2026-09-05 (259 verdicts) · run log 2026-08-14 → 2026-09-05 (242 rows) ·
-invocation log 2026-08-20 → 2026-09-06 (87 rows) · 283 merged PRs over the project's life
+**Suite version:** vendored under `.claude/skills/`, updated through the window — which is why a fix
+kept in the vendored copy cannot be relied on (Part B, finding 1)
+**Window:** gate ledger 2026-07-22 → 2026-09-05 (259 verdicts) · run log 2026-08-14 → 2026-09-05
+(242 rows) · invocation log 2026-08-20 → 2026-09-06 (87 rows) · 283 merged PRs over the project's life
+**What ran:** the full lifecycle. Hook-counted invocations (87, a floor — Part B, finding 4):
+`wai-pr-review` 28 · `wai-testing` 25 · `wai-implementation` 15 · `wai-requirements-planning` 11 ·
+`wai-retro` 3 · `wai-team` 2 · `wai-learning-gap` 1 · `wai-architecture-audit` 1 · `wai` (router) 1.
+Self-reported run-log rows (242): `wai-pr-review` 147 · `wai-implementation` 40 · `wai-testing` 39 ·
+`wai-requirements-planning` 10 · `wai-retro` 3 · `wai-architecture-audit` 2 · without a skill 1. The
+balance reads the distribution as reliable and the absolute counts as an undercount.
 **Corpus:** 259 gate verdicts, 246 of them GO/NO-GO, **229 judged**
 *(The repo's own balance of 2026-09-06, read together with its defect report of 2026-08-31; landed
 here as the dated record, translated on intake. Numbers are the repo's; nothing was re-measured
@@ -66,7 +72,9 @@ finding 3.
 | `EX-API`/`EX-SEC` from the sentence *"SEC-3/API-1 not touched"* in the PR text | 1 |
 | `fp,unknown` | 1 |
 
-**Twelve of fourteen share one root:** the classifier read *mentions* as *acts*. A PR that wrote
+**Twelve of fourteen share one root** (the balance's count; the itemised table attributes eleven
+rows to a text-read cause, with two `fp` and one `fp,unknown` left undetailed): the classifier read
+*mentions* as *acts*. A PR that wrote
 *about* erasure paths was treated like one that touched them — and because the gate ledger and the
 run log ride along in every PR of this repo, it hit the PRs that had nothing to do with the topic
 first.
@@ -82,7 +90,7 @@ was still running** when the gate was called; those rows measure the caller's pa
 
 ## Part B — where the suite was wrong, or was measured wrong
 
-### Finding 1 · The citation channel read mentions as acts — and the local fix did not survive an update
+### Finding 1 · The citation channel read mentions as acts — and a local fix would not survive an update
 
 Over the last 64 merged PRs, classified one by one (report of 2026-08-31, § 1c): 10 tagged
 `EX-GDPR`, **9 through the citation channel**, none touching an erasure path; in **6 of 10** it was
@@ -96,7 +104,7 @@ a folder the next suite update overwrites, with a red test as the only brake.
 ### Finding 2 · Six NO-GOs measured the caller, not the PR
 
 Six rows' only reason was a required check still `IN_PROGRESS`. Correct by the rules, useless as a
-verdict: the same PR a minute later was GO. **Proposal:** none for the gate — it must not guess a
+verdict: the same PR, re-run once the check had finished, was GO. **Proposal:** none for the gate — it must not guess a
 running check green (that is the skip-to-green class it was hardened against); the lesson is for the
 caller, and the ledger's `nil` tag exists for exactly these rows.
 
@@ -106,8 +114,10 @@ Three NO-GO rows from 2026-08-10 and 2026-08-11, all with the same reason (*main
 required status checks*), carry the tag `fn`. By the ledger's definition (`fn` = *a GO that should
 have blocked*) a NO-GO cannot be one; the three are either early mis-tags or meant *"blocked for
 the wrong reason"*. They are not counted as slips above, and the zero stands under this reservation.
-`gate-stats.sh` prints them as a data-quality line since v0.2.0; the balance notes that **the column
-that matters most was the one maintained least carefully**.
+`gate-stats.sh` prints them as a data-quality line since v0.1.0 (PR #17, 2026-08-06); the balance
+notes that **the column that matters most was the one maintained least carefully**. (The 2026-08-12
+report gave `test=IN_PROGRESS` as these rows' reason; the balance gives the required-checks reason —
+a question for the source, not re-measured here.)
 
 ### Finding 4 · A guard that does not run looks exactly like a guard that finds nothing
 
@@ -148,9 +158,8 @@ before every merge** — it is the part that produces findings; the gate only he
 deleted**. What changes: no `merge-gate.sh`, no hold on contract paths, no waiting for an approval
 on technical changes. What changes it back: publication — users who do not sit at the same table.
 
-The suite's reading: the gate was **accurate and no longer needed** — 90.5 % precision, zero slips,
-and eleven rows saying *ok, besser GO*. A gate is not judged by its confusion matrix alone; it is
-judged by whether the person it holds still wants to be held.
+The balance's own reading (its learning 6): the gate was **accurate and no longer needed** — 90.5 %
+precision, zero slips, and eleven rows saying *ok, besser GO*.
 
 ---
 
@@ -184,3 +193,10 @@ judged by whether the person it holds still wants to be held.
 
 The balance did not paste the raw `gate-stats.sh` output; the tables in Part A are its extract
 (verdict counts, judged rows, `fp`/`fn`, the *besser GO* line, the NO-GO causes it itemised).
+
+---
+
+*The field-repo identifier `fr-06287b7fb053` is a keyed hash of the repository URL. The key is
+random, generated once per reporting repo, and never leaves the reporter — so the same identifier
+groups all reports from one repo without naming it, and no outside party can confirm a guessed URL
+against it.*
