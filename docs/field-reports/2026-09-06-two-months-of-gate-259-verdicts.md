@@ -3,11 +3,12 @@
 **Field repo:** `fr-06287b7fb053` — the game repo of the two earlier reports, `solo` mode: the
 [30-run report](2026-08-06-thirty-runs-zero-false-negatives.md) and the
 [three-weeks report](2026-08-12-three-weeks-of-ledger.md)
-**Suite version:** vendored under `.claude/skills/`, updated through the window — which is why a fix
-kept in the vendored copy cannot be relied on (Part B, finding 1)
+**Suite version:** vendored under `.claude/skills/` — the suite's own earlier reports on this repo
+record two versions there (2026-08-06, 2026-08-12) and a ledger lost to an update, which is why a
+fix kept in the vendored copy cannot be relied on (Part B, finding 1)
 **Window:** gate ledger 2026-07-22 (start per the 2026-08-12 report) → 2026-09-05 (259 verdicts) ·
-run log 2026-08-14 → 2026-09-05
-(242 rows) · invocation log 2026-08-20 → 2026-09-06 (87 rows) · 283 merged PRs over the project's life
+run log 2026-08-14 → 2026-09-05 (242 rows) · invocation log 2026-08-20 → 2026-09-06 (87 rows) ·
+283 merged PRs over the project's life
 **What ran:** the full lifecycle. Hook-counted invocations (87, a floor — Part B, finding 4):
 `wai-pr-review` 28 · `wai-testing` 25 · `wai-implementation` 15 · `wai-requirements-planning` 11 ·
 `wai-retro` 3 · `wai-team` 2 · `wai-learning-gap` 1 · `wai-architecture-audit` 1 · `wai` (router) 1.
@@ -15,17 +16,18 @@ Self-reported run-log rows (242): `wai-pr-review` 147 · `wai-implementation` 40
 `wai-requirements-planning` 10 · `wai-retro` 3 · `wai-architecture-audit` 2 · without a skill 1. The
 balance reads the distribution as reliable and the absolute counts as an undercount.
 **Corpus:** 259 gate verdicts, 246 of them GO/NO-GO, **229 judged**
-*(The repo's own balance of 2026-09-06, read together with its defect report of 2026-08-31; landed
+*(The repo's own balance of 2026-09-06, read together with § 1c of its defect report of 2026-08-31; landed
 here as the dated record, translated on intake. Numbers are the repo's; nothing was re-measured
 here.)*
 
 > **Outcome note (added on intake — the findings below keep their original voice, and are true as
 > of the window):** finding 1 (the citation channel, 12 of 14 false positives) is the classifier
 > fix of #67 (PR #71) — the citation scan decides from added code lines only, prose is advisory,
-> title and body are no longer read. Finding 4's second half (a hook that exists only in the main
-> checkout) is why `invocation-log.sh --snippet` now names linked worktrees as the condition for a
-> global hook, and why `open-items.sh` lists rows that exist only in a worktree (#68, PR #72).
-> Finding 3 (tags on rows that have no rate) is #69 (PR #73), and the ledger header clause it implies is #74. At publication, #71–#73 were open, stacked, and awaiting the human merge each requires.
+> title and body are no longer read. Finding 4's first cause (a hook that exists only in the main
+> checkout) is what `invocation-log.sh --snippet` now addresses — it names linked worktrees as the
+> condition for a global hook (#68, PR #72). Finding 3 (tags on rows that have no rate) is #69
+> (PR #73), and the ledger header clause it implies is #74. At publication, #71–#73 were open,
+> stacked, and awaiting the human merge each requires.
 
 ---
 
@@ -78,7 +80,7 @@ rows to a text-read cause, with two `fp` and one `fp,unknown` left undetailed): 
 *mentions* as *acts*. A PR that wrote
 *about* erasure paths was treated like one that touched them — and because the gate ledger and the
 run log ride along in every PR of this repo, it hit the PRs that had nothing to do with the topic
-first.
+disproportionately.
 
 ### The quiet category: 11 × "ok, besser GO"
 
@@ -94,11 +96,11 @@ was still running** when the gate was called; those rows measure the caller's pa
 ### Finding 1 · The citation channel read mentions as acts — and a local fix would not survive an update
 
 Over the last 64 merged PRs, classified one by one (report of 2026-08-31, § 1c): 10 tagged
-`EX-GDPR`, **9 through the citation channel**, none touching an erasure path; in **6 of 10** it was
-the **only** exclusion reason. The three text checks in `excluded-domains.sh` had three reaches — the
+`EX-GDPR` — **9 through the citation channel**, none of them touching an erasure path, and 1
+through `ERASURE_PATHS`, correctly; in **6 of 10** it was the **only** exclusion reason. The three text checks in `excluded-domains.sh` had three reaches — the
 erasure regex read added lines of every file, the citation scan read the whole diff plus title and
 body, and the variable named for labels held title + body + labels. The repo fixed it in its
-vendored copy (15 of 19 tags drop, the 4 that remain are correct) and guarded the fix with a test —
+vendored copy (re-measured on all 19 PRs it had ever tagged: 15 tags drop, the 4 that remain are correct) and guarded the fix with a test —
 a folder the next suite update overwrites, with a red test as the only brake.
 **Proposal:** the change belongs upstream, not in a vendored copy. *(Adopted — see the outcome note.)*
 
@@ -122,9 +124,10 @@ a question for the source, not re-measured here.)
 
 ### Finding 4 · A guard that does not run looks exactly like a guard that finds nothing
 
-The invocation hook — the suite's denominator — undercounted by about **a factor of five**: 28
-hook-counted PR-review invocations against 147 run-log rows for the same skill; on 2026-09-01,
-**12 merged PRs against one counted invocation**. Four causes, all found:
+The invocation hook — the suite's denominator — undercounted. The independent evidence is the
+merged-PR comparison: on 2026-09-01, **12 merged PRs against one counted invocation**. The balance
+also reads 28 hook-counted PR-review invocations against 147 run-log rows as about **a factor of
+five** — Finding 5 notes that part of that ratio is legitimate. Four causes, all found:
 
 1. The hook lived in `.claude/settings.local.json`, which is untracked and therefore exists only in
    the **main checkout** — while the repo's own instructions put every second session in a
