@@ -1161,6 +1161,17 @@ assert "git diff + an appended diff -u section: the new code file is code → EX
 edfix; printf '\033[32m+// PAY-2 applies here\033[m\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
 assert "a diff with terminal colour codes → UNKNOWN, exit 2, never CLEAR" 2 "$rc" "$out" 'colour codes' 'VERDICT: CLEAR'
+# ✗ …but an ESC byte INSIDE content is content (a CLI fixture, a snapshot file): the guard reads
+#   only a line that BEGINS with an escape sequence (fourth review of #71 — through `--pr` the
+#   unanchored guard turned a readable PR UNKNOWN, with a remedy that could not apply).
+edfix; printf 'src/term.ts\n' > "$ED_D/files"
+printf -- '--- a/src/term.ts\n+++ b/src/term.ts\n@@ -1,2 +1,3 @@\n export const RED = "\033[31m";\n export const a = 1;\n+export const b = 2;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "an ESC byte in a context line is content → CLEAR, not UNKNOWN" 0 "$rc" "$out" 'VERDICT: CLEAR' 'UNKNOWN'
+edfix; printf 'src/term.ts\n' > "$ED_D/files"
+printf -- '--- a/src/term.ts\n+++ b/src/term.ts\n@@ -1,2 +1,3 @@\n export const RED = "\033[31m";\n export const a = 1;\n+  await db.query("DELETE FROM users WHERE id = 1");\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "  · and the same diff with a DELETE FROM users still gates → EX-GDPR, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
 
 # = EACH PARSER RULE HAS A CASE THAT GOES RED WITHOUT IT. The review deleted six rules one at a time
 #   and the suite stayed green: the earlier cases were caught by a different rule than their name.

@@ -27,16 +27,18 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   the rest of a code file as prose, first inside a hunk and then through git's
   `diff.suppressBlankEmpty`: in a git-format diff the boundary is the `diff --git` line itself, a
   bare diff latches to code on any desync, a `diff -u` section appended to a `git diff` turns to
-  code, and a coloured diff is UNKNOWN. A failed or missing awk, or no work directory, is UNKNOWN,
-  never clean. `CMakeLists.txt` counts as code although `.txt` is prose. `widen()` names its tag
-  in the anchored detail line. Unchanged: the path channel, `EX-GUARD`, `EX-MIG`, the dial's
-  anchoring (#30) and `--autonomy`'s hold on the advisory set. Forty-two cases in `tests/run.sh`,
-  the fixtures carrying `+++ b/<file>` headers; the nine shapes this fix changes fail against the
+  code, and a diff whose lines begin with colour codes is UNKNOWN (an escape byte inside content
+  is content). A failed or missing awk, or no work directory, is UNKNOWN, never clean.
+  `CMakeLists.txt` counts as code although `.txt` is prose. `widen()` names its tag in the
+  anchored detail line. Unchanged: the path channel, `EX-GUARD`, `EX-MIG`, the dial's anchoring
+  (#30) and `--autonomy`'s hold on the advisory set. Forty-four cases in `tests/run.sh`, the
+  fixtures carrying `+++ b/<file>` headers; the nine shapes this fix changes fail against the
   previous script, the holes three review rounds found fail against the heads they were found on —
-  six against the first, eight against the second, two against the third — and eight more pin
-  parser rules a deletion could otherwise remove unnoticed. The `gh` stub now serves labels and,
-  for that counterproof only, a title/body — the classifier's test asserts neither is ever
-  requested. Rationale: `docs/rationale/excluded-domains.md` § *Three text channels, one reach*.
+  six against the first, eight against the second, two against the third, two against the fourth —
+  and eight more pin parser rules a deletion could otherwise remove unnoticed. The `gh` stub now
+  serves labels and, for that counterproof only, a title/body — the classifier's test asserts
+  neither is ever requested. Rationale: `docs/rationale/excluded-domains.md` § *Three text
+  channels, one reach*.
 
 - **`merge-gate.sh` writes both books before it prints a line** (#64). The ledger row and the
   run-log row used to be written *after* the `VERDICT:` line, with the `note:` line printed between

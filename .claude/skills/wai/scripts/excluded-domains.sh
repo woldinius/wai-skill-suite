@@ -243,9 +243,9 @@ added_lines() { grep '^+' "$DIFF_FILE" 2>/dev/null | grep -v '^+++' ; }
 #    code; a bare diff is trusted as far as its generator's counts (a hand-crafted one with lying
 #    counts and a forged second file can still pass as prose — no real caller writes one).
 #  · MIXED: a `+++ ` line outside a git header region — a `diff -u` section appended to a `git diff`,
-#    or an added line that starts with `++ ` — turns the rest of that file to code (third review of
-#    #71). A diff carrying terminal colour codes matches no line shape at all: UNKNOWN (see
-#    acquire_inputs).
+#    or an added line that starts with `++ ` — turns that line and the rest of that file to code
+#    (third review of #71). A diff carrying terminal colour codes matches no line shape at all:
+#    UNKNOWN (see acquire_inputs).
 # A diff captured without any header (a bare `+line` stream) is all code — the fail-closed default.
 # `CMakeLists.txt` is code although `.txt` is prose: a build file that runs commands.
 # awk is the one tool this split adds to the deciding path, so its failure must not read as "no
@@ -362,7 +362,11 @@ acquire_inputs() {
   fi
   # A coloured diff (color.ui=always in the caller's git config) matches no line shape the parser
   # knows, so every added line would be read as nothing: that is "could not read", not "clean".
-  if [ "$INPUT_UNKNOWN" -eq 0 ] && grep -q "$(printf '\033')\[" "$DIFF_FILE" 2>/dev/null; then
+  # Anchored to the START of a line: every content line of a well-formed diff starts with +, -, a
+  # space or \, so a line that begins with an ESC sequence is colour — while an ESC byte INSIDE
+  # content (a CLI fixture, a snapshot file) is content, and must not turn a readable PR UNKNOWN
+  # (fourth review of #71).
+  if [ "$INPUT_UNKNOWN" -eq 0 ] && grep -q "^$(printf '\033')\[" "$DIFF_FILE" 2>/dev/null; then
     INPUT_UNKNOWN=1; INPUT_REASON="the diff carries terminal colour codes — capture it with --no-color"
   fi
 }
