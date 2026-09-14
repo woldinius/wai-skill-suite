@@ -23,8 +23,8 @@ record, translated on intake. Numbers are the repo's; nothing was re-measured he
 > fix of #67 (PR #71) — the citation scan decides from added code lines only, prose is advisory,
 > title and body are no longer read. Finding 4's first cause (a hook that exists only in the main
 > checkout) is what `invocation-log.sh --snippet` now addresses — it names linked worktrees as the
-> condition for a global hook (#68, PR #72). Finding 3 (tags on rows that have no rate) is #69
-> (PR #73), and the ledger header clause it implies is #74.
+> condition for a global hook (#68, PR #72). Finding 3's other half — a tag on a MOOT row, which
+> has no rate either — is #69 (PR #73), and the ledger header clause it implies is #74.
 
 ---
 
@@ -99,16 +99,17 @@ text checks in `excluded-domains.sh` had three reaches — the erasure regex rea
 every file, the citation scan read the whole diff plus title and body, and the variable named for
 labels held title + body + labels. The repo fixed it in its vendored copy (re-measured on all 19
 PRs the gate had ever tagged `EX-GDPR`: 15 tags drop, the 4 that remain are correct) and guarded
-the fix with a test — a folder the next suite update overwrites, with a red test as the only brake.
-**Proposal:** the change belongs upstream, not in a vendored copy. *(Adopted — see the outcome
-note.)*
+the fix with a test; the fix itself sits in a folder the next suite update overwrites, with a red
+test as the only brake. **Proposal:** the change belongs upstream, not in a vendored copy.
+*(Adopted — see the outcome note.)*
 
 ### Finding 2 · Six NO-GOs measured the caller, not the PR
 
 Six rows' only reason was a required check still `IN_PROGRESS`. Correct by the rules, useless as a
-verdict: it said nothing about the PR. **Proposal:** none for the gate — it must not guess a
-running check green (that is the skip-to-green class it was hardened against); the lesson is for the
-caller, and the ledger's `nil` tag exists for exactly these rows.
+verdict: it said nothing about the PR. **Proposal (the suite's, on intake — the balance makes
+none):** none for the gate — it must not guess a running check green (that is the skip-to-green
+class it was hardened against); the lesson is for the caller, and the ledger's `nil` tag exists for
+exactly these rows.
 
 ### Finding 3 · Three `fn` tags on NO-GO rows — an instrument finding
 
@@ -179,8 +180,8 @@ precision, zero slips, and eleven rows saying *ok, besser GO*.
   because it called the function directly. *Sabotage the production line, not the helper.*
 - **A sabotage anchor that occurs twice in a file hits the wrong line** — four times; the
   counterproof reported "survived" while the assertion was fine. Count the anchor before replacing.
-- **Derived lists hold, typed lists drift** — every list that existed twice in the project drifted at
-  least once (a module map, a key list, a parameter table).
+- **Derived lists hold, typed lists drift** — every list that existed twice in the project drifted
+  at least once (a module map, a key list, a parameter table).
 
 ## What this report does not answer
 
