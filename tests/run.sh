@@ -278,12 +278,24 @@ assert "  · a detached HEAD → the loose-row note names it (no branch, no PR)"
 # A gh that answers `pr list` after 6 s, the gate killed at 2 s: both rows must already be on disk.
 gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
 SLOWGH="$TMP/slowgh$N"; mkdir -p "$SLOWGH"
-printf '#!/bin/sh\ncase "$*" in "pr list"*) sleep 6 ;; esac\nexec "%s/gh" "$@"\n' "$STUB" > "$SLOWGH/gh"; chmod +x "$SLOWGH/gh"
+printf '#!/bin/sh\ncase "$*" in "pr list"*) : > "$GH_FIXTURE/in-pr-list"; sleep 6 ;; esac\nexec "%s/gh" "$@"\n' "$STUB" > "$SLOWGH/gh"; chmod +x "$SLOWGH/gh"
 ( cd "$D" && PATH="$SLOWGH:$PATH" GH_FIXTURE="$D" exec sh "$GATE" 1 >/dev/null 2>&1 ) & _gp=$!
-sleep 2; kill "$_gp" 2>/dev/null; wait "$_gp" 2>/dev/null
+# Kill it the moment it is INSIDE the wait (the stub marks entry), not after a fixed sleep: a fixed
+# sleep is a race a slow runner loses (review of #72); the marker makes the shape deterministic.
+_w=0; while [ ! -f "$D/in-pr-list" ] && [ "$_w" -lt 100 ]; do sleep 0.1; _w=$((_w+1)); done
+kill "$_gp" 2>/dev/null; wait "$_gp" 2>/dev/null
 _lr="$(grep -c '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null || echo 0)"; _rr="$(grep -c '^| 20' "$D/docs/architecture/run-log.md" 2>/dev/null || echo 0)"
 if [ "$_lr" = 1 ] && [ "$_rr" = 1 ]; then ok "a gh that hangs on pr list, gate killed mid-wait → BOTH books already written (note derived last)"
 else bad "a gh that hangs on pr list, gate killed mid-wait → both books written" "ledger rows: $_lr run-log rows: $_rr"; fi
+# The key is parsed before any early return (review of #72): a wrong value is said on the default
+# branch too, and a key set twice says which one won — the template ships it as an active line.
+gfix; ( cd "$D" && git init -q -b main . ) 2>/dev/null; printf 'LEDGER_HOME="bogus"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · LEDGER_HOME=bogus on the DEFAULT branch → still said; verdict unchanged" 0 "$rc" "$out" "LEDGER_HOME='bogus' in merge-gate.conf is not branch.main — treated as branch"
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"
+printf 'LEDGER_HOME="branch"\nLEDGER_HOME="main"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · LEDGER_HOME set twice → the note says the first wins, and branch mode stays silent" 0 "$rc" "$out" 'LEDGER_HOME is set 2 times in merge-gate.conf — the first \(branch\) wins' 'belong on main'
 # Outside a git repo (every other fixture here) there is no branch to name — the note stays off;
 # those fixtures all assert exact verdict output and double as the pin.
 
