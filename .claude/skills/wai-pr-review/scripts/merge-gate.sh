@@ -206,7 +206,7 @@ derive_ledger_note() {
   # natural wrong edit. Both quote styles are stripped. (Review of #72.)
   _homes="$(sed -n 's/^LEDGER_HOME=//p' "${REPO_ROOT:-.}/docs/architecture/merge-gate.conf" 2>/dev/null | tr -d "\"'")"
   _home="$(printf '%s\n' "$_homes" | head -1)"
-  _nhome="$(printf '%s\n' "$_homes" | grep -c . || true)"
+  _nhome="$(grep -c '^LEDGER_HOME=' "${REPO_ROOT:-.}/docs/architecture/merge-gate.conf" 2>/dev/null || true)"
   _mode=branch
   case "$_home" in
     ''|branch) : ;;
@@ -214,7 +214,7 @@ derive_ledger_note() {
     *)         LEDGER_NOTE="note: LEDGER_HOME='$_home' in merge-gate.conf is not branch|main — treated as branch." ;;
   esac
   if [ "${_nhome:-0}" -gt 1 ]; then
-    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: LEDGER_HOME is set $_nhome times in merge-gate.conf — the first ($_home) wins."
+    LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: LEDGER_HOME is set $_nhome times in merge-gate.conf — the first ('$_home') wins."
   fi
   if [ -z "$_cur" ]; then
     LEDGER_NOTE="${LEDGER_NOTE:+$LEDGER_NOTE }note: this ledger row landed on a detached HEAD — no branch, so no PR can carry it to $_def; the row is loose until it is committed on a branch."

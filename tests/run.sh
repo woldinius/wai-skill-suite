@@ -285,7 +285,10 @@ printf '#!/bin/sh\ncase "$*" in "pr list"*) : > "$GH_FIXTURE/in-pr-list"; sleep 
 _w=0; while [ ! -f "$D/in-pr-list" ] && [ "$_w" -lt 100 ]; do sleep 0.1; _w=$((_w+1)); done
 kill "$_gp" 2>/dev/null; wait "$_gp" 2>/dev/null
 _lr="$(grep -c '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null || echo 0)"; _rr="$(grep -c '^| 20' "$D/docs/architecture/run-log.md" 2>/dev/null || echo 0)"
-if [ "$_lr" = 1 ] && [ "$_rr" = 1 ]; then ok "a gh that hangs on pr list, gate killed mid-wait → BOTH books already written (note derived last)"
+# The marker must have appeared: without it the kill never landed inside the wait, and the rows
+# would prove nothing (a gate that stopped asking `gh pr list` would pass here on the timeout).
+if [ -f "$D/in-pr-list" ] && [ "$_lr" = 1 ] && [ "$_rr" = 1 ]; then ok "a gh that hangs on pr list, gate killed mid-wait → BOTH books already written (note derived last)"
+elif [ ! -f "$D/in-pr-list" ]; then bad "a gh that hangs on pr list, gate killed mid-wait → both books written" "the stub was never reached — the test no longer exercises the wait"
 else bad "a gh that hangs on pr list, gate killed mid-wait → both books written" "ledger rows: $_lr run-log rows: $_rr"; fi
 # The key is parsed before any early return (review of #72): a wrong value is said on the default
 # branch too, and a key set twice says which one won — the template ships it as an active line.
@@ -295,7 +298,12 @@ assert "  · LEDGER_HOME=bogus on the DEFAULT branch → still said; verdict unc
 gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"
 printf 'LEDGER_HOME="branch"\nLEDGER_HOME="main"\n' >> "$D/docs/architecture/merge-gate.conf"
 out="$(gate)"; rc=$?
-assert "  · LEDGER_HOME set twice → the note says the first wins, and branch mode stays silent" 0 "$rc" "$out" 'LEDGER_HOME is set 2 times in merge-gate.conf — the first \(branch\) wins' 'belong on main'
+assert "  · LEDGER_HOME set twice → the note says the first wins, and branch mode stays silent" 0 "$rc" "$out" 'LEDGER_HOME is set 2 times in merge-gate.conf — the first \(.branch.\) wins' 'belong on main'
+# …and an EMPTY first value counts as a line too: it wins (branch mode) and the note says so.
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"
+printf 'LEDGER_HOME=""\nLEDGER_HOME="main"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · an empty first LEDGER_HOME still counts: set 2 times, the empty first wins, said" 0 "$rc" "$out" 'LEDGER_HOME is set 2 times in merge-gate.conf — the first \(..\) wins' 'belong on main'
 # Outside a git repo (every other fixture here) there is no branch to name — the note stays off;
 # those fixtures all assert exact verdict output and double as the pin.
 

@@ -1422,13 +1422,13 @@ assert "no origin ref → the worktree-rows line says NOT CHECKED, and the summa
 # worktree against once on the base is ONE row only in the worktree — a set comparison said "none"
 # — and a gate row whose compared cells (minute, PR, verdict) collide with the base's counts too.
 oifix; mkdir -p "$D/docs/architecture"
-printf '| when (UTC) | skill |\n|---|---|\n| 2026-09-14T05:11Z | wai-pr-review |\n' > "$D/docs/architecture/invocation-log.md"
-printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n| 2026-09-14T05:11Z | 72 | NO-GO | reason A | |\n' > "$D/docs/architecture/gate-ledger.md"
+printf '| when (UTC) | skill |\n|---|---|\n| 2026-08-01T00:00Z | wai-pr-review |\n' > "$D/docs/architecture/invocation-log.md"
+printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n| 2026-08-01T00:00Z | 72 | NO-GO | reason A | |\n' > "$D/docs/architecture/gate-ledger.md"
 gitcommit "$D" 'chore: one row in each book'
 git -C "$D" update-ref refs/remotes/origin/main "$(git -C "$D" rev-parse HEAD)"
 WTM="$TMP/oi-wtmulti$N"; git -C "$D" worktree add "$WTM" -b multi-wt >/dev/null 2>&1
-printf '| 2026-09-14T05:11Z | wai-pr-review |\n' >> "$WTM/docs/architecture/invocation-log.md"
-printf '| 2026-09-14T05:11Z | 72 | NO-GO | reason B | |\n' >> "$WTM/docs/architecture/gate-ledger.md"
+printf '| 2026-08-01T00:00Z | wai-pr-review |\n' >> "$WTM/docs/architecture/invocation-log.md"
+printf '| 2026-08-01T00:00Z | 72 | NO-GO | reason B | |\n' >> "$WTM/docs/architecture/gate-ledger.md"
 out="$(oi)"; rc=$?
 assert "a duplicated invocation row in a worktree → invocation-log +1, never none (rows are counted)" 0 "$rc" "$out" 'oi-wtmulti[^ ]*: .*invocation-log \+1' 'rows only in a worktree: none'
 assert "  · a gate row colliding with the base's compared cells counts as well → gate-ledger +1" 0 "$rc" "$out" 'oi-wtmulti[^ ]*: gate-ledger \+1'
