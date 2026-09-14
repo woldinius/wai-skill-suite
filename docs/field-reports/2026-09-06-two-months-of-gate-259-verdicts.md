@@ -12,10 +12,10 @@ run log 2026-08-14 → 2026-09-05 (242 rows) · invocation log 2026-08-20 → 20
 merged PRs over the project's life
 **What ran:** the full lifecycle. Hook-counted invocations (87, a floor — Part B, finding 4):
 `wai-pr-review` 28 · `wai-testing` 25 · `wai-implementation` 15 · `wai-requirements-planning` 11 ·
-`wai-retro` 3 · `wai-team` 2 · `wai-learning-gap` 1 · `wai-architecture-audit` 1 · `wai` (router)
-1. Self-reported run-log rows (242): `wai-pr-review` 147 · `wai-implementation` 40 · `wai-testing`
-39 · `wai-requirements-planning` 10 · `wai-retro` 3 · `wai-architecture-audit` 2 · without a skill
-1. The balance reads the distribution as reliable and the absolute counts as an undercount.
+`wai-retro` 3 · `wai-team` 2 · `wai-learning-gap` 1 · `wai-architecture-audit` 1 · `wai` (router) 1.
+Self-reported run-log rows (242): `wai-pr-review` 147 · `wai-implementation` 40 · `wai-testing`
+39 · `wai-requirements-planning` 10 · `wai-retro` 3 · `wai-architecture-audit` 2 · without a skill 1.
+The balance reads the distribution as reliable and the absolute counts as an undercount.
 **Corpus:** 259 gate verdicts, 246 of them GO/NO-GO, **229 judged**
 *(The repo's own balance of 2026-09-06, read together with § 1c of its defect report of 2026-08-31;
 landed here as the dated record, translated on intake. Numbers are the repo's; nothing was
