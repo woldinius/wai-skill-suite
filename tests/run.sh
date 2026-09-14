@@ -258,6 +258,32 @@ gfix
 ( cd "$D" && git init -q -b main . ) 2>/dev/null
 out="$(gate)"; rc=$?
 assert "  · on the default branch itself, no note — a warning on every run is one nobody reads" 0 "$rc" "$out" 'VERDICT: GO' 'note: this ledger row'
+# The open-PR question is asked about the RIGHT repository — the gate's resolved --repo is passed on
+# (the "advertised, never passed on" class the classifier delegation re-found).
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"
+out="$(gate)"; rc=$?
+if grep -q 'pr list --repo acme/repo --head feature-x' "$D/gh-calls.log" 2>/dev/null; then ok "  · and gh pr list is asked with --repo acme/repo (the resolved repo, not the local remote)"
+else bad "  · and gh pr list is asked with --repo acme/repo" "$(grep 'pr list' "$D/gh-calls.log" 2>&1)"; fi
+# An unknown LEDGER_HOME value is treated as branch AND said — never silently (review of #72).
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null; printf '1\n' > "$D/pr-list"; printf 'LEDGER_HOME="bogus"\n' >> "$D/docs/architecture/merge-gate.conf"
+out="$(gate)"; rc=$?
+assert "  · LEDGER_HOME=bogus → treated as branch, and the note says so; verdict unchanged" 0 "$rc" "$out" "LEDGER_HOME='bogus' in merge-gate.conf is not branch.main — treated as branch"
+# A DETACHED HEAD is the loosest a row can be — no branch, so no PR can ever carry it. Said as such.
+gfix; ( cd "$D" && git init -q -b main . && git -c user.email=f@example.invalid -c user.name=F -c commit.gpgsign=false commit -q --allow-empty -m base && git checkout -q --detach ) 2>/dev/null
+out="$(gate)"; rc=$?
+assert "  · a detached HEAD → the loose-row note names it (no branch, no PR)" 0 "$rc" "$out" 'landed on a detached HEAD'
+# THE NOTE IS DERIVED AFTER BOTH BOOKS. `gh pr list` is a network call; derived inside emit_ledger it
+# sat between the two writers and re-opened the window § Books before output closed — a Ctrl-C on a
+# hanging gh left a ledger row with no run-log partner (fresh-context review of #72, reproduced).
+# A gh that answers `pr list` after 6 s, the gate killed at 2 s: both rows must already be on disk.
+gfix; ( cd "$D" && git init -q -b main . && git checkout -q -b feature-x ) 2>/dev/null
+SLOWGH="$TMP/slowgh$N"; mkdir -p "$SLOWGH"
+printf '#!/bin/sh\ncase "$*" in "pr list"*) sleep 6 ;; esac\nexec "%s/gh" "$@"\n' "$STUB" > "$SLOWGH/gh"; chmod +x "$SLOWGH/gh"
+( cd "$D" && PATH="$SLOWGH:$PATH" GH_FIXTURE="$D" exec sh "$GATE" 1 >/dev/null 2>&1 ) & _gp=$!
+sleep 2; kill "$_gp" 2>/dev/null; wait "$_gp" 2>/dev/null
+_lr="$(grep -c '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null || echo 0)"; _rr="$(grep -c '^| 20' "$D/docs/architecture/run-log.md" 2>/dev/null || echo 0)"
+if [ "$_lr" = 1 ] && [ "$_rr" = 1 ]; then ok "a gh that hangs on pr list, gate killed mid-wait → BOTH books already written (note derived last)"
+else bad "a gh that hangs on pr list, gate killed mid-wait → both books written" "ledger rows: $_lr run-log rows: $_rr"; fi
 # Outside a git repo (every other fixture here) there is no branch to name — the note stays off;
 # those fixtures all assert exact verdict output and double as the pin.
 

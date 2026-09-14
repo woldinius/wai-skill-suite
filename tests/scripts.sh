@@ -1468,6 +1468,10 @@ assert "  · the snippet states why repo-local, and names ~/.claude/settings.jso
 assert "  · with the global alternative's condition (an absolute command path)" 0 "$rc" "$out" '/\.claude/settings\.json with an ABSOLUTE command path'
 assert "  · and where a row lands in a linked worktree (the sentence wraps; grep is per line)" 0 "$rc" "$out" 'In a linked worktree the row lands in that worktree'
 assert "  · with the override named" 0 "$rc" "$out" 'INVOCATION_LOG overrides the path'
+# …and the GAP the repo-local file carries (field report 2026-08-31 § 6e, the balance § 2): an untracked
+# file exists only in the checkout where it was written, so a linked worktree runs no hook — that is
+# the measured condition for the global alternative, not "several repos".
+assert "  · and names the worktree gap: an untracked settings file means a linked worktree has no hook" 0 "$rc" "$out" 'linked worktree \(git worktree add\) has no hook'
 
 # Repo-root resolution, same rule as every writer: from a subdir the row lands at the root.
 N=$((N+1)); D="$TMP/ivgit$N"; gitrepo "$D"; printf 'x\n' > "$D/f"; gitcommit "$D" 'chore: base'

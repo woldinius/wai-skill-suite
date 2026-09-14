@@ -215,13 +215,13 @@ existed (#28, #31). The rule became *rows belong on main*, and the gate said so 
 branch — *collect loose rows into a small chore PR promptly*.
 
 Both repos that use the suite then moved to the opposite practice, and measured why. This repo
-folded its row-only chore PRs on 2026-08-20 (#55): a row rides the PR that produced it, or the next
-one — never a PR of its own. A field repo followed on 2026-08-21 and reported (field report of
-2026-09-12, § 2) that the collection path had cost it three PRs carrying nothing but rows, two
-near-losses in the hand-offs between them, and about sixteen duplicate rows in one collection
-sweep — while the squash race the rule guarded against does not occur when the row's own PR carries
-it: the squash keeps the row. Meanwhile every agent run read the note and had to overrule it, which
-is the shape of a warning nobody reads.
+closed its last row-only chore PR unmerged on 2026-08-27 (#55) with the rule written in its closing
+comment: a row rides the PR that produced it, or the next one — never a PR of its own. A field repo
+had moved on 2026-08-21 and reported (field report of 2026-09-12, § 2) that the collection path had
+cost it three PRs carrying nothing but rows, two near-losses, and almost sixteen duplicate rows —
+while the squash race the rule guarded against does not occur when the row's own PR carries it: the
+squash keeps the row. Meanwhile every agent run read the note and had to overrule it, which is the
+shape of a warning nobody reads.
 
 So the note fires only when the row is genuinely loose (#66). `LEDGER_HOME=branch` — the default,
 and what an absent key means — makes the gate ask `gh pr list --head <branch>`: an open PR means the

@@ -50,7 +50,10 @@ Add to .claude/settings.local.json (per-developer opt-in — NOT settings.json):
 }
 Why the repo-local file: the command path is repo-relative and the log it writes is THIS repo's
 denominator, so the hook belongs where the repo is — settings.local.json is per developer and
-never committed. The alternative, for someone who works in several suite repos, is ONE hook in
+never committed. The gap that comes with it: an untracked file exists only in the checkout where
+you wrote it, so a linked worktree (git worktree add) has no hook and its sessions log nothing —
+a field repo counted about a fifth of its invocations that way until it moved the hook. So:
+ONE checkout → this repo-local file. LINKED WORKTREES, or several suite repos → one hook in
 ~/.claude/settings.json with an ABSOLUTE command path; it fires in every repo, and the row still
 lands in the repo of the current worktree (the script resolves the repo root, not the cwd).
 In a linked worktree the row lands in that worktree's docs/architecture/invocation-log.md — its
