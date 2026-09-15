@@ -48,7 +48,8 @@ Not the gate alone — merge gates with exit codes exist elsewhere. What this su
 - **The gate writes its own denominator.** Every verdict lands in an append-only
   [ledger](docs/architecture/gate-ledger.md) that a human tags later (`ok`/`fp`/`fn`) — so
   *"the model checked"* has an artefact, and the false-negative rate has a place to be measured
-  instead of asserted.
+  instead of asserted. In the field dataset of 2026-09-06 it has been: no GO the owner later
+  judged wrong over 81 judged GO verdicts, under one reservation (see *In the field*, below).
 
 The merge gate described below is the **proof of that doctrine, not the product**.
 
@@ -66,9 +67,41 @@ n = 1, and the file says so).
 
 **Limits, stated up front.** One author so far; evidence from a handful of repos; systematic
 per-run logging exists since 2026-07-13. "In daily use" is a usage claim, not an efficacy claim —
-the efficacy evidence, including every case where the suite was wrong, is in the linked files,
-and it is deliberately not summarized into a slogan. Claude Code + GitHub only, by design
-(see *Porting*, below).
+the efficacy evidence, including every case where the suite was wrong, is in the linked files; the
+one dataset large enough to summarize is summarized in the next section — dated, with its
+denominators and its reservations, not as a slogan. Claude Code + GitHub only, by design (see
+*Porting*, below).
+
+## In the field — what 259 verdicts measured
+
+The largest dataset as of 2026-09-06 comes from one field repo: a game with its own CI — 283
+merged PRs over the project's life, a gate ledger from 2026-07-22 to 2026-09-05. Its balance of
+2026-09-06 ([field report](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md),
+dated; the numbers are the repo's, true as of that date):
+
+- **The gate waved through nothing the owner later judged wrong** — none of 81 judged GO
+  verdicts, across 259 verdicts, under one reservation (three `fn` tags on NO-GO rows, the
+  report's finding 3; and an `fn` can surface weeks later) — and **90.5 % of its judged blocks
+  were right** (134 of 148).
+- **Where the suite was wrong, it changed.** Twelve of the fourteen false alarms had one root, by
+  the balance's count (its itemised table attributes eleven): the classifier read *mentions* of a
+  domain as *acts*. Findings from the field became fixes in
+  [0.4.0](CHANGELOG.md#040--2026-09-14) — the classifier (#67), the gate's book order (#64, from a
+  later field report), the
+  ledger note (#66), rows that exist only in a worktree (#68) and the MOOT count (#69) — and the
+  report shipped with them.
+- **The counterproof earned its place:** in two PRs of 2026-09-05/06, 3 of 30 counterproofs — a
+  line under test deliberately broken to see whether an assertion goes red — found what a green
+  test run would not have shown.
+- **The lifecycle carried the work.** Hook-counted invocations are led by `wai-pr-review` and
+  `wai-testing`, then `wai-implementation` and `wai-requirements-planning` — a floor, because the
+  counter undercounted until 2026-09-03 (Q9 in [open-questions](docs/open-questions.md)).
+- **The cost is on the record too.** Eleven blocks were correct but no longer wanted, and before
+  release the owner switched the gate role off: the review stays mandatory before every merge, and
+  the gate returns when the product is published.
+
+It is still the author's own repo — usage and outcome evidence, not independent evidence. That is
+Q7, and it stays open.
 
 ## What is deterministic here — and what is not
 
@@ -154,8 +187,10 @@ iOS app and an Android app — four first-class surfaces joined by a versioned A
   truth** (verify purchases server-side, idempotent credit/debit, refund clawback). Tokens are
   digital goods → StoreKit/Play Billing on mobile, Stripe only on web.
 
-Smaller repos work too — `wai-init` scopes and sizes everything to what the repo actually is
-(one of the field repos is a hobby game server without CI).
+Other shapes work too — `wai-init` scopes and sizes everything to what the repo actually is: one
+field repo is a game-server prototype, deliberately without CI
+([2026-08-02](docs/field-reports/2026-08-02-prototype-field-session.md), dated), and the dataset
+summarized in *In the field* comes from a different game repo with its own CI.
 
 ## Skills
 
@@ -167,11 +202,12 @@ retrospective of the suite's own record. All are triggered
 automatically via their `description` and demarcate themselves against the others to avoid
 mis-routing.
 
-**Field exposure** — the author's self-report as of 2026-08: a usage claim, not an efficacy
-claim, and nothing in this repo measures it yet (that is Q9 in
-[open-questions](docs/open-questions.md)). What *would* be checkable, though nobody has counted it
-yet: the heavily-used skills appear to be where most recorded defects were found — and fixed — so
-most regression tests would trace back to them.
+**Field exposure** — the author's self-report as of 2026-09: a usage claim, not an efficacy
+claim. The first measured counts come from one field repo: 87 hook-counted invocations, led by
+`wai-pr-review` and `wai-testing` — a floor (Q9 in [open-questions](docs/open-questions.md),
+dated). What *would* be checkable, though nobody has counted it yet: the heavily-used skills appear
+to be where most recorded defects were found — and fixed — so most regression tests would trace
+back to them.
 **daily** = in daily use across the author's repos since consolidation · **periodic** =
 deliberately not daily — run every 5–10 PRs, or after a stretch of major changes · **less
 often** = fewer occasions, well-tested · **once per repo** = by nature runs once-to-rarely per
@@ -190,7 +226,7 @@ repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explici
 | [`wai-team`](.claude/skills/wai-team/SKILL.md) | Commissioned | less often · well-tested | **Mandated lifecycle orchestrator:** works one or more GitHub issues through the full cycle — one branch+PR per issue, serial by default, bounded parallelism only for disjoint issues — integrated via pr-review's **merge queue**; every review on fresh context, the merge policy confirmed at kickoff; Blocker/Major & contract merges collect in **your decision list**. | "run the cycle on #42", "work the backlog", "process issues #12–#18" |
 | [`wai-architecture-audit`](.claude/skills/wai-architecture-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **structural** audit: decoupling/modularity, drift, dead code + **non-obvious semantic redundancy / inconsistency / cross-surface dead-ends**, efficiency & container topology — as a trend over time. Measures against a persisted **architecture baseline**. | "audit the codebase", "is it decoupled", "find redundancy/drift" |
 | [`wai-security-audit`](.claude/skills/wai-security-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **adversarial** cyber-security sweep: attack-surface map + authZ/IDOR, secrets, injection (incl. prompt), SSRF, rate-limiting, session/token lifecycle, dependency CVEs, crypto/TLS, **token-economy fraud**, client attestation — posture as a trend. Report-only; redacted. | "security audit", "are we secure", "pentest", "check the attack surface", "dependency CVEs" |
-| [`wai-retro`](.claude/skills/wai-retro/SKILL.md) | Periodic | new — proving | **Artifact-derived retrospective** of the suite's own record, at a threshold (doctor's report-cadence advisory) — never from recall: the gate ledger's report extract, the run log and `git log` in; a dated, narrated report with raw counts beside every rate out; the judgment column stays human. Finishes by advancing the ledger's report marker so the cadence resets. Collaboration level gated until a question trace exists; publication to this repo only on explicit request, sanitized + pseudonymized (`fr-<12hex>`). | "run the retro", "retrospective", "what did the suite do this month", "cut a report" |
+| [`wai-retro`](.claude/skills/wai-retro/SKILL.md) | Periodic | proving — runs here and in one field repo | **Artifact-derived retrospective** of the suite's own record, at a threshold (doctor's report-cadence advisory) — never from recall: the gate ledger's report extract, the run log and `git log` in; a dated, narrated report with raw counts beside every rate out; the judgment column stays human. Finishes by advancing the ledger's report marker so the cadence resets. Collaboration level gated until a question trace exists; publication to this repo only on explicit request, sanitized + pseudonymized (`fr-<12hex>`). | "run the retro", "retrospective", "what did the suite do this month", "cut a report" |
 
 ## Personal skills
 
@@ -224,7 +260,7 @@ sits inside a checkout, it installs *from that checkout* — so the tree you rev
 you get, not whatever the remote's default branch holds.
 
 ```bash
-git clone --depth 1 --branch v0.3.3 https://github.com/woldinius/wai-skill-suite.git /tmp/wai
+git clone --depth 1 --branch v0.4.0 https://github.com/woldinius/wai-skill-suite.git /tmp/wai
 sh /tmp/wai/install.sh            # installs into the current directory
 rm -rf /tmp/wai
 ```
@@ -234,7 +270,7 @@ same version. (An earlier README once pinned to a tag before that tag existed �
 `tests/numbers-lint.sh` now checks every version reference here against `git tag`.)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.3.3/install.sh | SKILLS_REF=v0.3.3 sh
+curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.4.0/install.sh | SKILLS_REF=v0.4.0 sh
 ```
 
 What the script does — and deliberately does **not** do:
@@ -283,10 +319,14 @@ Everything below is the complete list of side effects; nothing else is written.
 |---|---|---|
 | Plugin install | the plugin cache only — **nothing in your repo** | on `/plugin install` |
 | `install.sh` | `.claude/skills/` + its own manifest and version stamp | when you run it |
-| `wai-init` | `docs/architecture/` (catalog, testing strategy, gate config; optional coordination config) | after asking its setup questions |
+| `wai-init` | `docs/architecture/` (catalog, testing strategy, gate config; optional coordination config); on approval, the suite's issue labels and — where the plan allows — the `main` ruleset, via `gh` | after asking its setup questions |
 | `wai-cicd` / `wai-mobile-release` | CI/deploy/release artifacts — **as visible proposals; the human commits** | when you invoke them |
+| Skill runs (all but `wai`, `wai-init`, `wai-learning-gap`) | one attendance row appended to `docs/architecture/run-log.md` via `run-log.sh` (`merge-gate.sh`, `backlog-scan.sh` and `dep-cve-scan.sh` write theirs themselves) | at hand-back (the three scripts: when they run) |
 | Lifecycle skills | `agent/**` branches, PRs, issues via `gh`, and appends to `docs/architecture/gate-ledger.md` | during normal work |
-| `wai-learning-gap` | `~/.claude/learning/` — personal, opt-in, never repo state | only for a human with a ledger |
+| `wai-architecture-audit` / `wai-security-audit` | a dated report in `docs/architecture/audits/` or `docs/architecture/security-audits/` (the architecture audit also persists its baseline under `docs/architecture/`; in a public repo the security report is class-level only), on an `agent/**` branch + PR (with any approved cleanups); unfixed findings filed as issues | when you invoke them |
+| `wai-retro` | `docs/architecture/retrospectives/<date>.md` on an `agent/**` branch + PR, plus one report-marker line appended to the gate ledger; on explicit request only, a sanitized extract for the suite repo, keyed by a gitignored HMAC key | when you invoke it (doctor advises it at the report threshold) |
+| Invocation hook (opt-in) | appends to `docs/architecture/invocation-log.md` | only after you add the hook to your settings |
+| `wai-learning-gap` | `~/.claude/learning/` — personal, opt-in, never repo state; plus a personal pre-commit hook in the configured hooks dir (never a committed one; an existing hook is kept as `pre-commit.pre-wai-learning-gap` and chained) and the planted gap in the working tree (never committed) | only for a human with a ledger |
 
 Nothing writes to `main` directly, nothing stores secrets, and no skill approves a PR.
 
@@ -359,7 +399,8 @@ Cross-skill rules live next to the router and are referenced by every relevant s
 Early versions of these skills grew inside product repos starting **December 2025** — a wild set
 of similar skills, drifting apart. On **2026-06-13** they were consolidated into one suite, and
 that suite has been **in daily use in three commercial projects plus prototypes** since — by the
-author's own account, not yet independently evidenced (Q7). This
+author's own account, not yet independently evidenced (Q7); one field repo's logs measured its
+usage as of 2026-09-06 (Q9). This
 repository is a **curated re-publication** of that work: real milestone dates, cleaned content,
 and the dated evidence — [empirics](docs/empirics.md),
 [field reports](docs/field-reports/), [ADRs](docs/adr/), and the audits (returning from the
@@ -368,8 +409,8 @@ tried and dropped: [docs/history.md](docs/history.md).
 
 **Built with AI, deliberately.** A range of AI models worked on this suite — whichever was most
 capable for the problem at hand, including on these very documents. That is a statement of
-method, not a confession: building today without the most capable model for the problem is
-closer to negligence than to rigor. Using AI is not the weakness — using it without knowing
+method, not a confession: we count working with the most capable model for the problem as part
+of rigor. Using AI is not the weakness — using it without knowing
 what it must never decide is. That knowledge is this repo's actual thesis: the model works
 everywhere here, and the merge verdict still belongs to a script and a human
 ([ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)).
@@ -393,7 +434,9 @@ The claims above are checkable, and the failures are part of the record on purpo
   prototype and this repo itself, defects of the suite included. (No count here: it went
   stale twice in two days; the directory listing is the number.) **If you run the suite:** the
   most interesting report is the one where it was **wrong** — the ledger has a column for that,
-  and [`TEMPLATE.md`](docs/field-reports/TEMPLATE.md) is the paste-sized way to send it.
+  and [`TEMPLATE.md`](docs/field-reports/TEMPLATE.md) is the paste-sized way to send it. The
+  dataset *In the field* summarizes:
+  [six weeks, 259 gate verdicts](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md).
 - [`docs/adr/`](docs/adr/) — the four decisions that shaped the architecture, with the
   cases where the scripts lost.
 - `docs/architecture/audits/` — the suite auditing itself with its own audit skill (first
@@ -426,7 +469,7 @@ install.sh                                       # idempotent installer (inject/
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
 tests/                                           # 475 cases for the deciding scripts — founded on bugs that shipped
-docs/                                        # history, empirics, field reports, ADRs, audits, catalog, open questions
+docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, catalog, open questions, known criticism, publication rule, learnings
 ```
 
 > After running `install.sh` in a target project, `.claude/.wai-suite-manifest` records the
