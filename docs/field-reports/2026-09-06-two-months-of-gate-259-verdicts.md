@@ -28,6 +28,10 @@ re-measured here.)*
 > checkout) is what `invocation-log.sh --snippet` now addresses — it names linked worktrees as the
 > condition for a global hook (#68, PR #72). Finding 3's other half — a tag on a MOOT row, which
 > has no rate either — is #69 (PR #73), and the ledger header clause it implies is #74.
+>
+> **Wording note (2026-09-15):** two sentences about the outcome column (finding 3 and *What this
+> report does not answer*) were rephrased to state the measured fact without judging how the
+> column was kept; no number and no finding changed.
 
 ---
 
@@ -120,7 +124,8 @@ required status checks*), carry the tag `fn`. By the ledger's definition (`fn` =
 have blocked*) a NO-GO cannot be one; the three are either early mis-tags or meant *"blocked for
 the wrong reason"*. They are not counted as slips above, and the zero stands under this reservation.
 `gate-stats.sh` prints them as a data-quality line since v0.2.0 (PR #17, 2026-08-12); the balance
-notes that **the column that matters most was the one maintained least carefully**. (The 2026-08-12
+notes that **the column that matters most is also the one where tagging needed correction** — the
+reason it is worth a regular review. (The 2026-08-12
 report gave `test=IN_PROGRESS` as these rows' reason; the balance gives the required-checks reason —
 a question for the source, not re-measured here.)
 
@@ -190,7 +195,8 @@ precision, zero slips, and eleven rows saying *ok, besser GO*.
 - How much suite really ran is an estimate: the denominator is reliable only since 2026-09-03; the
   87 invocations are a floor.
 - Whether the zero false negatives hold, only time tells — an `fn` often surfaces weeks later, and
-  the three mis-tagged rows show that the column it depends on was the least carefully kept.
+  the three mis-tagged rows show that the column it depends on is the one most worth a regular
+  review.
 - Whether friction was the reason or the occasion: the next balance should measure findings per
   PR before and after the switch-off.
 

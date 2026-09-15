@@ -4,6 +4,25 @@ Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 
+## [Unreleased]
+
+### Changed
+
+- **The README shows the field record.** A new *In the field* section summarizes the largest
+  dataset so far — one field repo's two months: no GO later judged wrong over 81 judged GO
+  verdicts, 90.5 % of blocks right, twelve of fourteen false alarms from one root that 0.4.0
+  fixed, and the owner's decision to switch the gate role off before release while the review
+  stays mandatory — dated, and linked to its
+  [field report](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md). Stale claims
+  corrected on the way: the field repo is no longer described as a game server without CI;
+  *Field exposure* and Q7 no longer say that nothing measures usage or that every evidence repo
+  shares the author's product shape; the side-effects table, introduced as the complete list,
+  now names the run log, the retrospectives and the opt-in invocation log; and the install
+  examples pin `v0.4.0` instead of `v0.3.3`, so a pinned install gets the classifier and SIGPIPE
+  fixes. The *Built with AI* paragraph no longer calls building without the most capable model
+  negligence, and two sentences in that field report that judged how its outcome column was kept
+  now state the measured fact, with a dated note.
+
 ## [0.4.0] — 2026-09-14
 
 The field's second dataset turned into five fixes: the classifier stops reading mentions as acts,
