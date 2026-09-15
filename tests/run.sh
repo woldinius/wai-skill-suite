@@ -504,8 +504,9 @@ assert "gate-stats: a nil tag is reported as its own count" 0 "$rc" "$out" '1 ni
 assert "gate-stats: an unmatched tag is counted AND named, never silently dropped" 0 "$rc" "$out" \
   '1 unmatched tag\(s\): need inspection'
 
-# A RECONSTRUCTED ROW (`LOST`). Field ledgers rebuild a lost row from the verdict the PR comment
-# still shows and tag it LOST (the 2026-09-06 balance carried four and kept them out of its matrix).
+# A RECONSTRUCTED ROW (`LOST`). The 2026-09-06 balance carried four rows marked LOST, each with a
+# GO/NO-GO verdict, and kept them out of its matrix. By the suite's definition `lost` marks a row
+# reconstructed after its original was lost — verdict known from the PR comment, outcome never judged.
 # It is a known class: its own line, never "unmatched", and in NO rate — not fp/fn, not coverage.
 # `manual` stays what it was: an unmatched tag, named.
 N=$((N+1)); LOSTF="$TMP/lost$N.md"
@@ -661,9 +662,10 @@ printf 'Their catalog holds `PAY-9`; ours does not.\n' > "$D/docs/learnings/fiel
 out="$(lint)"; rc=$?
 assert "a verbatim field report is a FOREIGN ID space and is not linted" 0 "$rc" "$out" 'VERDICT: OK'
 
-# CHECK 4a SEES THE CATALOG AND THE ROOT AGENT FILES. A field catalog renumbered `IOS-2` →
-# `CLIENT-2`; had `CLIENT-2` not existed, nothing would have failed — 4a read docs/ only. The
-# catalog's own cross-references and CLAUDE.md / AGENTS.md are consumers too.
+# CHECK 4a SEES THE CATALOG AND THE ROOT AGENT FILES. Reported from a field repo (2026-08-31), not
+# yet written up here: after the suite retired `IOS-2` → `CLIENT-2` in 0.3.1, that repo re-pointed
+# its citations, and nothing would have failed had `CLIENT-2` not existed in its tailored catalog —
+# 4a read docs/ only. The catalog's own cross-references and CLAUDE.md / AGENTS.md are consumers too.
 # The fixture catalog ENDS in `## Retired IDs`, so an appended line would sit inside the exempt
 # section and prove nothing: a live dimension goes in before that heading.
 before_retired() {   # $1 = one markdown line, inserted above `## Retired IDs` in the fixture catalog
@@ -687,6 +689,12 @@ lfix; grep -v 'SEC-8' "$D/docs/architecture/quality-attributes.md" > "$D/c" && m
 before_retired '- **SEC-100 · Local** — narrows `SEC-8` to one tenant. *Red Flag:* b.'
 out="$(lint)"; rc=$?
 assert "  · a catalog cross-reference to a baseline-only ID points at the master → OK" 0 "$rc" "$out" 'VERDICT: OK' 'SEC-8'
+# THE TRADE-OFF, pinned: master-ok also covers the repo's OWN dimensions, so the re-point above to a
+# tailored-away ID passes inside the catalog — while the SAME citation in docs/ fails.
+printf 'The plan narrows `SEC-8`.\n' > "$D/docs/plan.md"
+out="$(lint)"; rc=$?
+assert "  · the same tailored-away citation in docs/ → adopt-or-fix FAIL (the documented trade-off)" 1 "$rc" "$out" \
+  'cited in docs/, defined in the baseline, absent from YOUR catalog: SEC-8' "catalog's own cross-references.*SEC-8"
 lfix; printf '\n## Notes\n\nSee `PAY-7`.\n' >> "$D/docs/architecture/quality-attributes.md"
 out="$(lint)"; rc=$?
 assert "  · a section after '## Retired IDs' is read again → its dangling citation FAILS" 1 "$rc" "$out" \
@@ -1125,9 +1133,10 @@ if grep -q 'advisory (not gating): EX-SEC' "$D/docs/architecture/gate-ledger.md"
 else bad "  · and the ledger row carries it" "$(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
 
 # UN-ANCHORING WAS SILENT. Which families a citation decides for follows the SHAPE of the
-# CONTRACT_PATHS globs, so removing one path can un-anchor a family: in a field repo
-# `server/schema.js` was the only *schema* path, and when it went, EX-API stopped gating with
-# nothing saying so. The classifier now prints ANCHORED-DOMAINS on every classified run. Same diff
+# CONTRACT_PATHS globs, so removing one path can un-anchor a family. Reported from a field repo
+# (2026-08-31), not yet written up here: `server/schema.js` was its only *schema* path, and when it
+# went, EX-API stopped gating with nothing saying so. The classifier now prints ANCHORED-DOMAINS on
+# every default-mode run (and in the --autonomy blocklist HELD branches). Same diff
 # (an API- citation in an added code line), the conf with and without the schema path:
 edfix; printf 'src/api/handler.ts\n' > "$ED_D/files"
 printf '+  // API-2: the contract is versioned\n' > "$ED_D/diff"

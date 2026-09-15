@@ -135,7 +135,7 @@ PERIODIC (after a few features/refactors, or on security triggers)
   at all, so read nothing as clean. Both at once exits 1, and both summary lines print. It reports
   presence now; staleness of an already-generated artifact (an old `ci.yml`) still needs a
   `wai-cicd` re-run.
-- **Want the run log's missing denominator — how often skills actually START, not just hand back?**
+- **Want the start log — how often skills actually START, not just hand back?**
   → opt in, per developer, to the invocation hook: `sh scripts/invocation-log.sh --snippet` prints
   the `PostToolUse` block for your **`.claude/settings.local.json`** (never `settings.json` — a
   committed hook would switch it on repo-wide; personal state never becomes repo state). The hook

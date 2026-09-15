@@ -58,10 +58,12 @@ number followed the definition the day this landed.
 
 ## A reconstructed row has no outcome
 
-Field ledgers lose rows — to a squash race, to a vendored-copy update — and the repo that lost
-them rebuilds the row from the verdict the PR comment still shows, tagged `LOST`. The field
-balance of 2026-09-06 ([report](../field-reports/2026-09-06-two-months-of-gate-259-verdicts.md))
-carried four such rows and kept them out of its confusion matrix. This counter reported them as
+Field ledgers lose rows — to a squash race, to a vendored-copy update. The field balance of
+2026-09-06 ([report](../field-reports/2026-09-06-two-months-of-gate-259-verdicts.md)) carried four
+rows marked `LOST`, each with a GO/NO-GO verdict, and kept them out of its confusion matrix; the
+report does not say where their verdicts came from. The suite **defines** the tag: `lost` marks a
+row reconstructed after its original row was lost, its verdict known from the PR comment, its
+outcome never judged. This counter reported them as
 *unmatched* — a data-quality alarm for a row whose state is known and deliberate.
 
 A reconstructed row has a verdict (the script did emit it once) but no judged outcome: the tag

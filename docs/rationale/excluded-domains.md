@@ -138,10 +138,11 @@ update overwrites — with one red test as the only brake. That is why the chang
 
 The citation dial makes a family's citations decide only where the family is anchored, and
 anchoring is derived from the SHAPE of the `CONTRACT_PATHS` globs (and a non-empty
-`ERASURE_PATHS`). That makes the set a side effect of an unrelated edit: in a field repo,
-`server/schema.js` was the only `*schema*` path in `merge-gate.conf`; when it was removed from the
-list, `EX-API` stopped being anchored, every `API-` citation in added code turned advisory, and
-nothing said so — the verdicts simply changed character.
+`ERASURE_PATHS`). That makes the set a side effect of an unrelated edit. Reported from a field repo
+(2026-08-31), not yet written up here: `server/schema.js` was the only `*schema*` path in its
+`merge-gate.conf`; when it was removed from the list, `EX-API` stopped being anchored, every `API-`
+citation in added code turned advisory, and nothing said so — the verdicts simply changed
+character.
 
 So the set is now output. Every classified default-mode run prints `ANCHORED-DOMAINS: <tags>` (or
 `ANCHORED-DOMAINS: none`) beside `EXCLUDED-DOMAINS:` / `ADVISORY-DOMAINS:`; the `--autonomy` HELD

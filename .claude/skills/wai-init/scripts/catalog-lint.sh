@@ -191,6 +191,9 @@ FOUND_4A=0
 # CATALOG's own prose only — the variant banner says so ("prose may still reference an ID that only
 # the platform master carries"), and wai-init lints right after copying a variant. Docs and agent
 # files still get the adopt-or-fix finding. An ID that exists NOWHERE fails for every source.
+# THE TRADE-OFF, stated: master-ok covers the repo's OWN dimensions too, so a re-point to an ID the
+# catalog tailored away passes inside the catalog, while the same citation fails in docs/ (both
+# pinned in tests/run.sh). Why: docs/rationale/catalog-lint.md § The catalog and the agent files are consumers too
 check_4a() {   # $1 = where the citations sit (named in the finding) · $2 = cited IDs, one per line
   _adopt=""; _drift=""
   for c in $2; do

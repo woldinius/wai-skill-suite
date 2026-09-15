@@ -13,8 +13,8 @@ This script was decided in issue #29 on 2026-08-18. The run log's two tiers were
 field: the script-written tier logged 9 of 9; every prompt-written tier had gaps —
 architecture-audit 0 rows with a committed report, learning-gap 0 rows with a ledger entry,
 implementation 4 of 5. Self-logging that depends on the model is not a measurement. The fix is
-the two artifacts the script's header names — this mechanical denominator with no outcome column,
-and run-log.md as the model-written numerator — never merged.
+the two artifacts the script's header names — this mechanical start log with no outcome column,
+and run-log.md as the model-written subject record — never merged.
 
 ## A crafted skill name forged denominator rows
 

@@ -193,7 +193,8 @@ label can never *suppress* a path or diff match.
 where its family is **anchored** — the repo declares paths whose shape classifies into it
 (`EX-GDPR` anchors on a non-empty `ERASURE_PATHS`). Unanchored, the citation is **reported as
 advisory** (`ADVISORY-DOMAINS:` in the classifier's output) but does not gate. Which families are
-anchored is itself printed on every classified run — `ANCHORED-DOMAINS: EX-GDPR EX-PAY …` or
+anchored is itself printed on every default-mode run and in the `--autonomy` blocklist HELD
+branches — `ANCHORED-DOMAINS: EX-GDPR EX-PAY …` or
 `ANCHORED-DOMAINS: none` — and `merge-gate.sh` repeats it as one terminal line (*citations decide
 here: …*, never in the ledger row), because removing a path from `CONTRACT_PATHS` can un-anchor a
 family with nothing else saying so. Where a repo

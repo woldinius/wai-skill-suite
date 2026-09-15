@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# invocation-log.sh — the mechanical DENOMINATOR of skill runs.
+# invocation-log.sh — the mechanical START LOG of skill runs.
 #
 # Self-logging that depends on the model is not a measurement, so there are two artifacts, NEVER
 # merged:
@@ -7,7 +7,7 @@
 #   invocations (THIS file's output)  — every wai-* skill invocation, written MECHANICALLY by a
 #                                        harness hook. No outcome column, ever: it counts starts,
 #                                        it judges nothing.
-#   run-log.md (run-log.sh)           — the model-written numerator, at hand-back, with outcome.
+#   run-log.md (run-log.sh)           — the model-written subject record, at hand-back, with outcome.
 #
 # The two count different units — a START here, a SUBJECT handled there — so retro-compliance.sh
 # prints them side by side per skill and never as a rate. A merged artifact would be worse than
@@ -92,7 +92,7 @@ if [ ! -f "$LOG" ]; then
 # Invocation log
 
 Every row is a wai-* skill INVOCATION, appended mechanically by a harness hook the developer
-opted into (`invocation-log.sh --snippet`). This is the **denominator**: it counts starts and
+opted into (`invocation-log.sh --snippet`). This is the **start log**: it counts starts and
 judges nothing — there is deliberately **no outcome column**, and there never will be. The
 model-written record with outcomes is `run-log.md`, one row per subject handled. The two count
 different units — a start here, a subject there — so `retro-compliance.sh` prints them side by

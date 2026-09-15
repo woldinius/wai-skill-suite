@@ -1621,7 +1621,7 @@ assert "  · no percentage is derived from the pair" 0 "$rc_" "$out" \
   'starts vs. subject rows:' '(starts vs\. subject rows|two units, not a rate):.*%'
 rcfix; out="$(rc)"; rc_=$?
 assert "no invocation log → the opt-in is NAMED; absence never reads as nothing-ran" 0 "$rc_" "$out" \
-  'invocations \(hook\): not installed.*never that nothing ran'
+  'invocations \(hook\): not installed — the start log is opt-in.*never that nothing ran'
 
 # gh PRESENT BUT FAILING — fail closed to the git path, and SAY the degradation happened. A gh that
 # errors must never silently become "nothing landed": that is the comfortable answer, and it is the

@@ -44,7 +44,8 @@ verdict, a review can run the gate twice, and one session can review several PRs
 balance of 2026-09-06 ([report](../field-reports/2026-09-06-two-months-of-gate-259-verdicts.md),
 finding 5) measured 5.3 run-log rows per PR-review invocation and read part of that as
 legitimate — one row per subject — which is exactly what a rate over the pair cannot show: under
-the old label `wai-implementation invoked 3 · logged 15` read like a 500 % compliance.
+the old label, a line such as `wai-implementation invoked 3 · logged 15` (an illustration, not a
+measured number) would read like a 500 % compliance.
 
 So the line is now `starts vs. subject rows`, each count carries its unit, one sentence says the
 two are not a rate, and no percentage is derived from them. Whether a skill ran without leaving

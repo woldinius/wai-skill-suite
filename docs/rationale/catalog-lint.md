@@ -118,9 +118,10 @@ check that implies coverage it structurally cannot have is worse than a red one.
 Check 4a resolved the citations in `docs/` and skipped two other places that cite IDs: the live
 catalog itself (a dimension that says "Generalizes `PAY-1`" is a citation like any other) and the
 agent instruction files at the root, `CLAUDE.md` and `AGENTS.md`, which every session reads before
-it reads anything else. A field catalog renumbered `IOS-2` → `CLIENT-2` and re-pointed its own
-cross-references; the check would have passed just as quietly had `CLIENT-2` not existed — the
-near-miss that motivated this.
+it reads anything else. The near-miss that motivated this was reported from a field repo
+(2026-08-31), not yet written up here: after the suite retired `IOS-2` → `CLIENT-2` in 0.3.1, that
+repo re-pointed its citations, and the check would have passed just as quietly had `CLIENT-2` not
+existed in its tailored catalog.
 
 So 4a now reads both, with two carve-outs:
 
@@ -137,10 +138,20 @@ platform master carries; such a reference points at the master", and `wai-init` 
 the copy. Measured before this rule: the `web` variant cites four master-only IDs in its own prose
 and `minimum` three — every fresh install at those tiers would have gone red on text the suite
 declares correct. The near-miss this section exists for is the other case, a cross-reference to an
-ID that exists nowhere, and that fails. Each finding names where the citation sits. **First-run consequence:** an existing repo whose
-catalog or root agent file already cites an ID that resolves nowhere turns red on the first run
-after the update. That is intended — the citation was already dangling; the lint stopped not
-seeing it.
+ID that exists nowhere, and that fails. Each finding names where the citation sits.
+
+**The trade-off, stated.** `master-ok` rests on the banner, which excuses prose that shipped with
+the variant — but it covers the repo's own dimensions too. So a re-point to an ID the repo's catalog
+tailored away (a local dimension that "narrows `SEC-8`" where `SEC-8` was dropped) passes inside
+the catalog, while the same citation in `docs/` fails as adopt-or-fix. Both halves are pinned in
+`tests/run.sh`. The tighter alternative — accept only the master-only IDs the shipped variants
+themselves cite — was not taken here.
+
+**First-run consequence:** an existing repo turns red on the first run after the update wherever
+its catalog or a root agent file cites an ID that resolves nowhere, or `CLAUDE.md` / `AGENTS.md`
+cites an ID the baseline defines but the repo's catalog tailored away (adopt it via `wai-init`, or
+fix the citation) — the second is the likelier red. That is intended: either citation pointed at
+nothing in this repo's catalog; the lint stopped not seeing it.
 
 The shipped baseline was the first file this caught: its preamble told authors to mint new IDs
 "e.g. MAINT-10" — backticked there, so a citation to an ID that exists nowhere, and an example that

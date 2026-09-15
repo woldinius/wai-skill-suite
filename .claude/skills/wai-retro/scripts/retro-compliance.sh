@@ -144,7 +144,7 @@ if [ -f "$ILOG" ] && [ -r "$ILOG" ]; then
     echo "    two units, not a rate: an invocation row counts one start, a run-log row counts one subject handled (merge-gate.sh writes one per verdict) — neither is the other's denominator, so no share is printed."
   fi
 else
-  echo "  invocations (hook): not installed — the denominator is opt-in (sh .claude/skills/wai/scripts/invocation-log.sh --snippet); absence means the hook is off, never that nothing ran"
+  echo "  invocations (hook): not installed — the start log is opt-in (sh .claude/skills/wai/scripts/invocation-log.sh --snippet); absence means the hook is off, never that nothing ran"
 fi
 
 # ── gate-ledger verdicts in the period ───────────────────────────────────────────────────────────
