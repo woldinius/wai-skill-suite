@@ -85,8 +85,9 @@ dated; the numbers are the repo's, true as of that date):
   were right** (134 of 148).
 - **Where the suite was wrong, it changed.** Twelve of the fourteen false alarms had one root, by
   the balance's count (its itemised table attributes eleven): the classifier read *mentions* of a
-  domain as *acts*. The field's findings became fixes in
-  [0.4.0](CHANGELOG.md#040--2026-09-14) — the classifier (#67), the gate's book order (#64), the
+  domain as *acts*. Findings from the field became fixes in
+  [0.4.0](CHANGELOG.md#040--2026-09-14) — the classifier (#67), the gate's book order (#64, from a
+  later field report), the
   ledger note (#66), rows that exist only in a worktree (#68) and the MOOT count (#69) — and the
   report shipped with them.
 - **The counterproof earned its place:** in two PRs of 2026-09-05/06, 3 of 30 counterproofs — a
@@ -318,14 +319,14 @@ Everything below is the complete list of side effects; nothing else is written.
 |---|---|---|
 | Plugin install | the plugin cache only — **nothing in your repo** | on `/plugin install` |
 | `install.sh` | `.claude/skills/` + its own manifest and version stamp | when you run it |
-| `wai-init` | `docs/architecture/` (catalog, testing strategy, gate config; optional coordination config) | after asking its setup questions |
+| `wai-init` | `docs/architecture/` (catalog, testing strategy, gate config; optional coordination config); on approval, the suite's issue labels and — where the plan allows — the `main` ruleset, via `gh` | after asking its setup questions |
 | `wai-cicd` / `wai-mobile-release` | CI/deploy/release artifacts — **as visible proposals; the human commits** | when you invoke them |
 | Skill runs (all but `wai`, `wai-init`, `wai-learning-gap`) | one attendance row appended to `docs/architecture/run-log.md` via `run-log.sh` (`merge-gate.sh`, `backlog-scan.sh` and `dep-cve-scan.sh` write theirs themselves) | at hand-back (the three scripts: when they run) |
 | Lifecycle skills | `agent/**` branches, PRs, issues via `gh`, and appends to `docs/architecture/gate-ledger.md` | during normal work |
-| `wai-architecture-audit` / `wai-security-audit` | a dated report in `docs/architecture/audits/` or `docs/architecture/security-audits/` (the architecture audit also persists its baseline under `docs/architecture/`; in a public repo the security report is class-level only), on an `agent/**` branch + PR | when you invoke them |
-| `wai-retro` | `docs/architecture/retrospectives/<date>.md` on an `agent/**` branch + PR, plus one report-marker line appended to the gate ledger | when you invoke it (doctor advises it at the report threshold) |
+| `wai-architecture-audit` / `wai-security-audit` | a dated report in `docs/architecture/audits/` or `docs/architecture/security-audits/` (the architecture audit also persists its baseline under `docs/architecture/`; in a public repo the security report is class-level only), on an `agent/**` branch + PR (with any approved cleanups); unfixed findings filed as issues | when you invoke them |
+| `wai-retro` | `docs/architecture/retrospectives/<date>.md` on an `agent/**` branch + PR, plus one report-marker line appended to the gate ledger; on explicit request only, a sanitized extract for the suite repo, keyed by a gitignored HMAC key | when you invoke it (doctor advises it at the report threshold) |
 | Invocation hook (opt-in) | appends to `docs/architecture/invocation-log.md` | only after you add the hook to your settings |
-| `wai-learning-gap` | `~/.claude/learning/` — personal, opt-in, never repo state; plus a personal pre-commit hook in the configured hooks dir (never a committed one) and the planted gap in the working tree (never committed) | only for a human with a ledger |
+| `wai-learning-gap` | `~/.claude/learning/` — personal, opt-in, never repo state; plus a personal pre-commit hook in the configured hooks dir (never a committed one; an existing hook is kept as `pre-commit.pre-wai-learning-gap` and chained) and the planted gap in the working tree (never committed) | only for a human with a ledger |
 
 Nothing writes to `main` directly, nothing stores secrets, and no skill approves a PR.
 

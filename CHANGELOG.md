@@ -19,8 +19,10 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   the way: *Surfaces* now names the game repo behind that dataset next to the no-CI prototype it
   already named; *Field exposure* and Q7 no longer say that nothing measures usage or that every
   evidence repo shares the author's product shape; the side-effects table, introduced as the
-  complete list, now is one — the run log for every skill run, the audit reports, the
-  retrospectives, the opt-in invocation log and the learning-gap hook; and the install examples
+  complete list, now is one — the run log for every skill run but `wai`, `wai-init` and
+  `wai-learning-gap`, the audit reports and the findings they file, `wai-init`'s labels and
+  ruleset, the retrospectives and the retro's on-request extract, the opt-in invocation log, and
+  the learning-gap hook; and the install examples
   pin `v0.4.0` instead of `v0.3.3`, so a pinned install gets the classifier and SIGPIPE fixes. The
   *Built with AI* paragraph no longer calls work without the most capable model negligence, and
   four passages in that field report that judged the people involved now state the measured fact,

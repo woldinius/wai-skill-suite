@@ -22,7 +22,8 @@ landed here as the dated record, translated on intake. Numbers are the repo's; n
 re-measured here.)*
 
 > **Outcome note (added on intake — the findings below keep their original voice, except the
-> passages the wording note names, and are true as of the window):** finding 1 (the citation channel, 12 of 14 false positives) is the classifier
+> passages the wording note names, and are true as of the window):** finding 1 (the citation
+> channel, 12 of 14 false positives) is the classifier
 > fix of #67 (PR #71) — the citation scan decides from added code lines only, prose is advisory,
 > title and body are no longer read. Finding 4's first cause (a hook that exists only in the main
 > checkout) is what `invocation-log.sh --snippet` now addresses — it names linked worktrees as the
