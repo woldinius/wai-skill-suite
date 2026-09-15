@@ -49,7 +49,7 @@ Add to .claude/settings.local.json (per-developer opt-in — NOT settings.json):
   }
 }
 Why the repo-local file: the command path is repo-relative and the log it writes is THIS repo's
-denominator, so the hook belongs where the repo is — settings.local.json is per developer and
+start log, so the hook belongs where the repo is — settings.local.json is per developer and
 never committed. The gap that comes with it: an untracked file exists only in the checkout where
 you wrote it, so a linked worktree (git worktree add) has no hook and its sessions log nothing —
 a field repo counted about a fifth of its invocations that way until it moved the hook. So:
@@ -71,11 +71,11 @@ printf '%s' "$IN" | grep -q '"tool_name"[[:space:]]*:[[:space:]]*"Skill"' || exi
 SKILL="$(printf '%s' "$IN" | grep -o '"skill"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"skill"[[:space:]]*:[[:space:]]*"//; s/"$//')"
 # Table-safe, like run-log.sh's cell(): the name is the ONE field this row takes from the payload.
 # Pipes become '/', whitespace collapses, 80 chars on a word boundary with a visible cut.
-# Why: docs/rationale/invocation-log.md § A crafted skill name forged denominator rows
+# Why: docs/rationale/invocation-log.md § A crafted skill name forged start-log rows
 SKILL="$(printf '%s' "$SKILL" | tr '\n' ' ' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^ *//; s/ *$//' \
   | awk '{ if (length($0) <= 80) print; else { s = substr($0, 1, 80); sub(/ [^ ]*$/, "", s); print s "…" } }')"
 case "$SKILL" in
-  wai|wai-*) : ;;                       # only the suite's own skills — a foreign skill is not our denominator
+  wai|wai-*) : ;;                       # only the suite's own skills — a foreign skill does not belong in our start log
   *) exit 0 ;;
 esac
 

@@ -16,9 +16,9 @@ implementation 4 of 5. Self-logging that depends on the model is not a measureme
 the two artifacts the script's header names — this mechanical start log with no outcome column,
 and run-log.md as the model-written subject record — never merged.
 
-## A crafted skill name forged denominator rows
+## A crafted skill name forged start-log rows
 
 The skill name is the one field a row takes from the hook payload, and a name carrying '|' forged
 extra columns — a crafted skill name minted rows with a fake timestamp and skill, corrupting the
-very denominator this log exists to make trustworthy. Hence the table-safe sanitisation
+very start count this log exists to make trustworthy. Hence the table-safe sanitisation
 (run-log.sh's cell() shape) before the append.
