@@ -664,8 +664,9 @@ assert "a verbatim field report is a FOREIGN ID space and is not linted" 0 "$rc"
 
 # CHECK 4a SEES THE CATALOG AND THE ROOT AGENT FILES. Reported from a field repo (2026-08-31), not
 # yet written up here: after the suite retired `IOS-2` → `CLIENT-2` in 0.3.1, that repo re-pointed
-# its citations, and nothing would have failed had `CLIENT-2` not existed in its tailored catalog —
-# 4a read docs/ only. The catalog's own cross-references and CLAUDE.md / AGENTS.md are consumers too.
+# its catalog's cross-references, and a re-point to an ID that exists nowhere would have passed —
+# 4a read docs/ only. (A tailored-away target still passes inside the catalog: the master-ok
+# trade-off, pinned below.) The catalog's own cross-references and CLAUDE.md / AGENTS.md are consumers too.
 # The fixture catalog ENDS in `## Retired IDs`, so an appended line would sit inside the exempt
 # section and prove nothing: a live dimension goes in before that heading.
 before_retired() {   # $1 = one markdown line, inserted above `## Retired IDs` in the fixture catalog

@@ -32,16 +32,17 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   It resolved only `docs/`; a catalog dimension citing another ID ("Generalizes `PAY-1`") and
   `CLAUDE.md` / `AGENTS.md` at the repo root went unchecked. Reported from a field repo
   (2026-08-31), not yet written up here: after the suite retired `IOS-2` → `CLIENT-2` in 0.3.1,
-  that repo re-pointed its citations, and nothing would have failed had `CLIENT-2` not existed in
-  its tailored catalog. The catalog's
-  `## Retired IDs` section stays exempt (it cites retired IDs by design), and a missing
+  that repo re-pointed its catalog's cross-references. A re-point to an ID that exists nowhere
+  now fails; one to an ID the catalog tailored away (as `CLIENT-2` could have been) still passes
+  inside the catalog — the `master-ok` trade-off — and fails in `CLAUDE.md` / `AGENTS.md`. The
+  catalog's `## Retired IDs` section stays exempt (it cites retired IDs by design), and a missing
   `CLAUDE.md` or `AGENTS.md` is not an error. In the catalog's own prose an ID only the baseline
   defines is a pointer at the master, as the variant banner documents, and passes; an ID that
   exists nowhere fails. **Upgrade consequence: this can turn an existing
   repo's catalog-lint red on its first run** — wherever its catalog or a root agent file cites an
   ID that resolves nowhere, or `CLAUDE.md` / `AGENTS.md` cites an ID the baseline defines but the
-  repo's catalog tailored away (adopt it via wai-init, or fix the citation); the second is the
-  likelier red. That is intended: either citation pointed at nothing in this repo's catalog, and
+  repo's catalog tailored away (adopt it via wai-init, or fix the citation); we expect the second
+  to be the likelier red. That is intended: either citation pointed at nothing in this repo's catalog, and
   the finding names the file it sits in. The first file it caught was the shipped baseline itself,
   whose preamble told authors to mint new IDs "e.g. `MAINT-10`" — an ID that exists nowhere, and
   an example that contradicted check 7's mint-at-100 rule; it now reads "minted at ≥ 100
@@ -54,7 +55,8 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   …* — not in the ledger row. A citation decides only for an anchored family, and anchoring follows
   the shape of the `CONTRACT_PATHS` globs, so removing a path could silently un-anchor one.
   Reported from a field repo (2026-08-31), not yet written up here: `server/schema.js` was its
-  only `*schema*` path, and when it went, `EX-API` stopped gating with nothing saying so. Rationale: `docs/rationale/excluded-domains.md` § *Un-anchoring
+  only `*schema*` path, and when it went, `EX-API` stopped gating with nothing saying so.
+  Rationale: `docs/rationale/excluded-domains.md` § *Un-anchoring
   was silent*.
 
 ### Fixed
@@ -70,7 +72,8 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 - **`gate-stats.sh` recognises `lost`.** The 2026-09-06 balance carried four rows marked `LOST`,
   each with a GO/NO-GO verdict; gate-stats reported them as unmatched tags. By the suite's
   definition, `lost` marks a row reconstructed after its original row was lost — the verdict is
-  known from the PR comment, the outcome was never judged. `lost` (2-char prefix, case-insensitive) is now a known class — counted on its own
+  known from the PR comment, the outcome was never judged. `lost` (2-char prefix,
+  case-insensitive) is now a known class — counted on its own
   line as *reconstructed*, in no rate (not fp/fn, not calibration, not outcome coverage). `manual`
   and every other unknown tag stay unmatched and named. The ledger header `merge-gate.sh` writes
   for a new ledger documents the tag; existing ledgers keep their header. Rationale:

@@ -120,8 +120,10 @@ catalog itself (a dimension that says "Generalizes `PAY-1`" is a citation like a
 agent instruction files at the root, `CLAUDE.md` and `AGENTS.md`, which every session reads before
 it reads anything else. The near-miss that motivated this was reported from a field repo
 (2026-08-31), not yet written up here: after the suite retired `IOS-2` → `CLIENT-2` in 0.3.1, that
-repo re-pointed its citations, and the check would have passed just as quietly had `CLIENT-2` not
-existed in its tailored catalog.
+repo re-pointed its catalog's cross-references. A re-point to an ID that exists nowhere would
+have passed just as quietly and now fails; one to an ID the catalog tailored away (as `CLIENT-2`
+could have been) still passes inside the catalog — the `master-ok` trade-off — and fails in
+`CLAUDE.md` / `AGENTS.md`.
 
 So 4a now reads both, with two carve-outs:
 
@@ -150,7 +152,7 @@ themselves cite — was not taken here.
 **First-run consequence:** an existing repo turns red on the first run after the update wherever
 its catalog or a root agent file cites an ID that resolves nowhere, or `CLAUDE.md` / `AGENTS.md`
 cites an ID the baseline defines but the repo's catalog tailored away (adopt it via `wai-init`, or
-fix the citation) — the second is the likelier red. That is intended: either citation pointed at
+fix the citation) — we expect the second to be the likelier red. That is intended: either citation pointed at
 nothing in this repo's catalog; the lint stopped not seeing it.
 
 The shipped baseline was the first file this caught: its preamble told authors to mint new IDs
