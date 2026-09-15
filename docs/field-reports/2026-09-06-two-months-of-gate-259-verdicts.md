@@ -21,17 +21,18 @@ The balance reads the distribution as reliable and the absolute counts as an und
 landed here as the dated record, translated on intake. Numbers are the repo's; nothing was
 re-measured here.)*
 
-> **Outcome note (added on intake — the findings below keep their original voice, and are true as
-> of the window):** finding 1 (the citation channel, 12 of 14 false positives) is the classifier
+> **Outcome note (added on intake — the findings below keep their original voice, except the
+> passages the wording note names, and are true as of the window):** finding 1 (the citation channel, 12 of 14 false positives) is the classifier
 > fix of #67 (PR #71) — the citation scan decides from added code lines only, prose is advisory,
 > title and body are no longer read. Finding 4's first cause (a hook that exists only in the main
 > checkout) is what `invocation-log.sh --snippet` now addresses — it names linked worktrees as the
 > condition for a global hook (#68, PR #72). Finding 3's other half — a tag on a MOOT row, which
 > has no rate either — is #69 (PR #73), and the ledger header clause it implies is #74.
 >
-> **Wording note (2026-09-15):** two sentences about the outcome column (finding 3 and *What this
-> report does not answer*) were rephrased to state the measured fact without judging how the
-> column was kept; no number and no finding changed.
+> **Wording note (2026-09-15):** four passages were rephrased to state the measured fact without
+> judging the people involved — two about the outcome column (finding 3, where the balance's lesson
+> is now paraphrased, and *What this report does not answer*) and two about the six rows that met a
+> running check (*The quiet category* and finding 2's heading); no number and no finding changed.
 
 ---
 
@@ -91,7 +92,7 @@ disproportionately.
 Eleven NO-GOs are tagged *correct, but unwanted*: the gate rightly saw a contract path, and the
 owner no longer needed the hold. They are not false alarms. They are the reason for the decision in
 Part C — not inaccuracy, **friction without return**. Six further NO-GOs had one reason only: **CI
-was still running** when the gate was called; those rows measure the caller's patience, not the PR.
+was still running** when the gate was called; those rows measure the moment of the call, not the PR.
 
 ---
 
@@ -110,7 +111,7 @@ the fix with a test; the fix itself sits in a folder the next suite update overw
 test as the only brake. **Proposal:** the change belongs upstream, not in a vendored copy.
 *(Adopted — see the outcome note.)*
 
-### Finding 2 · Six NO-GOs measured the caller, not the PR
+### Finding 2 · Six NO-GOs measured the moment of the call, not the PR
 
 Six rows' only reason was a required check still `IN_PROGRESS`. Correct by the rules, useless as a
 verdict: it said nothing about the PR. **Proposal (the suite's, on intake — the balance makes
@@ -123,9 +124,10 @@ Three NO-GO rows from 2026-08-10 and 2026-08-11, all with the same reason (*main
 required status checks*), carry the tag `fn`. By the ledger's definition (`fn` = *a GO that should
 have blocked*) a NO-GO cannot be one; the three are either early mis-tags or meant *"blocked for
 the wrong reason"*. They are not counted as slips above, and the zero stands under this reservation.
-`gate-stats.sh` prints them as a data-quality line since v0.2.0 (PR #17, 2026-08-12); the balance
-notes that **the column that matters most is also the one where tagging needed correction** — the
-reason it is worth a regular review. (The 2026-08-12
+`gate-stats.sh` prints them as a data-quality line since v0.2.0 (PR #17, 2026-08-12). The balance
+draws its lesson about the outcome column from them; paraphrased here (wording note above): the
+column that matters most is also the one where tagging needed correction — the reason it is worth a
+regular review. (The 2026-08-12
 report gave `test=IN_PROGRESS` as these rows' reason; the balance gives the required-checks reason —
 a question for the source, not re-measured here.)
 
@@ -195,8 +197,8 @@ precision, zero slips, and eleven rows saying *ok, besser GO*.
 - How much suite really ran is an estimate: the denominator is reliable only since 2026-09-03; the
   87 invocations are a floor.
 - Whether the zero false negatives hold, only time tells — an `fn` often surfaces weeks later, and
-  the three mis-tagged rows show that the column it depends on is the one most worth a regular
-  review.
+  the three `fn` tags on NO-GO rows show that the column it depends on is the one most worth a
+  regular review.
 - Whether friction was the reason or the occasion: the next balance should measure findings per
   PR before and after the switch-off.
 

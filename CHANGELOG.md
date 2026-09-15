@@ -9,19 +9,22 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 ### Changed
 
 - **The README shows the field record.** A new *In the field* section summarizes the largest
-  dataset so far — one field repo's two months: no GO later judged wrong over 81 judged GO
-  verdicts, 90.5 % of blocks right, twelve of fourteen false alarms from one root that 0.4.0
-  fixed, and the owner's decision to switch the gate role off before release while the review
-  stays mandatory — dated, and linked to its
-  [field report](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md). Stale claims
-  corrected on the way: the field repo is no longer described as a game server without CI;
-  *Field exposure* and Q7 no longer say that nothing measures usage or that every evidence repo
-  shares the author's product shape; the side-effects table, introduced as the complete list,
-  now names the run log, the retrospectives and the opt-in invocation log; and the install
-  examples pin `v0.4.0` instead of `v0.3.3`, so a pinned install gets the classifier and SIGPIPE
-  fixes. The *Built with AI* paragraph no longer calls building without the most capable model
-  negligence, and two sentences in that field report that judged how its outcome column was kept
-  now state the measured fact, with a dated note.
+  dataset as of 2026-09-06 — one field repo's gate ledger over 2026-07-22 → 2026-09-05: no GO
+  later judged wrong over 81 judged GO verdicts (under the report's one reservation), 134 of 148
+  judged blocks right, twelve of fourteen false alarms from one root, and the 0.4.0 fixes that
+  answered them — plus the cost: eleven correct but unwanted holds, and the owner's decision to
+  switch the gate role off before release while the review stays mandatory. Dated, with its
+  denominators, and linked to its
+  [field report](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md). Corrected on
+  the way: *Surfaces* now names the game repo behind that dataset next to the no-CI prototype it
+  already named; *Field exposure* and Q7 no longer say that nothing measures usage or that every
+  evidence repo shares the author's product shape; the side-effects table, introduced as the
+  complete list, now is one — the run log for every skill run, the audit reports, the
+  retrospectives, the opt-in invocation log and the learning-gap hook; and the install examples
+  pin `v0.4.0` instead of `v0.3.3`, so a pinned install gets the classifier and SIGPIPE fixes. The
+  *Built with AI* paragraph no longer calls work without the most capable model negligence, and
+  four passages in that field report that judged the people involved now state the measured fact,
+  with a dated note.
 
 ## [0.4.0] — 2026-09-14
 
