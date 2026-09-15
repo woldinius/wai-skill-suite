@@ -1600,9 +1600,10 @@ printf '1 2026-08-10T09:00:00Z\n2 2026-08-10T10:00:00Z\n' > "$D/merged-prs-gh"
 out="$(rcgh)"; rc_=$?
 assert "  · below the ceiling, no cap caveat is printed" 0 "$rc_" "$out" 'merged PRs: 2 in the period' 'limit ceiling'
 
-# THE DENOMINATOR CROSSING (#29 pt.2). With an invocation log present, the per-skill compliance
-# line states invoked-vs-logged; absent, the line NAMES the opt-in — "not installed" must never
-# read as "nothing ran". logged > invoked is printed as-is, never clamped.
+# THE INVOCATION LOG BESIDE THE RUN LOG (#29 pt.2). With an invocation log present, the line
+# states per skill STARTS beside SUBJECT ROWS — two units, so never a rate (field balance of
+# 2026-09-06, finding 5: 5.3 run-log rows per PR-review invocation, partly one row per subject);
+# absent, the line NAMES the opt-in — "not installed" must never read as "nothing ran".
 rcfix
 { printf '| when (UTC) | skill |\n|---|---|\n'
   printf '| 2026-08-10T09:00Z | wai-pr-review |\n'
@@ -1610,13 +1611,17 @@ rcfix
   printf '| 2026-08-11T09:00Z | wai-testing |\n'
 } > "$D/docs/architecture/invocation-log.md"
 out="$(rc)"; rc_=$?
-assert "invocation log present → per-skill invoked-vs-logged compliance is stated" 0 "$rc_" "$out" \
-  'compliance:.*wai-pr-review invoked 2 · logged 2'
-assert "  · a skill invoked but never logged shows logged 0, not absence" 0 "$rc_" "$out" \
-  'wai-testing invoked 1 · logged 0'
+assert "invocation log present → per skill, starts beside subject rows, each with its unit" 0 "$rc_" "$out" \
+  'starts vs. subject rows:.*wai-pr-review 2 start\(s\) · 2 subject row\(s\)'
+assert "  · a skill started but never logged shows 0 subject rows, not absence" 0 "$rc_" "$out" \
+  'wai-testing 1 start\(s\) · 0 subject row\(s\)'
+assert "  · the two units are stated as not a rate — and the old 'compliance:' label is gone" 0 "$rc_" "$out" \
+  'two units, not a rate: an invocation row counts one start, a run-log row counts one subject handled' '^ +compliance:'
+assert "  · no percentage is derived from the pair" 0 "$rc_" "$out" \
+  'starts vs. subject rows:' '(starts vs\. subject rows|two units, not a rate):.*%'
 rcfix; out="$(rc)"; rc_=$?
 assert "no invocation log → the opt-in is NAMED; absence never reads as nothing-ran" 0 "$rc_" "$out" \
-  'invocations \(hook\): not installed.*never that nothing ran'
+  'invocations \(hook\): not installed — the start log is opt-in.*never that nothing ran'
 
 # gh PRESENT BUT FAILING — fail closed to the git path, and SAY the degradation happened. A gh that
 # errors must never silently become "nothing landed": that is the comfortable answer, and it is the

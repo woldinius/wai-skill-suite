@@ -49,6 +49,9 @@
 #     0  CLEAR     — no excluded domain touched
 #     1  EXCLUDED  — one or more; the tags + tripping file/statement print, plus a parseable
 #                    `EXCLUDED-DOMAINS: EX-PAY EX-GDPR` line for callers
+#   every classified default-mode run (0 or 1) also prints `ANCHORED-DOMAINS: EX-GDPR EX-PAY` (or
+#   `ANCHORED-DOMAINS: none`): the families whose citations DECIDE here. Beside it, exit 0 may
+#   carry `ADVISORY-DOMAINS: …` (reported, not gating).
 #     2  UNKNOWN   — a file list or diff could not be read. A gate that says CLEAR when unsure is
 #                    an invitation, not a gate, so unreadable == held for the human.
 #   --autonomy mode  (the ALLOWLIST eligibility gate — see below)
@@ -571,6 +574,13 @@ if [ -n "$WORK" ] && [ -f "$WORK/awk-failed" ]; then
   exit 2
 fi
 
+# ANCHORED-DOMAINS on EVERY classified run: which families a citation decides for is a property of
+# merge-gate.conf, and removing a path there can un-anchor a family with nothing else saying so.
+# (Not the shell variable ANCHORED — that is the internal set; this is the parseable output line.)
+# Why: docs/rationale/excluded-domains.md § Un-anchoring was silent
+ANCHORED_LINE="ANCHORED-DOMAINS: ${ANCHORED# }"
+[ -n "${ANCHORED# }" ] || ANCHORED_LINE="ANCHORED-DOMAINS: none"
+
 # --- Autonomy: the ALLOWLIST eligibility gate ---------------------------------------------------
 if [ "$AUTONOMY" -eq 1 ]; then
   # Fail-closed setup checks first — an unconfigured or unaffirmed surface refuses autonomy outright.
@@ -608,12 +618,14 @@ if [ "$AUTONOMY" -eq 1 ]; then
   # deciding; the unattended drain does not get that nuance. Autonomy errs closed, always.
   if [ -n "$ADVISORY" ]; then
     printf '%s' "$DETAIL"
+    echo "$ANCHORED_LINE"
     echo "VERDICT: HELD — advisory domain citation(s) or prose statement(s) ($ADVISORY) are not clear enough for an unattended merge; held for the human."
     exit 1
   fi
   if [ -n "$TAGS" ]; then
     printf '%s' "$DETAIL"
     echo "EXCLUDED-DOMAINS: $TAGS"
+    echo "$ANCHORED_LINE"
     echo "VERDICT: HELD — the excluded-domain blocklist is not clear ($TAGS); held for the human."
     exit 1
   fi
@@ -636,14 +648,17 @@ if [ -z "$TAGS" ]; then
   if [ -n "$ADVISORY" ]; then
     printf '%s' "$DETAIL"
     echo "ADVISORY-DOMAINS: $ADVISORY"
+    echo "$ANCHORED_LINE"
     echo "VERDICT: CLEAR — no excluded domain touched (advisory signals reported above; not gating, per #30 and #67)."
   else
+    echo "$ANCHORED_LINE"
     echo "VERDICT: CLEAR — no excluded domain touched."
   fi
   exit 0
 else
   printf '%s' "$DETAIL"
   echo "EXCLUDED-DOMAINS: $TAGS"
+  echo "$ANCHORED_LINE"
   echo "VERDICT: EXCLUDED — a human owns this change; do not agent-merge or act on it autonomously."
   exit 1
 fi

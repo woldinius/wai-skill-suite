@@ -129,6 +129,9 @@ once you have acted on the PR:
   A NO-GO that blocked for a reason outside the code (CI still running) is `nil`, not `fn`.
 - `nil` — the verdict says **nothing about the code** (e.g. a NO-GO caused only by CI still
   running). Excluded from the fp/fn math; counted on its own line by `gate-stats.sh`.
+- `lost` — a **reconstructed** row: the original row was lost, and the verdict is known from the
+  PR comment — the outcome was never judged. Counted on its own line by `gate-stats.sh`, outside
+  every rate.
 
 Tags are matched on their **first two characters** — free text after a comma is welcome and
 preserved. `ok, besser GO` is the calibration signal: the block was correct by the rules, but a GO
@@ -438,6 +441,7 @@ fi
 # Why, and what EX-GDPR closed: docs/rationale/merge-gate.md § Excluded domains: one classifier
 CONF="${REPO_ROOT:-.}/docs/architecture/merge-gate.conf"
 EXCL_SH="$(dirname "$0")/../../wai/scripts/excluded-domains.sh"
+ANCHOR_LINE=""                  # the anchored families, for the terminal only (see below)
 if [ ! -f "$CONF" ]; then
   # The gate needs its config to know which paths are contract-domain. Absent conf = it cannot
   # classify = UNKNOWN (never GO) — the same fail-closed state doctor.sh reports as drift.
@@ -465,6 +469,16 @@ else
   # info(), not a veto — stated, never blocking. (Found by the adversarial re-review of the PR
   # that introduced the dial.)
   EXCL_ADV="$(printf '%s\n' "$EXCL_OUT" | grep '^ADVISORY-DOMAINS:' | head -1 | sed 's/^ADVISORY-DOMAINS:[[:space:]]*//' || true)"
+  # WHICH FAMILIES A CITATION DECIDES FOR — stated on every classified run, because removing a path
+  # from CONTRACT_PATHS can un-anchor a family and nothing else says so. It describes the conf, not
+  # this PR: printed with the verdict, NEVER written to the ledger row (so not via info()).
+  # Why: docs/rationale/excluded-domains.md § Un-anchoring was silent
+  EXCL_ANC="$(printf '%s\n' "$EXCL_OUT" | grep '^ANCHORED-DOMAINS:' | head -1 | sed 's/^ANCHORED-DOMAINS:[[:space:]]*//' || true)"
+  if [ "$EXCL_ANC" = none ]; then
+    ANCHOR_LINE="  · citations decide here: none — merge-gate.conf declares no path for any family, so every cited catalog ID is advisory"
+  elif [ -n "$EXCL_ANC" ]; then
+    ANCHOR_LINE="  · citations decide here: $EXCL_ANC — families with declared paths in merge-gate.conf; a citation of any other family is advisory"
+  fi
   case "$EXCL_RC" in
     0) ok "no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure)"
        [ -z "$EXCL_ADV" ] || info "advisory (not gating): $EXCL_ADV — an unanchored citation or label, or a citation or erasure statement in prose; visible here so it reaches the ledger row" ;;
@@ -493,6 +507,7 @@ derive_ledger_note            # after BOTH books — it may call gh; see the fun
 # --- Verdict ------------------------------------------------------------------------------------
 echo "merge-gate: PR #$PR ($REPO → $BASE, mode: $MODE)"
 printf '%b' "$REASONS"
+[ -z "$ANCHOR_LINE" ] || printf '%s\n' "$ANCHOR_LINE"     # terminal only — never in the ledger row
 case "$VERDICT" in
   0) echo "VERDICT: GO — mechanical preconditions met. Merge only if your review also found no Blocker/Major." ;;
   1) echo "VERDICT: NO-GO — a precondition failed. Leave the PR for the human." ;;
