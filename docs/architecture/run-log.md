@@ -76,3 +76,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-14T21:00Z | wai-pr-review | PR #73 | NO-GO |
 | 2026-09-14T21:06Z | wai-pr-review | PR #75 | NO-GO |
 | 2026-09-15T06:44Z | wai-pr-review | PR #82 | NO-GO |
+| 2026-09-15T21:42Z | wai-implementation | field small pack (T4 T5 T7 T8) | four field fixes landed with 21 new cases, 496 green; the baseline's minting example stopped being a dangling citation |

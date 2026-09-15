@@ -192,7 +192,11 @@ label can never *suppress* a path or diff match.
 **The citation dial (the citation-dial decision, 2026-08-18 — issue #30).** A citation or label *decides* the verdict only
 where its family is **anchored** — the repo declares paths whose shape classifies into it
 (`EX-GDPR` anchors on a non-empty `ERASURE_PATHS`). Unanchored, the citation is **reported as
-advisory** (`ADVISORY-DOMAINS:` in the classifier's output) but does not gate: where a repo
+advisory** (`ADVISORY-DOMAINS:` in the classifier's output) but does not gate. Which families are
+anchored is itself printed on every classified run — `ANCHORED-DOMAINS: EX-GDPR EX-PAY …` or
+`ANCHORED-DOMAINS: none` — and `merge-gate.sh` repeats it as one terminal line (*citations decide
+here: …*, never in the ledger row), because removing a path from `CONTRACT_PATHS` can un-anchor a
+family with nothing else saying so. Where a repo
 declares no surface for a family, a citation is documentation, not contact. The rule exists
 because the safe version was measured expensive — the false alarm stood alone three times in one
 field repo, and the cheapest route to a green gate became *not citing catalog IDs*, the exact

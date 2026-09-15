@@ -112,3 +112,38 @@ nothing dangles, and no lint can see it. One field repo holds FIVE of them right
 This check catches the FUTURE hazard (a new local mint a later baseline dimension could take).
 It is blind to the LIVE one, which is the dangerous half. Saying so is the whole point: a green
 check that implies coverage it structurally cannot have is worse than a red one.
+
+## The catalog and the agent files are consumers too
+
+Check 4a resolved the citations in `docs/` and skipped two other places that cite IDs: the live
+catalog itself (a dimension that says "Generalizes `PAY-1`" is a citation like any other) and the
+agent instruction files at the root, `CLAUDE.md` and `AGENTS.md`, which every session reads before
+it reads anything else. A field catalog renumbered `IOS-2` → `CLIENT-2` and re-pointed its own
+cross-references; the check would have passed just as quietly had `CLIENT-2` not existed — the
+near-miss that motivated this.
+
+So 4a now reads both, with two carve-outs:
+
+- the catalog's `## Retired IDs` section is exempt — it cites retired IDs by design, and the
+  targets after its arrows are checked where they matter (check 3 and the live list). The skip ends
+  at the next `## ` heading, so a section placed after it is still read;
+- a missing `CLAUDE.md` or `AGENTS.md` is not an error; a file that is not there cites nothing.
+
+The resolution rule is 4a's — live or retired resolves; an ID that exists nowhere fails — with one
+difference by source. In `docs/` and the agent files, an ID only the baseline defines is the
+separate adopt-or-fix finding, as before. In the catalog's own prose it is **not** a finding: the
+variants `wai-init` copies say in their banner that prose "may still reference an ID that only the
+platform master carries; such a reference points at the master", and `wai-init` lints right after
+the copy. Measured before this rule: the `web` variant cites four master-only IDs in its own prose
+and `minimum` three — every fresh install at those tiers would have gone red on text the suite
+declares correct. The near-miss this section exists for is the other case, a cross-reference to an
+ID that exists nowhere, and that fails. Each finding names where the citation sits. **First-run consequence:** an existing repo whose
+catalog or root agent file already cites an ID that resolves nowhere turns red on the first run
+after the update. That is intended — the citation was already dangling; the lint stopped not
+seeing it.
+
+The shipped baseline was the first file this caught: its preamble told authors to mint new IDs
+"e.g. MAINT-10" — backticked there, so a citation to an ID that exists nowhere, and an example that
+contradicts check 7's mint-at-100 rule. It now reads "minted at ≥ 100 (e.g. MAINT-100)", plain
+text, so it is no citation. (Quoted here without backticks for the same reason: this file is in
+`docs/`, and a backticked example would be the very finding it describes.)

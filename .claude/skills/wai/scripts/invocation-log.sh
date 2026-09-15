@@ -9,9 +9,9 @@
 #                                        it judges nothing.
 #   run-log.md (run-log.sh)           — the model-written numerator, at hand-back, with outcome.
 #
-# The difference between the two is per-skill prompt-contract compliance, and retro-compliance.sh
-# reports it. A merged artifact would be worse than either: a row without an outcome is not a
-# subset of the run log, it is a forgery of one.
+# The two count different units — a START here, a SUBJECT handled there — so retro-compliance.sh
+# prints them side by side per skill and never as a rate. A merged artifact would be worse than
+# either: a row without an outcome is not a subset of the run log, it is a forgery of one.
 # Why: docs/rationale/invocation-log.md § The prompt-written tier was measured and had gaps (#29)
 #
 # OPT-IN, PER DEVELOPER (the learning-gap precedent): this script only runs if YOU wire it as a
@@ -94,8 +94,9 @@ if [ ! -f "$LOG" ]; then
 Every row is a wai-* skill INVOCATION, appended mechanically by a harness hook the developer
 opted into (`invocation-log.sh --snippet`). This is the **denominator**: it counts starts and
 judges nothing — there is deliberately **no outcome column**, and there never will be. The
-model-written numerator with outcomes is `run-log.md`; the difference between the two files is
-per-skill prompt-contract compliance (`retro-compliance.sh` reports it). **Never merge the two:**
+model-written record with outcomes is `run-log.md`, one row per subject handled. The two count
+different units — a start here, a subject there — so `retro-compliance.sh` prints them side by
+side per skill, never as a rate. **Never merge the two:**
 a row without an outcome is not a subset of the run log, it is a forgery of one.
 
 **APPEND-ONLY**, like the ledger and the run log. A gap here means the hook was not installed

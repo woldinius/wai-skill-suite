@@ -78,7 +78,10 @@ nothing from the file would move that count.) This skill stays a non-reader.
      named-empty lines for an empty period · `exit 2` = an input could not be read — the affected
      lines are `not measured`, and a share over a missing source is not a smaller measurement.
      It takes `--since YYYY-MM-DD` when the human names a period. It is an extractor, not a run:
-     it writes no run-log row itself.
+     it writes no run-log row itself. Where the opt-in invocation hook is installed it also prints,
+     per skill, `starts vs. subject rows` — invocation **starts** beside run-log rows, which count
+     **subjects handled** (one per verdict, and a review can run the gate twice). Two units,
+     **not a rate**: narrate them side by side, never divide one by the other.
    - **The closing picture** comes from `sh ../wai/scripts/open-items.sh` (from this skill's
      directory) at hand-back — `exit 0` = footer emitted (empty lines name their derivation) ·
      `exit 2` = nothing derivable, then say `not checked` yourself.
@@ -163,7 +166,8 @@ Use exactly this structure for `docs/architecture/retrospectives/<YYYY-MM-DD>.md
 
 ### Compliance — did the work leave a trace
 - [the traced share and per-skill run counts; a low share is a finding about the SUITE's prompt
-   contracts, not about the people]
+   contracts, not about the people. Where the hook is installed: starts beside subject rows, both
+   raw, with their units — two units, no percentage]
 
 ### Collaboration
 not derived — no artifact exists (a question trace is the prerequisite; nothing here is recalled)

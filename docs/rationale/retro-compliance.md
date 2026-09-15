@@ -33,3 +33,20 @@ back to merge commits.
 The principle "every metric needs a counter-reader" was bought in the field: a 0% that was really
 15% once shipped inside the very line meant to prove trustworthiness. That is why every rate this
 script prints carries its raw counts beside it.
+
+## Starts and subjects are two units
+
+With the invocation hook installed, this script used to print a line labelled `compliance:` —
+per skill, `invoked N · logged M` — and the invocation log's own header called the difference
+"per-skill prompt-contract compliance". The two numbers count different things. An invocation row
+is one **start**. A run-log row is one **subject handled**: `merge-gate.sh` writes one per
+verdict, a review can run the gate twice, and one session can review several PRs. The field
+balance of 2026-09-06 ([report](../field-reports/2026-09-06-two-months-of-gate-259-verdicts.md),
+finding 5) measured 5.3 run-log rows per PR-review invocation and read part of that as
+legitimate — one row per subject — which is exactly what a rate over the pair cannot show: under
+the old label `wai-implementation invoked 3 · logged 15` read like a 500 % compliance.
+
+So the line is now `starts vs. subject rows`, each count carries its unit, one sentence says the
+two are not a rate, and no percentage is derived from them. Whether a skill ran without leaving
+its row is still a real question — the traced share (merged PRs against gate verdicts) answers it
+for the one skill where the units match.

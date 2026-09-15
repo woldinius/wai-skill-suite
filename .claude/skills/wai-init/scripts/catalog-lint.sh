@@ -168,24 +168,52 @@ DOCS="$(find docs -name '*.md' ! -name 'quality-attributes.md' ! -path '*/field-
 # reported ✓ while two of the suite's own artifacts cited a retired ID.
 SKILLS="$(find .claude/skills -type f ! -path '*/wai-init/*' 2>/dev/null || true)"
 
-# 4a — the repo's docs, against the repo's catalog. A retired ID is fine to cite: old findings must
-#      stay resolvable.
-DRIFT=""; ADOPTABLE=""
-for c in $(cited_in "$DOCS"); do
-  printf '%s\n' "$LIVE"    | grep -qx "$c" && continue
-  printf '%s\n' "$RETIRED" | grep -qx "$c" && continue
-  if printf '%s\n' "$BASE_IDS" | grep -qx "$c"; then
-    ADOPTABLE="$ADOPTABLE $c"   # the baseline defines it; this repo tailored it away or never took it
-  else
-    DRIFT="$DRIFT $c"           # it exists nowhere: either the citation is wrong, or the ID is new
-  fi
-done
-if [ -z "$DRIFT$ADOPTABLE" ]; then
-  pass "every catalog ID cited by the repo's docs resolves"
-else
+# 4a — the repo's own consumers, against the repo's catalog. A retired ID is fine to cite: old
+#      findings must stay resolvable. THREE consumers, each named in its finding:
+#        · docs/ (the list above);
+#        · the live catalog's OWN cross-references ("Generalizes `PAY-1`") — EXCEPT its
+#          `## Retired IDs` section, which cites retired IDs by design (`IOS-2` → `CLIENT-2`);
+#        · the agent instruction files at the root, CLAUDE.md and AGENTS.md — a missing one is not
+#          an error, it is simply not scanned.
+# Why: docs/rationale/catalog-lint.md § The catalog and the agent files are consumers too
+# The catalog minus `## Retired IDs` (up to the next `## ` heading, so a section after it is read).
+# shellcheck disable=SC2016  # the backtick is a literal in the markdown, not an expansion
+catalog_refs() {
+  awk '/^## Retired IDs/ { skip = 1; next } /^## / { skip = 0 } !skip' "$CAT" 2>/dev/null \
+    | grep -oE '`(AI|RES|OBS|SEC|GDPR|API|MAINT|PERF|PAY|CLIENT|IOS|AND|WEB)-[0-9]+`' \
+    | tr -d '`' | sort -u
+}
+AGENT_FILES=""
+for a in CLAUDE.md AGENTS.md; do [ -f "$a" ] && AGENT_FILES="$AGENT_FILES $a"; done
+AGENT_FILES="${AGENT_FILES# }"
+FOUND_4A=0
+# $3 = master-ok: a baseline-only ID is a pointer at the master, not a finding. That holds for the
+# CATALOG's own prose only — the variant banner says so ("prose may still reference an ID that only
+# the platform master carries"), and wai-init lints right after copying a variant. Docs and agent
+# files still get the adopt-or-fix finding. An ID that exists NOWHERE fails for every source.
+check_4a() {   # $1 = where the citations sit (named in the finding) · $2 = cited IDs, one per line
+  _adopt=""; _drift=""
+  for c in $2; do
+    printf '%s\n' "$LIVE"    | grep -qx "$c" && continue
+    printf '%s\n' "$RETIRED" | grep -qx "$c" && continue
+    if printf '%s\n' "$BASE_IDS" | grep -qx "$c"; then
+      [ "${3:-}" = master-ok ] && continue
+      _adopt="$_adopt $c"       # the baseline defines it; this repo tailored it away or never took it
+    else
+      _drift="$_drift $c"       # it exists nowhere: either the citation is wrong, or the ID is new
+    fi
+  done
   # These are two different repairs, so they are two different findings.
-  [ -z "$ADOPTABLE" ] || note "cited in docs/, defined in the baseline, absent from YOUR catalog:$ADOPTABLE — adopt them via wai-init, or fix the citation"
-  [ -z "$DRIFT" ]     || note "cited in docs/ but neither live nor retired nor in the baseline:$DRIFT — the finding that cites them is unverifiable"
+  [ -z "$_adopt" ] || { FOUND_4A=1; note "cited in $1, defined in the baseline, absent from YOUR catalog:$_adopt — adopt them via wai-init, or fix the citation"; }
+  [ -z "$_drift" ] || { FOUND_4A=1; note "cited in $1 but neither live nor retired nor in the baseline:$_drift — the finding that cites them is unverifiable"; }
+  return 0
+}
+check_4a "docs/" "$(cited_in "$DOCS")"
+check_4a "the catalog's own cross-references" "$(catalog_refs)" master-ok
+# shellcheck disable=SC2086  # the file list must word-split
+[ -z "$AGENT_FILES" ] || check_4a "$AGENT_FILES" "$(cited_in "$(printf '%s\n' $AGENT_FILES)")"
+if [ "$FOUND_4A" -eq 0 ]; then
+  pass "every catalog ID cited by the repo's docs, the catalog's own cross-references${AGENT_FILES:+ and $AGENT_FILES} resolves"
 fi
 
 # 4b — the vendored skills, against the baseline they shipped with.

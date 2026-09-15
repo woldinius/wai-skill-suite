@@ -140,8 +140,9 @@ PERIODIC (after a few features/refactors, or on security triggers)
   the `PostToolUse` block for your **`.claude/settings.local.json`** (never `settings.json` — a
   committed hook would switch it on repo-wide; personal state never becomes repo state). The hook
   appends one mechanical row per wai-skill invocation to `docs/architecture/invocation-log.md` —
-  no outcome column, ever; the model-written numerator stays `run-log.md`, and
-  `retro-compliance.sh` reports the difference as per-skill compliance. Fail-open by design:
+  no outcome column, ever; the model-written record stays `run-log.md`, and
+  `retro-compliance.sh` prints the two per skill side by side — starts beside subject rows, two
+  units, never a rate. Fail-open by design:
   `exit 0` = row appended or input ignored (a hook must never break the harness) · `exit 2` =
   misuse only (an unknown argument), so a typo in the hook config is visible.
 - **Did a script and the prompt that invokes it drift apart** — after changing a script's exit

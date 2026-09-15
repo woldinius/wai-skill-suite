@@ -133,3 +133,20 @@ which tag had just been widened.
 
 The field repo had carried this fix in its vendored copy of the script — a folder the next suite
 update overwrites — with one red test as the only brake. That is why the change belongs here.
+
+## Un-anchoring was silent
+
+The citation dial makes a family's citations decide only where the family is anchored, and
+anchoring is derived from the SHAPE of the `CONTRACT_PATHS` globs (and a non-empty
+`ERASURE_PATHS`). That makes the set a side effect of an unrelated edit: in a field repo,
+`server/schema.js` was the only `*schema*` path in `merge-gate.conf`; when it was removed from the
+list, `EX-API` stopped being anchored, every `API-` citation in added code turned advisory, and
+nothing said so — the verdicts simply changed character.
+
+So the set is now output. Every classified default-mode run prints `ANCHORED-DOMAINS: <tags>` (or
+`ANCHORED-DOMAINS: none`) beside `EXCLUDED-DOMAINS:` / `ADVISORY-DOMAINS:`; the `--autonomy` HELD
+branches print it too. The name is the output token; the internal shell variable `ANCHORED` is
+unchanged and never printed under that name, so no caller's `grep '^ANCHORED'` can confuse the
+two. `merge-gate.sh` states it as one terminal line — *citations decide here: …* — and keeps it
+out of the ledger row on purpose: it is a property of the conf, not of the PR the row is about, and
+a row is capped at 400 characters that belong to the verdict's reasons.

@@ -28,6 +28,47 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   four passages in that field report that judged the people involved now state the measured fact,
   with a dated note.
 
+- **`catalog-lint.sh` check 4a reads the catalog's own cross-references and the root agent files.**
+  It resolved only `docs/`; a catalog dimension citing another ID ("Generalizes `PAY-1`") and
+  `CLAUDE.md` / `AGENTS.md` at the repo root went unchecked — a field catalog renumbered
+  `IOS-2` → `CLIENT-2`, and nothing would have failed had `CLIENT-2` not existed. The catalog's
+  `## Retired IDs` section stays exempt (it cites retired IDs by design), and a missing
+  `CLAUDE.md` or `AGENTS.md` is not an error. In the catalog's own prose an ID only the baseline
+  defines is a pointer at the master, as the variant banner documents, and passes; an ID that
+  exists nowhere fails. **Upgrade consequence: this can turn an existing
+  repo's catalog-lint red on its first run** — wherever its catalog or a root agent file already
+  cites an ID that resolves nowhere. That is intended: the citation was already dangling, and the
+  finding names the file it sits in. The first file it caught was the shipped baseline itself,
+  whose preamble told authors to mint new IDs "e.g. `MAINT-10`" — an ID that exists nowhere, and
+  an example that contradicted check 7's mint-at-100 rule; it now reads "minted at ≥ 100
+  (e.g. MAINT-100)", and the three variants are regenerated from it. Rationale:
+  `docs/rationale/catalog-lint.md` § *The catalog and the agent files are consumers too*.
+- **The gate says which domain families are anchored.** `excluded-domains.sh` prints
+  `ANCHORED-DOMAINS: <tags>` (or `none`) on every classified run, beside `EXCLUDED-DOMAINS:` and
+  `ADVISORY-DOMAINS:`, and `merge-gate.sh` states it as one terminal line — *citations decide here:
+  …* — not in the ledger row. A citation decides only for an anchored family, and anchoring follows
+  the shape of the `CONTRACT_PATHS` globs, so removing a path could silently un-anchor one: in a
+  field repo `server/schema.js` was the only `*schema*` path, and when it went, `EX-API` stopped
+  gating with nothing saying so. Rationale: `docs/rationale/excluded-domains.md` § *Un-anchoring
+  was silent*.
+
+### Fixed
+
+- **`retro-compliance.sh` no longer calls two units a rate.** The line labelled `compliance:` set
+  invocation-log rows against run-log rows per skill (`wai-implementation invoked 3 · logged 15`).
+  An invocation counts a **start**; a run-log row counts a **subject handled** — `merge-gate.sh`
+  writes one per verdict, and a review can run the gate twice (the field balance of 2026-09-06,
+  finding 5: 5.3 run-log rows per PR-review invocation). The line is now `starts vs. subject rows`,
+  both raw counts carry their unit, one sentence says the two are not a rate, and no percentage is
+  printed for the pair. `wai-retro`, `wai`, the invocation log's header and the rationale follow.
+- **`gate-stats.sh` recognises `lost`.** Field ledgers tag a row rebuilt from the PR comment after
+  its original row was lost as `LOST` (the 2026-09-06 balance carried four); it was reported as an
+  unmatched tag. `lost` (2-char prefix, case-insensitive) is now a known class — counted on its own
+  line as *reconstructed*, in no rate (not fp/fn, not calibration, not outcome coverage). `manual`
+  and every other unknown tag stay unmatched and named. The ledger header `merge-gate.sh` writes
+  for a new ledger documents the tag; existing ledgers keep their header. Rationale:
+  `docs/rationale/gate-stats.md` § *A reconstructed row has no outcome*.
+
 ## [0.4.0] — 2026-09-14
 
 The field's second dataset turned into five fixes: the classifier stops reading mentions as acts,
