@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# invocation-log.sh — the mechanical DENOMINATOR of skill runs.
+# invocation-log.sh — the mechanical START LOG of skill runs.
 #
 # Self-logging that depends on the model is not a measurement, so there are two artifacts, NEVER
 # merged:
@@ -7,11 +7,11 @@
 #   invocations (THIS file's output)  — every wai-* skill invocation, written MECHANICALLY by a
 #                                        harness hook. No outcome column, ever: it counts starts,
 #                                        it judges nothing.
-#   run-log.md (run-log.sh)           — the model-written numerator, at hand-back, with outcome.
+#   run-log.md (run-log.sh)           — the model-written subject record, at hand-back, with outcome.
 #
-# The difference between the two is per-skill prompt-contract compliance, and retro-compliance.sh
-# reports it. A merged artifact would be worse than either: a row without an outcome is not a
-# subset of the run log, it is a forgery of one.
+# The two count different units — a START here, a SUBJECT handled there — so retro-compliance.sh
+# prints them side by side per skill and never as a rate. A merged artifact would be worse than
+# either: a row without an outcome is not a subset of the run log, it is a forgery of one.
 # Why: docs/rationale/invocation-log.md § The prompt-written tier was measured and had gaps (#29)
 #
 # OPT-IN, PER DEVELOPER (the learning-gap precedent): this script only runs if YOU wire it as a
@@ -49,7 +49,7 @@ Add to .claude/settings.local.json (per-developer opt-in — NOT settings.json):
   }
 }
 Why the repo-local file: the command path is repo-relative and the log it writes is THIS repo's
-denominator, so the hook belongs where the repo is — settings.local.json is per developer and
+start log, so the hook belongs where the repo is — settings.local.json is per developer and
 never committed. The gap that comes with it: an untracked file exists only in the checkout where
 you wrote it, so a linked worktree (git worktree add) has no hook and its sessions log nothing —
 a field repo counted about a fifth of its invocations that way until it moved the hook. So:
@@ -71,11 +71,11 @@ printf '%s' "$IN" | grep -q '"tool_name"[[:space:]]*:[[:space:]]*"Skill"' || exi
 SKILL="$(printf '%s' "$IN" | grep -o '"skill"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"skill"[[:space:]]*:[[:space:]]*"//; s/"$//')"
 # Table-safe, like run-log.sh's cell(): the name is the ONE field this row takes from the payload.
 # Pipes become '/', whitespace collapses, 80 chars on a word boundary with a visible cut.
-# Why: docs/rationale/invocation-log.md § A crafted skill name forged denominator rows
+# Why: docs/rationale/invocation-log.md § A crafted skill name forged start-log rows
 SKILL="$(printf '%s' "$SKILL" | tr '\n' ' ' | sed 's/|/\//g; s/[[:space:]]\{1,\}/ /g; s/^ *//; s/ *$//' \
   | awk '{ if (length($0) <= 80) print; else { s = substr($0, 1, 80); sub(/ [^ ]*$/, "", s); print s "…" } }')"
 case "$SKILL" in
-  wai|wai-*) : ;;                       # only the suite's own skills — a foreign skill is not our denominator
+  wai|wai-*) : ;;                       # only the suite's own skills — a foreign skill does not belong in our start log
   *) exit 0 ;;
 esac
 
@@ -92,10 +92,11 @@ if [ ! -f "$LOG" ]; then
 # Invocation log
 
 Every row is a wai-* skill INVOCATION, appended mechanically by a harness hook the developer
-opted into (`invocation-log.sh --snippet`). This is the **denominator**: it counts starts and
+opted into (`invocation-log.sh --snippet`). This is the **start log**: it counts starts and
 judges nothing — there is deliberately **no outcome column**, and there never will be. The
-model-written numerator with outcomes is `run-log.md`; the difference between the two files is
-per-skill prompt-contract compliance (`retro-compliance.sh` reports it). **Never merge the two:**
+model-written record with outcomes is `run-log.md`, one row per subject handled. The two count
+different units — a start here, a subject there — so `retro-compliance.sh` prints them side by
+side per skill, never as a rate. **Never merge the two:**
 a row without an outcome is not a subset of the run log, it is a forgery of one.
 
 **APPEND-ONLY**, like the ledger and the run log. A gap here means the hook was not installed

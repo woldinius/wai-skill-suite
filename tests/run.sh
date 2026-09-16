@@ -504,6 +504,32 @@ assert "gate-stats: a nil tag is reported as its own count" 0 "$rc" "$out" '1 ni
 assert "gate-stats: an unmatched tag is counted AND named, never silently dropped" 0 "$rc" "$out" \
   '1 unmatched tag\(s\): need inspection'
 
+# A RECONSTRUCTED ROW (`LOST`). The 2026-09-06 balance carried four rows marked LOST, each with a
+# GO/NO-GO verdict, and kept them out of its matrix. By the suite's definition `lost` marks a row
+# reconstructed after its original was lost — verdict known from the PR comment, outcome never judged.
+# It is a known class: its own line, never "unmatched", and in NO rate — not fp/fn, not coverage.
+# `manual` stays what it was: an unmatched tag, named.
+N=$((N+1)); LOSTF="$TMP/lost$N.md"
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | NO-GO | x | ok |\n'
+  printf '| 2026-08-01T01:00Z | 2 | NO-GO | x | fp |\n'
+  printf '| 2026-08-01T02:00Z | 3 | NO-GO | x | LOST |\n'
+  printf '| 2026-08-01T03:00Z | 4 | GO | x | lost, verdict from the PR comment |\n'
+  printf '| 2026-08-01T04:00Z | 5 | NO-GO | x | manual |\n'
+} > "$LOSTF"
+out="$(sh "$STATS" "$LOSTF" 2>&1)"; rc=$?
+assert "gate-stats: LOST/lost rows are counted as reconstructed, case-insensitively (2)" 0 "$rc" "$out" \
+  '2 reconstructed row\(s\) \(`lost`\) — the verdict is known, the outcome was never judged; outside every rate'
+assert "  · a LOST row is not an unmatched tag — only 'manual' is" 0 "$rc" "$out" \
+  '1 unmatched tag\(s\): manual —' 'unmatched tag.*(LOST|lost)'
+assert "  · and it enters no fp rate: 1 of 2 judged NO-GOs, not 1 of 3" 0 "$rc" "$out" '1 of 2 judged NO-GOs = 50%' 'of 3 judged'
+rep="$(sh "$STATS" --report "$LOSTF" 2>&1)"; rc=$?
+assert "  · --report: out of coverage too (3 of 3 judgeable, not 3 of 5), its own line beside it" 0 "$rc" "$rep" \
+  'outcome coverage: 3 of 3 judgeable rows tagged \(100%\)'
+assert "  · --report: the reconstructed GO row is no judged GO row (no fn denominator from it)" 0 "$rc" "$rep" \
+  'false negatives: no judged GO rows yet'
+assert "  · --report names the reconstructed rows on their own line" 0 "$rc" "$rep" '^- 2 reconstructed row\(s\) \(`lost`\)'
+
 # --report: the paste-ready extract docs/open-questions.md asks field users for. It must reproduce
 # the fixture's counts exactly, carry raw counts beside every rate, and never exit 0 with nothing.
 rep="$(sh "$STATS" --report "$FLD" 2>&1)"; rc=$?
@@ -635,6 +661,57 @@ lfix; mkdir -p "$D/docs/learnings/field-reports"
 printf 'Their catalog holds `PAY-9`; ours does not.\n' > "$D/docs/learnings/field-reports/2026-01-01-x.md"
 out="$(lint)"; rc=$?
 assert "a verbatim field report is a FOREIGN ID space and is not linted" 0 "$rc" "$out" 'VERDICT: OK'
+
+# CHECK 4a SEES THE CATALOG AND THE ROOT AGENT FILES. Reported from a field repo (2026-08-31), not
+# yet written up here: after the suite retired `IOS-2` → `CLIENT-2` in 0.3.1, that repo re-pointed
+# its catalog's cross-references, and a re-point to an ID that exists nowhere would have passed —
+# 4a read docs/ only. (A tailored-away target still passes inside the catalog: the master-ok
+# trade-off, pinned below.) The catalog's own cross-references and CLAUDE.md / AGENTS.md are consumers too.
+# The fixture catalog ENDS in `## Retired IDs`, so an appended line would sit inside the exempt
+# section and prove nothing: a live dimension goes in before that heading.
+before_retired() {   # $1 = one markdown line, inserted above `## Retired IDs` in the fixture catalog
+  awk -v line="$1" '/^## Retired IDs/ { print line; print "" } { print }' \
+    "$D/docs/architecture/quality-attributes.md" > "$D/c" && mv "$D/c" "$D/docs/architecture/quality-attributes.md"
+}
+lfix; before_retired '- **SEC-100 · Local** — generalizes `PAY-7`. *Red Flag:* b.'
+out="$(lint)"; rc=$?
+assert "a catalog cross-reference to an ID that exists nowhere → FAIL, and says where it sits" 1 "$rc" "$out" \
+  "cited in the catalog's own cross-references but neither live nor retired.*PAY-7"
+# The fixture's `## Retired IDs` reads `API-3` → `MAINT-5`: MAINT-5 is neither live nor in the
+# baseline, API-3 is retired. Both are cited by design there, so that section must stay exempt —
+# and a section AFTER it is read again (the skip ends at the next heading).
+lfix; out="$(lint)"; rc=$?
+assert "the catalog's '## Retired IDs' section is exempt (its MAINT-5 target resolves nowhere) → OK" 0 "$rc" "$out" \
+  "VERDICT: OK" 'MAINT-5'
+# A cross-reference to an ID ONLY THE BASELINE defines is a pointer at the master — the variant
+# banner documents it, and wai-init lints right after copying a variant (web and minimum carry such
+# references). Not a finding in the catalog; the same citation in docs/ still is (case above).
+lfix; grep -v 'SEC-8' "$D/docs/architecture/quality-attributes.md" > "$D/c" && mv "$D/c" "$D/docs/architecture/quality-attributes.md"
+before_retired '- **SEC-100 · Local** — narrows `SEC-8` to one tenant. *Red Flag:* b.'
+out="$(lint)"; rc=$?
+assert "  · a catalog cross-reference to a baseline-only ID points at the master → OK" 0 "$rc" "$out" 'VERDICT: OK' 'SEC-8'
+# THE TRADE-OFF, pinned: master-ok also covers the repo's OWN dimensions, so the re-point above to a
+# tailored-away ID passes inside the catalog — while the SAME citation in docs/ fails.
+printf 'The plan narrows `SEC-8`.\n' > "$D/docs/plan.md"
+out="$(lint)"; rc=$?
+assert "  · the same tailored-away citation in docs/ → adopt-or-fix FAIL (the documented trade-off)" 1 "$rc" "$out" \
+  'cited in docs/, defined in the baseline, absent from YOUR catalog: SEC-8' "catalog's own cross-references.*SEC-8"
+lfix; printf '\n## Notes\n\nSee `PAY-7`.\n' >> "$D/docs/architecture/quality-attributes.md"
+out="$(lint)"; rc=$?
+assert "  · a section after '## Retired IDs' is read again → its dangling citation FAILS" 1 "$rc" "$out" \
+  "catalog's own cross-references.*PAY-7"
+lfix; printf '# Agent notes\n\nEvery review cites `SEC-1` and `GDPR-4`.\n' > "$D/CLAUDE.md"
+out="$(lint)"; rc=$?
+assert "CLAUDE.md citing an ID that exists nowhere → FAIL, naming CLAUDE.md" 1 "$rc" "$out" \
+  'cited in CLAUDE.md but neither live nor retired nor in the baseline: GDPR-4'
+lfix; printf 'Tailored away: `PAY-3`.\n' > "$D/AGENTS.md"
+grep -v 'PAY-3' "$D/docs/architecture/quality-attributes.md" > "$D/c" && mv "$D/c" "$D/docs/architecture/quality-attributes.md"
+out="$(lint)"; rc=$?
+assert "AGENTS.md citing a baseline ID the catalog tailored away → the adopt-or-fix finding" 1 "$rc" "$out" \
+  'cited in AGENTS.md, defined in the baseline, absent from YOUR catalog: PAY-3'
+lfix; rm -f "$D/CLAUDE.md" "$D/AGENTS.md"
+out="$(lint)"; rc=$?
+assert "no CLAUDE.md and no AGENTS.md → not an error, OK" 0 "$rc" "$out" 'VERDICT: OK' 'CLAUDE.md|AGENTS.md'
 
 # ── dep-cve-scan.sh ─────────────────────────────────────────────────────────────────────────────
 # The whole point: a scanner that did NOT run must read as `not_measured`, NEVER as 0 / clean. And a
@@ -1056,6 +1133,37 @@ if grep -q 'advisory (not gating): EX-SEC' "$D/docs/architecture/gate-ledger.md"
   ok "  · and the ledger row carries it (visible where the tags are audited)"
 else bad "  · and the ledger row carries it" "$(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
 
+# UN-ANCHORING WAS SILENT. Which families a citation decides for follows the SHAPE of the
+# CONTRACT_PATHS globs, so removing one path can un-anchor a family. Reported from a field repo
+# (2026-08-31), not yet written up here: `server/schema.js` was its only *schema* path, and when it
+# went, EX-API stopped gating with nothing saying so. The classifier now prints ANCHORED-DOMAINS on
+# every default-mode run (and in the --autonomy blocklist HELD branches). Same diff
+# (an API- citation in an added code line), the conf with and without the schema path:
+edfix; printf 'src/api/handler.ts\n' > "$ED_D/files"
+printf '+  // API-2: the contract is versioned\n' > "$ED_D/diff"
+printf 'CONTRACT_PATHS="src/billing/* server/schema.js"\nERASURE_PATHS="apps/api/src/erasure/*"\n' > "$ED_D/merge-gate.conf"
+out="$(edrun)"; rc=$?
+assert "a schema-shaped path in CONTRACT_PATHS → EX-API anchored, and the API citation decides" 1 "$rc" "$out" \
+  'ANCHORED-DOMAINS: EX-GDPR EX-PAY EX-API'
+printf 'CONTRACT_PATHS="src/billing/*"\nERASURE_PATHS="apps/api/src/erasure/*"\n' > "$ED_D/merge-gate.conf"
+out="$(edrun)"; rc=$?
+assert "  · the same diff without it → EX-API absent from the anchored line, the citation advisory" 0 "$rc" "$out" \
+  'ANCHORED-DOMAINS: EX-GDPR EX-PAY$' 'ANCHORED-DOMAINS:.*EX-API'
+: > "$ED_D/merge-gate.conf"
+out="$(edrun)"; rc=$?
+assert "  · no declared paths at all → 'ANCHORED-DOMAINS: none', never an empty or missing line" 0 "$rc" "$out" \
+  'ANCHORED-DOMAINS: none'
+edfix; out="$(edrun)"; rc=$?
+assert "  · a plain CLEAR run states the anchored families too" 0 "$rc" "$out" 'ANCHORED-DOMAINS: EX-GDPR EX-PAY EX-AUTH EX-API'
+# The gate states it as ONE terminal line and keeps it OUT of the ledger row: it describes the conf,
+# not the PR the row is about. (gfix: CONTRACT_PATHS billing + auth under apps/api/ — PAY, AUTH, API.)
+gfix; out="$(gate)"; rc=$?
+assert "gate: one info line names the families whose citations decide here" 0 "$rc" "$out" \
+  'citations decide here: EX-PAY EX-AUTH EX-API — families with declared paths in merge-gate.conf'
+if grep -q 'citations decide here' "$D/docs/architecture/gate-ledger.md" 2>/dev/null; then
+  bad "  · and the anchored line is NOT written to the ledger row" "$(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"
+else ok "  · and the anchored line is NOT written to the ledger row"; fi
+
 # An input that cannot be read is HELD, never CLEAR — the fail-closed rule the whole suite rests on.
 edfix; out="$(EXCLUDED_DOMAINS_MERGE_CONF="$ED_D/merge-gate.conf" EXCLUDED_DOMAINS_COORD_CONF="$ED_D/coordination.conf" sh "$ED" --files "$ED_D/files" --diff "$ED_D/does-not-exist" 2>&1)"; rc=$?
 assert "an unreadable diff → UNKNOWN, exit 2 (fail-closed, never CLEAR)" 2 "$rc" "$out" 'UNKNOWN' 'VERDICT: CLEAR'
@@ -1076,12 +1184,14 @@ assert "an unreadable diff → UNKNOWN, exit 2 (fail-closed, never CLEAR)" 2 "$r
 # ✗ A catalog ID in a CONTEXT line — this PR did not write it and did not add it.
 edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1,3 +1,3 @@\n // PAY-2 applies here\n-old\n+new\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
-assert "a PAY id in a CONTEXT line → CLEAR, no advisory (the field's context-line hits)" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-PAY'
+# The must-NOT covers every line a deciding or advisory tag can appear on (the `  x` detail lines,
+# ADVISORY-DOMAINS, EXCLUDED-DOMAINS) — not ANCHORED-DOMAINS, which states the conf on every run.
+assert "a PAY id in a CONTEXT line → CLEAR, no advisory (the field's context-line hits)" 0 "$rc" "$out" 'VERDICT: CLEAR' '^(  x |ADVISORY-DOMAINS:|EXCLUDED-DOMAINS:).*EX-PAY'
 
 # ✗ … in a REMOVED line — the PR deletes the citation; it cannot be widening anything.
 edfix; printf -- '--- a/src/util/format.ts\n+++ b/src/util/format.ts\n@@ -1,2 +1,1 @@\n-// PAY-2 applies here\n+new\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
-assert "a PAY id in a REMOVED line → CLEAR, no advisory" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-PAY'
+assert "a PAY id in a REMOVED line → CLEAR, no advisory" 0 "$rc" "$out" 'VERDICT: CLEAR' '^(  x |ADVISORY-DOMAINS:|EXCLUDED-DOMAINS:).*EX-PAY'
 
 # ✗ … in an added line of a PROSE file — a document cites in order to document. Advisory: visible
 # in the verdict, not gating, even though PAY IS anchored in this fixture.
@@ -1122,7 +1232,7 @@ assert "DELETE FROM users in an added .sql line → EX-GDPR, exit 1 (code gates 
 # stub is the only mode with that channel; gh-calls.log records what the classifier asked for.
 edfix; printf 'This review found nothing under SEC-3; PAY-3 unchanged.\n' > "$ED_D/body"
 out="$(edrun_pr)"; rc=$?
-assert "SEC-3 and PAY-3 in the PR body → CLEAR, no advisory, no widening (the body is a description)" 0 "$rc" "$out" 'VERDICT: CLEAR' 'EX-SEC|EX-PAY'
+assert "SEC-3 and PAY-3 in the PR body → CLEAR, no advisory, no widening (the body is a description)" 0 "$rc" "$out" 'VERDICT: CLEAR' '^(  x |ADVISORY-DOMAINS:|EXCLUDED-DOMAINS:).*(EX-SEC|EX-PAY)'
 if grep -Eq 'title|body' "$ED_D/gh-calls.log" 2>/dev/null; then bad "  · and neither title nor body was ever requested from gh" "$(grep -E 'title|body' "$ED_D/gh-calls.log")"
 else ok "  · and neither title nor body was ever requested from gh"; fi
 

@@ -8,6 +8,8 @@
 # Tags are matched on their FIRST TWO characters, never compared literally. The free text after a
 # comma is the human's and is preserved — and any tag this parser cannot place is COUNTED AND
 # PRINTED. A statistic that drops rows must say so.
+# Known tags: ok · fp · fn · nil · lost (a RECONSTRUCTED row, case-insensitive: the verdict is
+# known from the PR comment, the outcome was never judged — its own line, outside every rate).
 # Why: docs/rationale/gate-stats.md § The 0% that was 15%
 #
 #   exit 0  printed the numbers (or the report)
@@ -88,6 +90,11 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
     # header and reported every MOOT row as untagged. Why: docs/rationale/gate-stats.md § MOOT is blank by rule
     if (v == "MOOT") { if (o == "") moot_blank++; else moot_tagged++; next }
     if (o == "") { untagged++; next }         # emitted, not yet judged by the human
+    # `lost` — a RECONSTRUCTED row: its original row was lost and the verdict is known from the PR
+    # comment, but the outcome was never judged. Its own count, outside EVERY rate — coverage
+    # included. Case-insensitive, 2-char prefix: field ledgers write it `LOST`.
+    # Why: docs/rationale/gate-stats.md § A reconstructed row has no outcome
+    if (tolower(substr(o, 1, 2)) == "lo") { lostc++; next }
     tagged++
     p = substr(o, 1, 2)                       # the tag is the FIRST TWO characters — see header
     if (p == "ok") {
@@ -107,7 +114,7 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
   }
   END {
     nil_total   = nilc["GO"] + nilc["NO-GO"] + nilc["UNKNOWN"]
-    judgeable   = total - (verdict["MOOT"] + 0)    # MOOT rows are blank by rule — not in any coverage
+    judgeable   = total - (verdict["MOOT"] + 0) - lostc   # MOOT (blank by rule) and lost (never judged) — in no coverage
     nogo_ok     = okc["NO-GO"] + 0; nogo_fp = fpc["NO-GO"] + 0
     nogo_judged = nogo_ok + nogo_fp
     go_judged   = okc["GO"] + fpc["GO"] + fnc["GO"]
@@ -127,6 +134,8 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
       printf " · %d untagged · MOOT %d blank by rule\n", untagged + 0, moot_blank + 0
       if (moot_tagged > 0)
         printf "- data quality: %d tag(s) on MOOT rows — MOOT is blank by rule; the tag enters no rate\n", moot_tagged
+      if (lostc > 0)
+        printf "- %d reconstructed row(s) (`lost`) — the verdict is known, the outcome was never judged; outside every rate\n", lostc
       if (unmatched > 0)
         printf "- %d unmatched tag(s): %s — these rows are in NO rate below\n", unmatched, umlist
       if (nil_total > 0)
@@ -177,6 +186,8 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
       printf "     %d MOOT row(s) blank by rule — not untagged, not judged\n", moot_blank
     if (moot_tagged > 0)
       printf "     %d tag(s) on MOOT row(s) — MOOT is blank by rule; the tag enters no rate\n", moot_tagged
+    if (lostc > 0)
+      printf "     %d reconstructed row(s) (`lost`) — the verdict is known, the outcome was never judged; outside every rate\n", lostc
     if (unmatched > 0)
       printf "     %d unmatched tag(s): %s — these rows are in NO ratio below; a statistic that drops rows must say so\n", \
              unmatched, umlist

@@ -55,3 +55,21 @@ data-quality line: the tag has no rate to enter, so it can only mean the rule wa
 same class as the `fn`-on-NO-GO line, which the field balance called an instrument finding, not a
 gate finding. `numbers-lint` re-measures Q1's *untagged* from this output, so the open question's
 number followed the definition the day this landed.
+
+## A reconstructed row has no outcome
+
+Field ledgers lose rows — to a squash race, to a vendored-copy update. The field balance of
+2026-09-06 ([report](../field-reports/2026-09-06-two-months-of-gate-259-verdicts.md)) carried four
+rows marked `LOST`, each with a GO/NO-GO verdict, and kept them out of its confusion matrix; the
+report does not say where their verdicts came from. The suite **defines** the tag: `lost` marks a
+row reconstructed after its original row was lost, its verdict known from the PR comment, its
+outcome never judged. This counter reported them as
+*unmatched* — a data-quality alarm for a row whose state is known and deliberate.
+
+A reconstructed row has a verdict (the script did emit it once) but no judged outcome: the tag
+says *where the row came from*, not whether the gate was right. So `lost` — matched on its first
+two characters, case-insensitive, like every tag — is counted on its own line and enters **no**
+rate: not fp/fn, not calibration, and not outcome coverage either (it leaves both the tagged count
+and the judgeable denominator, the way MOOT does). Its verdict still counts in the verdict totals
+and the NO-GO cause split, because the verdict is known. A tag that is neither known nor `lost` —
+`manual`, say — is still counted as unmatched and named.

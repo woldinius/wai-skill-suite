@@ -145,8 +145,10 @@ necessary aspects as findings.
 
    The script **appends every verdict** to `docs/architecture/gate-ledger.md` — do not log it
    yourself, and never backfill or edit a past row; a verdict with no ledger row means it was never
-   run. The human tags each row's outcome (`ok`/`fp`/`fn`) later; the file explains how. Read the
-   numbers with `scripts/gate-stats.sh`.
+   run. The human tags each row's outcome (`ok`/`fp`/`fn`, plus `nil` and `lost` for a
+   reconstructed row) later; the file explains how. Read the numbers with `scripts/gate-stats.sh`.
+   The gate's output also names the families whose citations decide in this repo (*citations
+   decide here: …*) — a cited family outside that list is advisory only.
 
    - `exit 0` **GO** → and your review is clean → merge (see *How* below).
    - `exit 1` **NO-GO** → a precondition failed. **The human merges.** Append the reasons **to the

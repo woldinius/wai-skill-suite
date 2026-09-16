@@ -109,12 +109,15 @@ else
   echo "    per skill: $PERSKILL"
 fi
 
-# ── the invocation denominator (opt-in hook, #29) ────────────────────────────────────────────────
+# ── the invocation log beside the run log (opt-in hook, #29) ─────────────────────────────────────
 # invocation-log.md is written MECHANICALLY by the PostToolUse hook a developer opted into; the run
-# log above is the model-written numerator. The difference is per-skill prompt-contract compliance
-# — the number this section existed to imply and could never state. ABSENCE of the file is a
-# legitimate state (the hook is opt-in), so it is a named line, never an exit 2: "not installed"
-# must never read as "nothing ran".
+# log above is model-written. TWO UNITS, NEVER A RATE: an invocation row counts one START; a run-log
+# row counts one SUBJECT handled (merge-gate.sh writes one per verdict, and one review can run the
+# gate twice). Neither is the other's denominator, so both raw counts print with their unit, and no
+# percentage is derived from the pair.
+# Why: docs/rationale/retro-compliance.md § Starts and subjects are two units
+# ABSENCE of the file is a legitimate state (the hook is opt-in), so it is a named line, never an
+# exit 2: "not installed" must never read as "nothing ran".
 ILOG="${INVOCATION_LOG:-docs/architecture/invocation-log.md}"
 if [ -f "$ILOG" ] && [ -r "$ILOG" ]; then
   IVRAW="$(awk -F'|' -v since="$SINCE" '
@@ -128,19 +131,20 @@ if [ -f "$ILOG" ] && [ -r "$ILOG" ]; then
   if [ "$IVN" = 0 ]; then
     echo "  invocations (hook): none — 0 rows in the period ($ILOG)"
   else
-    # Cross per skill: invoked N (mechanical) vs logged M (model). logged > invoked is possible —
-    # a run on a machine without the hook — and is printed as-is, never clamped: a number that
-    # cannot exceed its denominator is a number someone normalised.
+    # Per skill: N starts (mechanical) beside M subject rows (model), each with its unit. M > N is
+    # normal — one start can handle several subjects, and a machine without the hook starts
+    # nothing here — and is printed as-is, never clamped and never divided.
     IVCROSS="$(printf '%s\n' "$IVRAW" | sed 1d | sort -rn | while IFS=' ' read -r _n _sk; do
                  [ -n "$_sk" ] || continue
                  _m="$(printf '%s\n' "$RLRAW" | sed 1d | grep -E " $_sk\$" | awk '{print $1; exit}')"
-                 printf '%s invoked %s · logged %s\n' "$_sk" "$_n" "${_m:-0}"
+                 printf '%s %s start(s) · %s subject row(s)\n' "$_sk" "$_n" "${_m:-0}"
                done | awk '{ s = s (s ? "  |  " : "") $0 } END { print s }')"
     echo "  invocations (hook): $IVN in the period ($ILOG)"
-    echo "    compliance: $IVCROSS"
+    echo "    starts vs. subject rows: $IVCROSS"
+    echo "    two units, not a rate: an invocation row counts one start, a run-log row counts one subject handled (merge-gate.sh writes one per verdict) — neither is the other's denominator, so no share is printed."
   fi
 else
-  echo "  invocations (hook): not installed — the denominator is opt-in (sh .claude/skills/wai/scripts/invocation-log.sh --snippet); absence means the hook is off, never that nothing ran"
+  echo "  invocations (hook): not installed — the start log is opt-in (sh .claude/skills/wai/scripts/invocation-log.sh --snippet); absence means the hook is off, never that nothing ran"
 fi
 
 # ── gate-ledger verdicts in the period ───────────────────────────────────────────────────────────

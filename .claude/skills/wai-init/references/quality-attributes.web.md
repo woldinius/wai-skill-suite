@@ -34,7 +34,7 @@
 > **stable ID** (e.g. `AI-3`); reviews and plans cite this ID to justify a finding
 > unambiguously. IDs are stable — when revising, change the content but
 > do not reassign IDs that have already been issued. Tech-stack-specific additions get new IDs
-> in the appropriate namespace series (e.g. `MAINT-10`).
+> in the appropriate namespace series, minted at ≥ 100 (e.g. MAINT-100).
 
 Table of contents (master numbering — gaps are sections not in this variant):
 2. Resilience & Operations (`RES-*`)
