@@ -24,6 +24,50 @@ degree they are verifiable. The tool layer here *manufactures verifiability* whe
 an exit code, a lint — and where verifiability collapses, the human is the design, not the
 fallback.
 
+## Skills
+
+A **router** points you to the right skill; three one-time **setup** skills prepare the repos;
+four skills form the per-requirement **lifecycle** (plan → implement → test → review); one
+**lifecycle orchestrator** works one issue or many under your mandate; three run **periodically**
+— a structural architecture audit, an adversarial security audit, and an artifact-derived
+retrospective of the suite's own record. All are triggered
+automatically via their `description` and demarcate themselves against the others to avoid
+mis-routing.
+
+**Field exposure** — the author's self-report as of 2026-09: a usage claim, not an efficacy
+claim. The first measured counts come from one field repo: 87 hook-counted invocations, led by
+`wai-pr-review` and `wai-testing` — a floor (Q9 in [open-questions](docs/open-questions.md),
+dated). What *would* be checkable, though nobody has counted it yet: the heavily-used skills appear
+to be where most recorded defects were found — and fixed — so most regression tests would trace
+back to them.
+**daily** = in daily use across the author's repos since consolidation · **periodic** =
+deliberately not daily — run every 5–10 PRs, or after a stretch of major changes · **less
+often** = fewer occasions, well-tested · **once per repo** = by nature runs once-to-rarely per
+repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explicitly wanted.
+
+| Skill | Stage | Exposure | What for | Trigger (examples) |
+|-------|-------|----------|----------|--------------------|
+| [`wai`](.claude/skills/wai/SKILL.md) | Router | less often · well-tested | Front door: recommends which skill to run next and how the suite hands off. Routes by **surface** (backend/web/iOS/Android) and lifecycle position. | "which skill do I use", "where do I start", "what's next" |
+| [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 87 IDs / ~510 lines). Every other skill reads the catalog at runtime, so its size is expected to be the suite's biggest cost lever (unmeasured — Q5). Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
+| [`wai-cicd`](.claude/skills/wai-cicd/SKILL.md) | Setup (backend+web) | once per repo · proving | **One-time:** GitHub-native CI/CD (Actions, GHCR) + deploy to your own server via Compose/SSH — Dockerfile, Compose, Caddy, the **merge gate** + branch protection. Other delivery systems are out of scope by design. | "set up CI/CD", "deploy to my server", "wire required checks" |
+| [`wai-mobile-release`](.claude/skills/wai-mobile-release/SKILL.md) | Setup (iOS/Android) | once per repo · proving | **One-time:** build, code signing (match / Play App Signing), the **mobile merge gate**, and store delivery (TestFlight / Play tracks). | "set up the iOS build", "Fastlane", "TestFlight", "Play Console" |
+| [`wai-requirements-planning`](.claude/skills/wai-requirements-planning/SKILL.md) | Plan | daily | Prepare a requirement; interview — or **grill-me mode** (one question at a time, recommended answers, alternatives for imprecise asks); decompose **per surface + contract-first**; diagrams over text; small items become issues, not planning docs. | "plan this requirement", "how do we build X", "grill me" |
+| [`wai-implementation`](.claude/skills/wai-implementation/SKILL.md) | Implement | daily | Concrete implementation — plan with risk/blast-radius first, then code, with per-surface concern sets. Default for code changes. | "implement X", "fix", "returns error 503", "refactor" |
+| [`wai-testing`](.claude/skills/wai-testing/SKILL.md) | Test | daily | Deterministic tests + the testing strategy: per-surface levels, **contract tests both sides**, token economy as a mandatory target (no real models/billing). | "write tests for X", "is this covered", "cover the billing path" |
+| [`wai-pr-review`](.claude/skills/wai-pr-review/SKILL.md) | Review | daily | Evaluate a PR/diff against the catalog, ordered by severity; classify by surface; token/billing & contract are human-gated domains. | "review this PR", "can this be merged", "check this diff" |
+| [`wai-team`](.claude/skills/wai-team/SKILL.md) | Commissioned | less often · well-tested | **Mandated lifecycle orchestrator:** works one or more GitHub issues through the full cycle — one branch+PR per issue, serial by default, bounded parallelism only for disjoint issues — integrated via pr-review's **merge queue**; every review on fresh context, the merge policy confirmed at kickoff; Blocker/Major & contract merges collect in **your decision list**. | "run the cycle on #42", "work the backlog", "process issues #12–#18" |
+| [`wai-architecture-audit`](.claude/skills/wai-architecture-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **structural** audit: decoupling/modularity, drift, dead code + **non-obvious semantic redundancy / inconsistency / cross-surface dead-ends**, efficiency & container topology — as a trend over time. Measures against a persisted **architecture baseline**. | "audit the codebase", "is it decoupled", "find redundancy/drift" |
+| [`wai-security-audit`](.claude/skills/wai-security-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **adversarial** cyber-security sweep: attack-surface map + authZ/IDOR, secrets, injection (incl. prompt), SSRF, rate-limiting, session/token lifecycle, dependency CVEs, crypto/TLS, **token-economy fraud**, client attestation — posture as a trend. Report-only; redacted. | "security audit", "are we secure", "pentest", "check the attack surface", "dependency CVEs" |
+| [`wai-retro`](.claude/skills/wai-retro/SKILL.md) | Periodic | proving — runs here and in one field repo | **Artifact-derived retrospective** of the suite's own record, at a threshold (doctor's report-cadence advisory) — never from recall: the gate ledger's report extract, the run log and `git log` in; a dated, narrated report with raw counts beside every rate out; the judgment column stays human. Finishes by advancing the ledger's report marker so the cadence resets. Collaboration level gated until a question trace exists; publication to this repo only on explicit request, sanitized + pseudonymized (`fr-<12hex>`). | "run the retro", "retrospective", "what did the suite do this month", "cut a report" |
+
+## Personal skills
+
+Not part of the wAI lifecycle — reusable helpers for the human, adopted per project like the others.
+
+| Skill | Exposure | What for | Trigger (examples) |
+|-------|----------|----------|--------------------|
+| [`wai-learning-gap`](.claude/skills/wai-learning-gap/SKILL.md) | daily · two developers — **needs many users, not more days** | Cloze-coding tutor, **per developer and opt-in**: after **every implementation phase**, plant exactly one learning gap (1–3 removed lines, 🧩 `LEARN #` marker, working tree only) the human must rebuild to get back to green. On first run it builds a **stack profile** from the repo's manifests (+ a short self-assessment) that seeds the **Leitner boxes** in the *personal* ledger `~/.claude/learning/<repo>/ledger.md` (outside the repo, so it survives a second clone or worktree); topics are interleaved, a local pre-commit hook keeps gaps out of commits, stale gaps are resolved & explained so implementation speed doesn't suffer. **The ledger is the opt-in**: a developer without one gets nothing — no gap, no hook, no ledger — so in a shared repo your colleagues are untouched. Works standalone in any repo. | "learning gap", "hint", "solution", "learning status", "learning mode on" |
+
 ## What is different here
 
 Not the gate alone — merge gates with exit codes exist elsewhere. What this suite adds is that
@@ -191,50 +235,6 @@ Other shapes work too — `wai-init` scopes and sizes everything to what the rep
 field repo is a game-server prototype, deliberately without CI
 ([2026-08-02](docs/field-reports/2026-08-02-prototype-field-session.md), dated), and the dataset
 summarized in *In the field* comes from a different game repo with its own CI.
-
-## Skills
-
-A **router** points you to the right skill; three one-time **setup** skills prepare the repos;
-four skills form the per-requirement **lifecycle** (plan → implement → test → review); one
-**lifecycle orchestrator** works one issue or many under your mandate; three run **periodically**
-— a structural architecture audit, an adversarial security audit, and an artifact-derived
-retrospective of the suite's own record. All are triggered
-automatically via their `description` and demarcate themselves against the others to avoid
-mis-routing.
-
-**Field exposure** — the author's self-report as of 2026-09: a usage claim, not an efficacy
-claim. The first measured counts come from one field repo: 87 hook-counted invocations, led by
-`wai-pr-review` and `wai-testing` — a floor (Q9 in [open-questions](docs/open-questions.md),
-dated). What *would* be checkable, though nobody has counted it yet: the heavily-used skills appear
-to be where most recorded defects were found — and fixed — so most regression tests would trace
-back to them.
-**daily** = in daily use across the author's repos since consolidation · **periodic** =
-deliberately not daily — run every 5–10 PRs, or after a stretch of major changes · **less
-often** = fewer occasions, well-tested · **once per repo** = by nature runs once-to-rarely per
-repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explicitly wanted.
-
-| Skill | Stage | Exposure | What for | Trigger (examples) |
-|-------|-------|----------|----------|--------------------|
-| [`wai`](.claude/skills/wai/SKILL.md) | Router | less often · well-tested | Front door: recommends which skill to run next and how the suite hands off. Routes by **surface** (backend/web/iOS/Android) and lifecycle position. | "which skill do I use", "where do I start", "what's next" |
-| [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 87 IDs / ~510 lines). Every other skill reads the catalog at runtime, so its size is expected to be the suite's biggest cost lever (unmeasured — Q5). Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
-| [`wai-cicd`](.claude/skills/wai-cicd/SKILL.md) | Setup (backend+web) | once per repo · proving | **One-time:** GitHub-native CI/CD (Actions, GHCR) + deploy to your own server via Compose/SSH — Dockerfile, Compose, Caddy, the **merge gate** + branch protection. Other delivery systems are out of scope by design. | "set up CI/CD", "deploy to my server", "wire required checks" |
-| [`wai-mobile-release`](.claude/skills/wai-mobile-release/SKILL.md) | Setup (iOS/Android) | once per repo · proving | **One-time:** build, code signing (match / Play App Signing), the **mobile merge gate**, and store delivery (TestFlight / Play tracks). | "set up the iOS build", "Fastlane", "TestFlight", "Play Console" |
-| [`wai-requirements-planning`](.claude/skills/wai-requirements-planning/SKILL.md) | Plan | daily | Prepare a requirement; interview — or **grill-me mode** (one question at a time, recommended answers, alternatives for imprecise asks); decompose **per surface + contract-first**; diagrams over text; small items become issues, not planning docs. | "plan this requirement", "how do we build X", "grill me" |
-| [`wai-implementation`](.claude/skills/wai-implementation/SKILL.md) | Implement | daily | Concrete implementation — plan with risk/blast-radius first, then code, with per-surface concern sets. Default for code changes. | "implement X", "fix", "returns error 503", "refactor" |
-| [`wai-testing`](.claude/skills/wai-testing/SKILL.md) | Test | daily | Deterministic tests + the testing strategy: per-surface levels, **contract tests both sides**, token economy as a mandatory target (no real models/billing). | "write tests for X", "is this covered", "cover the billing path" |
-| [`wai-pr-review`](.claude/skills/wai-pr-review/SKILL.md) | Review | daily | Evaluate a PR/diff against the catalog, ordered by severity; classify by surface; token/billing & contract are human-gated domains. | "review this PR", "can this be merged", "check this diff" |
-| [`wai-team`](.claude/skills/wai-team/SKILL.md) | Commissioned | less often · well-tested | **Mandated lifecycle orchestrator:** works one or more GitHub issues through the full cycle — one branch+PR per issue, serial by default, bounded parallelism only for disjoint issues — integrated via pr-review's **merge queue**; every review on fresh context, the merge policy confirmed at kickoff; Blocker/Major & contract merges collect in **your decision list**. | "run the cycle on #42", "work the backlog", "process issues #12–#18" |
-| [`wai-architecture-audit`](.claude/skills/wai-architecture-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **structural** audit: decoupling/modularity, drift, dead code + **non-obvious semantic redundancy / inconsistency / cross-surface dead-ends**, efficiency & container topology — as a trend over time. Measures against a persisted **architecture baseline**. | "audit the codebase", "is it decoupled", "find redundancy/drift" |
-| [`wai-security-audit`](.claude/skills/wai-security-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **adversarial** cyber-security sweep: attack-surface map + authZ/IDOR, secrets, injection (incl. prompt), SSRF, rate-limiting, session/token lifecycle, dependency CVEs, crypto/TLS, **token-economy fraud**, client attestation — posture as a trend. Report-only; redacted. | "security audit", "are we secure", "pentest", "check the attack surface", "dependency CVEs" |
-| [`wai-retro`](.claude/skills/wai-retro/SKILL.md) | Periodic | proving — runs here and in one field repo | **Artifact-derived retrospective** of the suite's own record, at a threshold (doctor's report-cadence advisory) — never from recall: the gate ledger's report extract, the run log and `git log` in; a dated, narrated report with raw counts beside every rate out; the judgment column stays human. Finishes by advancing the ledger's report marker so the cadence resets. Collaboration level gated until a question trace exists; publication to this repo only on explicit request, sanitized + pseudonymized (`fr-<12hex>`). | "run the retro", "retrospective", "what did the suite do this month", "cut a report" |
-
-## Personal skills
-
-Not part of the wAI lifecycle — reusable helpers for the human, adopted per project like the others.
-
-| Skill | Exposure | What for | Trigger (examples) |
-|-------|----------|----------|--------------------|
-| [`wai-learning-gap`](.claude/skills/wai-learning-gap/SKILL.md) | daily · two developers — **needs many users, not more days** | Cloze-coding tutor, **per developer and opt-in**: after **every implementation phase**, plant exactly one learning gap (1–3 removed lines, 🧩 `LEARN #` marker, working tree only) the human must rebuild to get back to green. On first run it builds a **stack profile** from the repo's manifests (+ a short self-assessment) that seeds the **Leitner boxes** in the *personal* ledger `~/.claude/learning/<repo>/ledger.md` (outside the repo, so it survives a second clone or worktree); topics are interleaved, a local pre-commit hook keeps gaps out of commits, stale gaps are resolved & explained so implementation speed doesn't suffer. **The ledger is the opt-in**: a developer without one gets nothing — no gap, no hook, no ledger — so in a shared repo your colleagues are untouched. Works standalone in any repo. | "learning gap", "hint", "solution", "learning status", "learning mode on" |
 
 ## Installation
 
