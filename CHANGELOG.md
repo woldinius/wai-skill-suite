@@ -12,6 +12,7 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
   the per-response usage records in Claude Code's session transcripts: responses, output, fresh
   input, cache reads and average context per response, the main thread and subagents apart; no
   prices, no content, no timestamps. Q5 stays open. Rationale: `docs/rationale/session-cost.md`.
+  ([#87](https://github.com/woldinius/wai-skill-suite/pull/87))
 
 ### Changed
 
