@@ -6,6 +6,13 @@ checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurab
 
 ## [Unreleased]
 
+### Added
+
+- **`session-cost.sh` gives Q5 its first measurement.** An optional `wai-retro` extractor sums
+  the per-response usage records in Claude Code's session transcripts: responses, output, fresh
+  input, cache reads and average context per response, the main thread and subagents apart; no
+  prices, no content, no timestamps. Q5 stays open. Rationale: `docs/rationale/session-cost.md`.
+
 ### Changed
 
 - **The README shows the field record.** A new *In the field* section summarizes the largest
