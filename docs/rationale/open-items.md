@@ -78,13 +78,16 @@ overrides — instead of a copy step nobody watches.
 Added 2026-09-26, with the lean-output change. The full footer is fourteen lines, and on a quiet
 repo nearly all of its class lines say *none*. Pasted at the end of every hand-back, it was often
 the longest part of one, and the lines that mattered (an open PR, an untagged ledger row) sat
-among the ones that did not. The same change measured this repo's PRs #56–#85 (the measuring
-command came with the task and is not recorded here): the median review comment ran 4,700
-characters, all comments on a PR 5,700, a PR body 4,800. The operational output had grown past
-what a human reads, and the footer was one of its fixed costs.
+among the ones that did not. The operational output around it had grown too. Measured 2026-09-26
+over PRs #56–#85 — `gh api repos/woldinius/wai-skill-suite/issues/<n>/comments` and
+`gh pr view <n> --json body`; review comment = a body starting `## PR Review`; medians over the
+PRs that have comments: a PR body ran 4,800 characters, a review comment 4,700, all comments on
+a PR 5,700. The population grows with every new comment, which is why the date is part of the
+figure: re-run later the same day, over 16 PRs and 9 review comments, the same method gave 5,033,
+4,491 and 8,639. The footer was one of the fixed costs in that output.
 
 `--brief` prints only the classes with a finding, then one line:
-`clean: 6 of 8 classes · skipped (no artifact): audits · not derived: asked, unanswered`. Three
+`open items — clean: 6 of 8 classes · skipped (no artifact): audits · not derived: asked, unanswered`. Three
 rules keep that brevity from becoming the bias the script exists to remove:
 
 - **A not-checked class always prints.** A check that could not run is itself a finding; dropping

@@ -3,7 +3,7 @@
 Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
-Entries stay at most 60 words; the PR carries the detail.
+New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ## [Unreleased]
 
@@ -12,7 +12,7 @@ Entries stay at most 60 words; the PR carries the detail.
 - **Lean output.** `open-items.sh --brief` prints only classes with findings plus one summary
   line; the eight skills that paste the footer use it, shaped by the new `hand-back.md`. A review
   lives once, in the PR comment, quoting only the gate's `VERDICT:` and `✗`/`?` lines, one comment
-  per round. Budgets cap reviews, PR bodies, commits, issues, retros and these entries.
+  per round. Budgets cap reviews, PR titles and bodies, commits, issues, retros, these entries.
 
 - **The README shows the field record.** A new *In the field* section summarizes the largest
   dataset as of 2026-09-06 — one field repo's gate ledger over 2026-07-22 → 2026-09-05: no GO

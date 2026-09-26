@@ -147,8 +147,8 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    (Conventional Commits + `Co-Authored-By` trailer), then **open the PR** with `gh pr create`
    (what/why, link to the plan, catalog IDs, API back-compat statement, and the
    **Verification** block from step 6 — the command and its real output, or the named reason
-   there is none; **about 15 lines**, the detail stays in the plan) — or update it if one already
-   exists; never touch `main`. **If an issue drove
+   there is none) — or update it if one already exists; never touch `main`. **Title at most 66
+   characters, body about 15 lines:** the plan (or the issue) carries the detail. **If an issue drove
    the work**, add `Closes #N` to the PR body (same-repo only — for a cross-repo issue use
    `owner/repo#N` and close manually); skip cleanly when there's no issue.
    **What the self-review (step 5) surfaced but this PR does not fix** — a pre-existing weakness

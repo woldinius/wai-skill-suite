@@ -369,8 +369,9 @@ fi
 # ── Summary — what was derived, what was skipped, what could not be checked ──────────────────────
 sk="${SKIPPED# }"; nc="${NOTCHECKED# }"
 if [ "$BRIEF" = yes ]; then
-  # ONE line. Empty segments drop; the not-checked classes also printed their own lines above.
-  s="clean: $CLEAN of 8 classes"
+  # ONE line, labelled — pasted under a hand-back it must say what it is. Empty segments drop; the
+  # not-checked classes also printed their own lines above.
+  s="open items — clean: $CLEAN of 8 classes"
   [ -z "$sk" ] || s="$s · skipped (no artifact): $sk"
   [ -z "$nc" ] || s="$s · not checked: $nc"
   echo "$s · not derived: asked, unanswered"

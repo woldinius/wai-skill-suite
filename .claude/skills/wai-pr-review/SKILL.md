@@ -109,7 +109,7 @@ necessary aspects as findings.
    decision, before the hand-off:
 
    ```
-   gh pr comment <PR> --body-file <the review from the format below>
+   gh pr comment <PR> --body-file <f>    # <f> = the review file (format below); save the URL it prints
    ```
 
    Not only in `team` mode, not only when merging, not only when the gate is green — **always**:
@@ -159,8 +159,11 @@ necessary aspects as findings.
 
    **Every verdict goes into the review comment** — that is where the decision is made. Quote the
    `VERDICT:` line and the `✗`/`?` lines only, in chat too (the `✓` lines are already in the
-   ledger row): append them to the review file and run
-   `gh pr comment <PR> --edit-last --body-file <f>`; if that fails, post a new comment.
+   ledger row): append them to `<f>`, the review file, and patch the comment by the id in its
+   saved URL (`…#issuecomment-<id>`):
+   `gh api -X PATCH repos/{owner}/{repo}/issues/comments/<id> -F body=@<f>` — the patch replaces
+   the whole body. No URL → post `<f>` as a new comment. Never `--edit-last`: it edits the
+   account's newest comment, which may be the human's.
 
    **Do not re-derive the script's answer in prose, and never overrule it.** The whole point is
    that "the model checked" becomes an artefact you can audit. If the script is unavailable

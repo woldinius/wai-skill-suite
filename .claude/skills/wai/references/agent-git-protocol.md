@@ -387,11 +387,13 @@ easy half; the **restore** is where finished work dies. The rule:
 - Open/update via `gh` (`gh pr create` / `gh pr edit`). Target `main`. Open as **draft** when
   the change touches a contract domain (API, User Management, Login, Security, Token, Billing)
   or has high blast radius, and label it for the human's attention.
+- **PR title** at most 66 characters: a squash merge makes it the subject on `main`, followed by
+  ` (#N)` — the 72-character subject budget of *Commit*, applied where the title lands.
 - **PR body** (use the repo's `.github/pull_request_template.md` if present), **about 15 lines**,
   covering: what & why + a link to the plan; catalog IDs touched; an explicit **API
   backward-compat statement** for store clients (no breaking change, or the versioning/migration
-  plan); test plan; risk / blast-radius. The plan and the commits carry the detail; the body
-  links them. End the body with:
+  plan); test plan; risk / blast-radius. The plan (or the issue) carries the detail; the body
+  links it. End the body with:
   `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 - The PR is the human's review surface. Lead it with what needs a decision, not a green check.
 

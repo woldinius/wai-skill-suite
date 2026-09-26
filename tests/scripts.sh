@@ -1442,26 +1442,37 @@ assert "  · a gate row colliding with the base's compared cells counts as well 
 oibrief() { oifix; git -C "$D" update-ref refs/remotes/origin/main "$(git -C "$D" rev-parse HEAD)"; }
 oibrief; out="$(oi --brief)"; rc=$?
 assert "--brief on a clean repo → exit 0 and ONLY the summary line, naming what was skipped" 0 "$rc" "$out" \
-  '^clean: 6 of 8 classes · skipped \(no artifact\): gate-ledger audits · not derived: asked, unanswered$' '^  · |^open-items:|SUMMARY'
+  '^open items — clean: 6 of 8 classes · skipped \(no artifact\): gate-ledger audits · not derived: asked, unanswered$' '^  · |^open-items:|SUMMARY'
 [ "$(printf '%s\n' "$out" | grep -c .)" = 1 ] && ok "  · and it is one line, nothing else" \
   || bad "  · and it is one line, nothing else" "$(printf '%s\n' "$out" | grep -c .) lines"
 oibrief; printf '7~fix-thing~fix the thing\n' | tr '~' '\034' > "$D/open-prs"
 out="$(oi --brief)"; rc=$?
 assert "--brief with one open PR → that class's line plus the summary" 0 "$rc" "$out" \
   '^  · open PRs \(1\): #7 fix the thing$' 'open PRs: none|issues assigned to'
-assert "  · the summary counts the class with a finding out of the clean ones" 0 "$rc" "$out" '^clean: 5 of 8 classes · '
+assert "  · the summary counts the class with a finding out of the clean ones" 0 "$rc" "$out" '^open items — clean: 5 of 8 classes · '
 [ "$(printf '%s\n' "$out" | grep -c .)" = 2 ] && ok "  · two lines: the finding and the summary" \
   || bad "  · two lines: the finding and the summary" "$(printf '%s\n' "$out" | grep -c .) lines"
 oibrief; out="$( cd "$D" && PATH="$NOGHBIN" GH_FIXTURE="$D" "$SH" "$OPENITEMS" --brief 2>&1 )"; rc=$?
 assert "--brief with gh unavailable → exit 0, and the not-checked line STILL prints" 0 "$rc" "$out" \
   '^  · open PRs: not checked — gh unavailable$'
 assert "  · the summary names every not-checked class" 0 "$rc" "$out" \
-  '^clean: 3 of 8 classes · skipped \(no artifact\): gate-ledger audits · not checked: open-prs assigned-issues merged-sweep · not derived: asked, unanswered$'
+  '^open items — clean: 3 of 8 classes · skipped \(no artifact\): gate-ledger audits · not checked: open-prs assigned-issues merged-sweep · not derived: asked, unanswered$'
 # A "none" with a caveat is not clean: a merge commit that is not local could not be verified.
 oibrief; printf '9~%s~2026-08-10T12:00:00Z\n' "0123456789abcdef0123456789abcdef01234567" | tr '~' '\034' > "$D/merged-prs"
 out="$(oi --brief)"; rc=$?
 assert "--brief: a sweep that could not verify a merge commit prints, and is not counted clean" 0 "$rc" "$out" \
   '#9 not verifiable \(merge commit not local; fetch first\)' 'clean: 6 of 8'
+# …and the other caveat: two remotes that gh does not resolve (no repo fixture → `gh repo view`
+# prints nothing), so the base may belong to a different repository. The branch and worktree-rows
+# "none" lines carry that caveat — both print, neither is clean (review of #86, m1).
+oibrief
+git -C "$D" remote add origin https://github.com/other/elsewhere.git
+git -C "$D" remote add tmp https://github.com/acme/work.git
+out="$(oi --brief)"; rc=$?
+assert "--brief: two remotes gh does not resolve → the branch 'none' prints with its caveat" 0 "$rc" "$out" \
+  '^  · branches with unique commits and no PR: none — .*base remote NOT resolved from gh'
+assert "  · and neither caveated 'none' counts as clean → clean: 4 of 8" 0 "$rc" "$out" \
+  '^open items — clean: 4 of 8 classes · '
 oibrief; out="$(oi --brief --bogus)"; rc=$?
 assert "--brief with an unknown option → exit 2, never a partial footer" 2 "$rc" "$out" 'unknown option' 'clean:'
 
