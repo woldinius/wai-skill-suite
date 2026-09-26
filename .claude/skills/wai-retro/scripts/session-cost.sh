@@ -26,7 +26,7 @@
 # (cache_read_input_tokens) · average context per response = (fresh input + cache read) / responses;
 # and output tokens per model, on one line.
 # NEVER PRINTED: a price or a cost share (prices are not in the transcript), message content, a
-# timestamp, a time of day, a duration.
+# timestamp, a time of day, a duration — the counters need no clock (data minimisation).
 # Why: docs/rationale/session-cost.md § Counters, no clock and no price
 #
 # An extractor, not a skill run: it writes no run-log row — it writes nothing at all.
@@ -39,7 +39,9 @@
 # Usage: sh session-cost.sh [--dir <path>] [--session <id-prefix>]
 #        Default dir: ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<slug>, the slug being the repo
 #        toplevel with every character outside [A-Za-z0-9] replaced by '-'. In a linked worktree
-#        whose own slug has no dir, the main checkout's slug is tried next.
+#        whose own slug has no dir, the main checkout's slug is tried next. Claude Code itself names
+#        the dir after the directory a session was LAUNCHED in, and cuts a name over 200 characters
+#        to 200 plus a hash: a session started in a subfolder, or under an over-long path, needs --dir.
 # Why: docs/rationale/session-cost.md § The default dir
 
 set -u

@@ -1705,7 +1705,7 @@ echo "session-cost.sh"
 SCOST="$ROOT/.claude/skills/wai-retro/scripts/session-cost.sh"
 SA="aaaa1111-0000-4000-8000-00000000000a"
 SB="bbbb2222-0000-4000-8000-00000000000b"
-SCTEXT='[{"type":"text","text":"a private sentence"}]'
+SCTEXT='[{"type":"text","text":"fixture message text"}]'
 # scline REQ MSGID MODEL IN CC CR OUT [CONTENT] — one assistant line; REQ "" = no requestId
 scline() {
   _rq=""; [ -z "$1" ] || _rq="\"requestId\":\"$1\","
@@ -1740,14 +1740,30 @@ out="$(sc)"; rc_=$?
 assert "an ESCAPED usage key (transcript JSON quoted in a tool result or tool input) is never counted" 0 "$rc_" "$out" \
   'main thread \(1 transcript\): 1 response · output 7 · fresh input 2 · cache read 10' '900000|m-quoted'
 
+# A STRING ENDING IN A BACKSLASH. JSON writes it "C:\\" — an escaped backslash, then the real
+# closing quote. Every escape PAIR is dropped, not only \": dropping \" alone eats that quote, and
+# the parse loses the response behind it.
+scdir
+scline req_P1 msg_P1 m-big 1 2 30 11 '[{"type":"text","text":"C:\\"}]' > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert 'a string ending in an escaped backslash ("C:\\") before usage → the response still counts' 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 11 · fresh input 3 · cache read 30'
+
 # THE ITERATIONS REPEAT, and exact keys. The usage object below lists cache_creation_input_tokens
 # BEFORE input_tokens and output_tokens_details BEFORE output_tokens, so a key matched by suffix or
 # prefix reads the wrong number; the nested iterations array repeats every key at 7777.
 scdir
-printf '%s\n' '{"parentUuid":"p2","isSidechain":false,"message":{"model":"m-big","id":"msg_I1","type":"message","role":"assistant","content":[{"type":"text","text":"a private sentence"}],"usage":{"cache_creation_input_tokens":20,"input_tokens":2,"output_tokens_details":{"thinking_tokens":5555},"cache_read_input_tokens":2000,"output_tokens":60,"iterations":[{"input_tokens":7777,"cache_creation_input_tokens":7777,"cache_read_input_tokens":7777,"output_tokens":7777,"type":"message"},{"input_tokens":7777,"output_tokens":7777}]}},"requestId":"req_I1","type":"assistant","uuid":"u2","timestamp":"2026-09-20T22:05:41.000Z"}' > "$D/$SA.jsonl"
+printf '%s\n' '{"parentUuid":"p2","isSidechain":false,"message":{"model":"m-big","id":"msg_I1","type":"message","role":"assistant","content":[{"type":"text","text":"fixture message text"}],"usage":{"cache_creation_input_tokens":20,"input_tokens":2,"output_tokens_details":{"thinking_tokens":5555},"cache_read_input_tokens":2000,"output_tokens":60,"iterations":[{"input_tokens":7777,"cache_creation_input_tokens":7777,"cache_read_input_tokens":7777,"output_tokens":7777,"type":"message"},{"input_tokens":7777,"output_tokens":7777}]}},"requestId":"req_I1","type":"assistant","uuid":"u2","timestamp":"2026-09-20T22:05:41.000Z"}' > "$D/$SA.jsonl"
 out="$(sc)"; rc_=$?
 assert "a nested iterations block is NOT double-counted — the usage object's own keys, exact, first" 0 "$rc_" "$out" \
   'main thread \(1 transcript\): 1 response · output 60 · fresh input 22 · cache read 2000' '7777|5555'
+# …and ITERATIONS FIRST. The repeat may precede the object's own keys; first occurrence is taken at
+# the usage object's own depth only, so it never falls into the nested array.
+scdir
+printf '%s\n' '{"parentUuid":"p5","isSidechain":false,"message":{"model":"m-big","id":"msg_I2","type":"message","role":"assistant","content":[{"type":"text","text":"fixture message text"}],"usage":{"iterations":[{"input_tokens":7777,"cache_creation_input_tokens":7777,"cache_read_input_tokens":7777,"output_tokens":7777,"type":"message"}],"input_tokens":2,"cache_creation_input_tokens":20,"cache_read_input_tokens":2000,"output_tokens":60}},"requestId":"req_I2","type":"assistant","uuid":"u5","timestamp":"2026-09-20T22:06:12.000Z"}' > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert "  · an iterations block BEFORE the usage keys is still never read" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 60 · fresh input 22 · cache read 2000' '7777'
 
 # THE TOP-LEVEL TYPE DECIDES. A user line may carry a structured tool result that nests an
 # assistant-shaped usage record, and a tool INPUT is a JSON object that may hold usage-shaped keys
@@ -1765,7 +1781,7 @@ assert "the TOP-LEVEL type decides, and only message.usage counts — nested usa
 # the top-level type BEFORE the message, the second key order seen in real transcripts, so the
 # skip count below also proves that order is read.
 scdir
-{ printf '%s\n' '{"parentUuid":"p4","isSidechain":false,"type":"assistant","uuid":"u4","timestamp":"2026-09-20T22:11:00.000Z","message":{"id":"syn-1","model":"<synthetic>","role":"assistant","type":"message","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0},"content":[{"type":"text","text":"a private sentence"}]},"requestId":"req_syn","isApiErrorMessage":true}'
+{ printf '%s\n' '{"parentUuid":"p4","isSidechain":false,"type":"assistant","uuid":"u4","timestamp":"2026-09-20T22:11:00.000Z","message":{"id":"syn-1","model":"<synthetic>","role":"assistant","type":"message","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0},"content":[{"type":"text","text":"fixture message text"}]},"requestId":"req_syn","isApiErrorMessage":true}'
   scline '' msg_F1 m-big 1 10 4000 3
   scline '' msg_F1 m-big 1 10 4000 9
 } > "$D/$SA.jsonl"
@@ -1808,7 +1824,7 @@ out="$(sc)"; rc_=$?
 assert "NO clock time in the output — every line read carried a timestamp, none leaks" 0 "$rc_" "$out" \
   'COUNTS ONLY' '[0-9]{1,2}:[0-9]{2}|[0-9]{4}-[0-9]{2}-[0-9]{2}'
 assert "  · no message content, and no price, currency or percentage" 0 "$rc_" "$out" \
-  'Prices are not in the transcript' 'private sentence|[$%]|USD|EUR'
+  'Prices are not in the transcript' 'fixture message text|[$%]|USD|EUR'
 
 # FAIL CLOSED: nothing to read is exit 2, never an all-zero report that reads like a free session.
 out="$("$SH" "$SCOST" --dir "$TMP/sc-nowhere" 2>&1)"; rc_=$?
@@ -1822,6 +1838,15 @@ out="$(sc --bogus)"; rc_=$?
 assert "an unknown option → exit 2" 2 "$rc_" "$out" 'unknown argument'
 out="$("$SH" "$SCOST" --session= 2>&1)"; rc_=$?
 assert "--session= (empty inline value) → exit 2, never silently every session" 2 "$rc_" "$out" 'must not silently'
+# A FAILING awk. The counters are captured before anything prints, so a parse that dies leaves
+# stdout EMPTY — no header, no partial counters — and exit 2 says so on stderr. The stub is an awk
+# that fails on every call, first on PATH for this one run.
+SCFAKE="$TMP/sc-fakeawk"; mkdir -p "$SCFAKE"
+printf '#!/bin/sh\necho "awk: simulated failure" >&2\nexit 2\n' > "$SCFAKE/awk"; chmod +x "$SCFAKE/awk"
+scdir; scline req_W1 msg_W1 m-big 1 0 0 5 > "$D/$SA.jsonl"
+out="$( PATH="$SCFAKE:$PATH" "$SH" "$SCOST" --dir "$D" 2>"$D.err" )"; rc_=$?
+assert "a failing awk → exit 2 and NOTHING on stdout — no header, no partial counters" 2 "$rc_" "$out" '' '.'
+assert "  · stderr names it: nothing was counted" 0 0 "$(cat "$D.err")" 'could not be parsed — nothing was counted'
 
 # THE DEFAULT DIR: $CLAUDE_CONFIG_DIR/projects/<slug>, the slug being the repo toplevel with one '-'
 # per character outside [A-Za-z0-9] — a space, '.', '_' and a two-byte letter (assembled at run

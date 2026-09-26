@@ -62,7 +62,8 @@ character after it), and no quote is left inside a string; splitting the line at
 alternates between text outside strings and string contents, so the bracket depth can be counted
 in the outside parts alone. The escape pairs are dropped, not unescaped: an unescaped `\"` becomes
 a real quote, and the test with an odd number of escaped quotes shows what that does to every
-count after it.
+count after it. And every pair is dropped, not only `\"`: a string that ends in a backslash is
+written `"C:\\"`, and dropping only `\"` would eat its closing quote.
 
 ## Counters, no clock and no price
 
@@ -77,10 +78,9 @@ script would go stale with nothing to notice it. The footer says so in the style
 `retro-compliance.sh`'s COUNTS ONLY line.
 
 No message content and no time data: every transcript line carries a timestamp, and none of it
-reaches the output. The counters need no clock, and a session's times are personal data the
-suite has no use for — a standing rule of this repo. A test holds it: every fixture line carries
-a timestamp and a message text, and the output must match neither a clock time, nor a date, nor
-the text.
+reaches the output. The counters need no clock (data minimisation). A test holds it: every
+fixture line carries a timestamp and a message text, and the output must match neither a clock
+time, nor a date, nor the text.
 
 ## The default dir
 
@@ -98,6 +98,13 @@ own. A worktree agent's transcript lives in the parent session's dir, under `sub
 script was written in a linked worktree under `.claude/worktrees/`, and that worktree's own slug
 had no dir. So where the worktree's slug has no dir, the main checkout's slug is tried next, and
 exit 2 names both paths.
+
+Two cases the default does not reach, as the review of PR #87 read them from the binary of Claude
+Code 2.1.280. Claude Code names the dir after the directory a session was **launched** in, not
+after the repo toplevel: a session started in a subfolder has a dir of its own, and the default
+never reads it — silently, when the toplevel's dir exists. And a name longer than 200 characters
+is cut to 200 and suffixed with a hash, which the script does not reproduce, so the default exits
+2 there. Both need `--dir`.
 
 A response met in two files counts once, for the file read first — main transcripts before
 subagent transcripts, so a response a subagent's file might repeat stays with the main thread.
