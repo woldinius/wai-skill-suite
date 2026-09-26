@@ -113,10 +113,10 @@ Title: <severity/type prefix if useful> <behavioral summary>
 **Skill:** <which wAI skill produced this, e.g. wai-pr-review>   ← who found it
 **Source:** <PR #N / audit report path / plan path / review>       ← the trail back
 **Catalog:** <ID(s), e.g. SEC-3, PAY-2>                            ← why it matters
-**What & why:** 2–4 sentences: the behavior/risk, anchored to the module or capability
-(file paths as hints, not as the spec — they go stale).
+**What & why:** 1–3 lines: the problem — the behavior/risk, anchored to the module or capability.
+**Evidence:** a `file:line` or a link (a hint, not the spec — lines go stale).
 
-**Acceptance criteria** (each independently checkable):
+**Acceptance criteria** (at most 5, each independently checkable):
 - [ ] <verifiable behavior, e.g. "a replayed webhook credits exactly once">
 - [ ] ...
 

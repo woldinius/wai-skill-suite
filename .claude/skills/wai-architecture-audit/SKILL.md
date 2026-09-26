@@ -180,10 +180,9 @@ last audit — don't re-derive a full report when nothing meaningful changed.
    "<subject>" "<half-sentence outcome>"` (from this skill's directory; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — an audit that finds
    nothing still writes its row, because that is the run that vanishes today; fail-open: exit 0
    even when the write fails, exit 2 only on misuse (missing arguments).
-   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (same directory), paste
-   its output verbatim beneath the ▶ Recommended next block, then give your recommendation — in that
-   order: the script derives (exit 0 = emitted; exit 2 = nothing derivable — then say `not checked`
-   yourself), the model recommends.
+   **Then hand back** per `../wai/references/hand-back.md`, ending with
+   `sh ../wai/scripts/open-items.sh --brief` (same directory) pasted verbatim — `exit 2`: say
+   `not checked`.
 
 ## Severity & trend
 

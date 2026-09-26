@@ -127,7 +127,9 @@ this skill adds orchestration, **not** new authority.
    gate as its cycle ends (in a `team` repo: auto-merge armed, waiting for another human's approval
    — see the git protocol), and the next cycle starts from the fresh `main`. Under **(b)** or **(c)**
    the reviewer is told **"verdict only — do not merge"**: it posts the review and the gate result,
-   and the PR waits for the end of the run. Everything else joins the **decision list**. In
+   and the PR waits for the end of the run. A fix loop keeps **one PR comment per review round**
+   (`wai-pr-review` §*Fix loops*), the gate quoted as its `VERDICT:` and `✗`/`?` lines only.
+   Everything else joins the **decision list**. In
    **autonomous** mode the allowlist eligibility floor and the serial post-merge barrier both
    apply — see *Autonomous integration*. With a **single-issue mandate** the loop simply runs once:
    same cycle, same policy, same decision list, one entry in it.
@@ -218,10 +220,9 @@ this skill adds orchestration, **not** new authority.
    not run on fresh context. A run that could not dispatch a fresh-context reviewer offers no
    batch: it hands over, as (c). No answer is a no: the PRs stay approval-ready.
    (The run-log row for this skill is written by `backlog-scan.sh` itself — do not log it again.)
-   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (from this skill's
-   directory — a sibling path), paste its output verbatim beneath the ▶ Recommended next block,
-   then give your recommendation — in that order: the script derives (exit 0 = emitted; exit 2 =
-   nothing derivable — then say `not checked` yourself), the model recommends.
+   **Then hand back** per `../wai/references/hand-back.md`, ending with
+   `sh ../wai/scripts/open-items.sh --brief` (from this skill's directory) pasted verbatim —
+   `exit 2`: say `not checked`.
 
 8. **Learning hand-off (clean run, opt-in)** — after a **clean run**, and **only at an
    interactive hand-back with a human present**, offer exactly **one** learning gap by
@@ -338,7 +339,7 @@ append-only gate ledger and the git log — never narrated from memory.
 - #N [title] → PR #P · merged [ts] · post-merge-verify green · [1 line what shipped]
 
 ### Merged
-- #N [title] → PR #P (auto-merged | auto-merge armed, awaiting a human approval | queue-merged) · [1 line what shipped]
+- #N [title] → PR #P (merged | armed, awaiting approval | queue-merged) · [1 line what shipped]
 
 ### Verified — nothing to fix
 - #N [title] — measured: [what was run · what it showed] · claimed defect no longer exists · [hardened so it keeps holding | closed as-is]
@@ -349,11 +350,11 @@ append-only gate ledger and the git log — never narrated from memory.
 ### Withheld from autonomy — held for you
 - #N / PR #P — [why: path not in AUTONOMY_SAFE_PATHS · excluded domain · Blocker/Major · UNKNOWN]
 
-### Blocked — waiting on a blocker that has not merged (team mode, or merge policy (b)/(c))
-- #N — depends on #X, whose PR #P is armed but not yet approved, or held for the end of the run · not started
+### Blocked — waiting on an unmerged blocker
+- #N — depends on #X (PR #P armed or held) · not started
 
 ### Skipped — claimed by someone else
-- #N — [assignee/branch owner] · not built, to avoid duplicate work
+- #N — [owner] · not built
 
 ### Parked / failed
 - #N — [why · what was left on the issue · label set]
@@ -362,10 +363,12 @@ append-only gate ledger and the git log — never narrated from memory.
 - #N — referenced by … · depends-on / blocked-by … · [genuine finding filed as #F]
 
 ### Issues filed
-- [follow-ups/minors filed during the run, per issues-protocol]
+- #F [title], …
 
 Learning: one representative gap offered (opt-in)   ← only when the clean-run hand-off fired
 ```
+
+Omit empty sections; one line per item.
 
 **`### Verified — nothing to fix` is a third outcome, not a variant of the other two:** without
 its own name it lands under "merged" or "parked", hiding what actually happened. The

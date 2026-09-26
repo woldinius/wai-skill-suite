@@ -82,9 +82,9 @@ nothing from the file would move that count.) This skill stays a non-reader.
      per skill, `starts vs. subject rows` — invocation **starts** beside run-log rows, which count
      **subjects handled** (one per verdict, and a review can run the gate twice). Two units,
      **not a rate**: narrate them side by side, never divide one by the other.
-   - **The closing picture** comes from `sh ../wai/scripts/open-items.sh` (from this skill's
-     directory) at hand-back — `exit 0` = footer emitted (empty lines name their derivation) ·
-     `exit 2` = nothing derivable, then say `not checked` yourself.
+   - **The closing picture** comes from `sh ../wai/scripts/open-items.sh --brief` (from this
+     skill's directory) at hand-back — `exit 0` = emitted · `exit 2` = nothing derivable, say
+     `not checked`.
 
 3. **Level 1 — suite performance (narrate the pasted numbers).** What the gate, the skills and
    the checks did over the period: verdict totals and the fp/fn rates from the gate report; the
@@ -133,13 +133,13 @@ nothing from the file would move that count.) This skill stays a non-reader.
 
 8. **Log the run and hand back.** `sh ../wai/scripts/run-log.sh wai-retro "<period>"
    "<half-sentence result>"` (from this skill's directory) — fail-open: `exit 0` even when the
-   write fails, `exit 2` only on misuse (missing arguments). Then the open-items footer (step 2)
-   verbatim beneath ▶ Recommended next, then the recommendation — the script derives, the model
-   recommends, in that order.
+   write fails, `exit 2` only on misuse (missing arguments). Then hand back per
+   `../wai/references/hand-back.md`, ending with the `--brief` footer (step 2) verbatim.
 
 ## Report format
 
-Use exactly this structure for `docs/architecture/retrospectives/<YYYY-MM-DD>.md`:
+Use exactly this structure for `docs/architecture/retrospectives/<YYYY-MM-DD>.md` — the
+narrative at most one page besides the pasted numbers:
 
 ```
 ## Suite retrospective: [repo] · [YYYY-MM-DD]

@@ -72,3 +72,34 @@ linked worktree runs no hook, which is how the same field repo counted about a f
 invocations until it moved the hook to `~/.claude/settings.json` on 2026-09-03 — and says when that
 global hook is the better choice. A repo that wants one consolidated ledger has a named path — the
 overrides — instead of a copy step nobody watches.
+
+## --brief: the footer names only what needs reading
+
+Added 2026-09-26, with the lean-output change. The full footer is fourteen lines, and on a quiet
+repo nearly all of its class lines say *none*. Pasted at the end of every hand-back, it was often
+the longest part of one, and the lines that mattered (an open PR, an untagged ledger row) sat
+among the ones that did not. The operational output around it had grown too: PR body median
+5,033 characters · review comment median 4,491 · comments per PR median 8,639 — measured
+2026-09-26 over the merged/open PRs among #56–#85 with `gh pr view <n> --json body` and
+`gh api repos/woldinius/wai-skill-suite/issues/<n>/comments`; review comment = a body starting
+`## PR Review`; medians over the PRs that have comments. The population grows with every new
+comment, which is why the date is part of the figure. The footer was one of the fixed costs in
+that output.
+
+`--brief` prints only the classes with a finding, then one line:
+`open items — clean: 6 of 8 classes · skipped (no artifact): audits · not derived: asked, unanswered`. Three
+rules keep that brevity from becoming the bias the script exists to remove:
+
+- **A not-checked class always prints.** A check that could not run is itself a finding; dropping
+  it would turn "gh was down" into a line that reads like coverage.
+- **A "none" with a caveat is not clean.** A sweep that could not verify a merge commit (not
+  local), or a base that may belong to a different repository (several remotes, not resolved
+  from gh), prints its line and is not counted in `clean: N`. A "none" against a base resolved
+  from gh is clean, and its informational note drops with it.
+- **The summary still names what was skipped and what is never derived.** The three trust rules
+  of the default output hold; only the lines that say *none* go.
+
+The default output is unchanged, and so are the exit codes. Writing the one-line test for this
+mode exposed a defect in both modes: in a repo without a remote, `grep -c . || echo 0` printed
+`0` twice and `[` wrote an error into the footer. It was stderr noise, never a wrong answer, and
+it is `|| true` now.
