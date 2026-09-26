@@ -1853,6 +1853,28 @@ if grep -q 'full plan text' "$ROOT/.claude/skills/wai-requirements-planning/SKIL
   ok "planning posts the full plan text to the issue, with the visible-split fallback"
 else bad "planning posts the full plan text to the issue, with the visible-split fallback" "full-text or never-truncate-silently sentence missing"; fi
 
+# Lean output: the anchors that keep the operational output short. Measured on this repo's PRs
+# #56–#85 (2026-09-26): a median review comment of 4,700 characters and 5,700 across all of a PR's
+# comments. A budget that lives only in a PR description is gone the next time someone edits the
+# template, so four rules are pinned here: the review is written once, its budget line, the brief
+# footer in every skill that pastes one, and the hand-back shape those skills name.
+PRR="$ROOT/.claude/skills/wai-pr-review/SKILL.md"
+if grep -q 'the only full copy' "$PRR"; then
+  ok "wai-pr-review: the PR comment is the only full copy of a review"
+else bad "wai-pr-review: the PR comment is the only full copy of a review" "the 'only full copy' rule is gone — the review is written twice again"; fi
+if grep -q 'with no Blocker/Major, at most ~400 words' "$PRR"; then
+  ok "wai-pr-review: the review format states its budget"
+else bad "wai-pr-review: the review format states its budget" "no 'with no Blocker/Major, at most ~400 words' line in the output format"; fi
+FOOTER_SKILLS="wai-architecture-audit wai-implementation wai-pr-review wai-team wai-security-audit wai-retro wai-requirements-planning wai-testing"
+no_brief=""; no_hb=""
+for s in $FOOTER_SKILLS; do
+  grep -q 'open-items\.sh --brief' "$ROOT/.claude/skills/$s/SKILL.md" 2>/dev/null || no_brief="$no_brief $s"
+  grep -q 'hand-back\.md' "$ROOT/.claude/skills/$s/SKILL.md" 2>/dev/null || no_hb="$no_hb $s"
+done
+assert "all 8 footer skills paste open-items.sh --brief" 0 "$([ -z "$no_brief" ] && echo 0 || echo 1)" "missing:$no_brief"
+[ -f "$ROOT/.claude/skills/wai/references/hand-back.md" ] || no_hb="$no_hb (the file itself)"
+assert "hand-back.md exists, and all 8 footer skills name it" 0 "$([ -z "$no_hb" ] && echo 0 || echo 1)" "missing:$no_hb"
+
 strays="$(find "$ROOT/.claude/skills" -maxdepth 2 -name 'README.md' | tr '\n' ' ')"
 assert "no README.md inside a skill folder" 0 "$([ -z "$strays" ] && echo 0 || echo 1)" "found: $strays"
 

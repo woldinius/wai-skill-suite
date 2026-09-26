@@ -187,7 +187,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took eleven repair commits in two days
 ([retrospective](docs/retrospective-2026-07.md)); the gate once failed *open* under zsh and later
-could never say GO at all. That is why [`tests/`](tests/) exists — 497 cases, **founded** on bugs
+could never say GO at all. That is why [`tests/`](tests/) exists — 510 cases, **founded** on bugs
 that shipped and grown into the regression guards around them, run on two shells in CI because
 shellcheck passed a construct that is a syntax error in the `/bin/sh` of macOS. (While the repo was
 private, the macOS job was dropped — its runners burned the Actions budget until no check could run
@@ -389,6 +389,9 @@ Cross-skill rules live next to the router and are referenced by every relevant s
   — the **interrogation primitive** ("grill me"): one question at a time with a recommended
   answer, facts looked up vs. decisions asked, alternatives for imprecise requirements, hard
   shared-understanding gate.
+- [`.claude/skills/wai/references/hand-back.md`](.claude/skills/wai/references/hand-back.md)
+  — the **hand-back shape**: result, your decisions, next, then the `open-items.sh --brief`
+  footer; the detail stays in the linked artifact.
 
 > **Portability:** the lifecycle skills expect `docs/architecture/quality-attributes.md`. If it's
 > missing they say so (→ run `wai-init`) and meanwhile work from their built-in short list of
@@ -468,7 +471,7 @@ install.sh                                       # idempotent installer (inject/
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 497 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 510 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, catalog, open questions, known criticism, publication rule, learnings
 ```
 

@@ -328,8 +328,9 @@ This is the **only** place the commit format is defined; the skills point here r
 carrying their own copy of it.
 
 - **Atomic, Conventional Commits:** one focused commit per coherent step. `<type>` ∈ feat | fix |
-  refactor | perf | chore | docs; `<scope>` is the affected component or app. The body explains
-  *what* and *why*, never *how*; add `BREAKING CHANGE:` when applicable.
+  refactor | perf | chore | docs; `<scope>` is the affected component or app. **A subject of at
+  most 72 characters and a body of at most 5 lines.** The body says *why* — no narrative, never
+  *how*; the PR carries the detail. Add `BREAKING CHANGE:` when applicable.
 
   ```
   feat(billing): add a per-user token budget
@@ -386,10 +387,11 @@ easy half; the **restore** is where finished work dies. The rule:
 - Open/update via `gh` (`gh pr create` / `gh pr edit`). Target `main`. Open as **draft** when
   the change touches a contract domain (API, User Management, Login, Security, Token, Billing)
   or has high blast radius, and label it for the human's attention.
-- **PR body** (use the repo's `.github/pull_request_template.md` if present), covering:
-  what & why + a link to the plan; catalog IDs touched; an explicit **API backward-compat
-  statement** for store clients (no breaking change, or the versioning/migration plan); test
-  plan; risk / blast-radius. End the body with:
+- **PR body** (use the repo's `.github/pull_request_template.md` if present), **about 15 lines**,
+  covering: what & why + a link to the plan; catalog IDs touched; an explicit **API
+  backward-compat statement** for store clients (no breaking change, or the versioning/migration
+  plan); test plan; risk / blast-radius. The plan and the commits carry the detail; the body
+  links them. End the body with:
   `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 - The PR is the human's review surface. Lead it with what needs a decision, not a green check.
 

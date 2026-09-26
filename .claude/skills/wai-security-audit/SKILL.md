@@ -208,10 +208,9 @@ parts you hadn't charted yet.
    (`gh issue list --label security`). Without `gh`, list the would-be issues with their
    commands.
    (The run-log row for this skill is written by `dep-cve-scan.sh` itself — do not log it again.)
-   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (from this skill's
-   directory), paste its output verbatim beneath the ▶ Recommended next block, then give your
-   recommendation — in that order: the script derives (exit 0 = emitted; exit 2 = nothing
-   derivable — then say `not checked` yourself), the model recommends.
+   **Then hand back** per `../wai/references/hand-back.md`, ending with
+   `sh ../wai/scripts/open-items.sh --brief` (from this skill's directory) pasted verbatim —
+   `exit 2`: say `not checked`.
 
 ## Severity & trend (security-framed)
 

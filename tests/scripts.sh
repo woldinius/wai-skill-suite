@@ -1433,6 +1433,38 @@ out="$(oi)"; rc=$?
 assert "a duplicated invocation row in a worktree → invocation-log +1, never none (rows are counted)" 0 "$rc" "$out" 'oi-wtmulti[^ ]*: .*invocation-log \+1' 'rows only in a worktree: none'
 assert "  · a gate row colliding with the base's compared cells counts as well → gate-ledger +1" 0 "$rc" "$out" 'oi-wtmulti[^ ]*: gate-ledger \+1'
 
+# --brief — WHAT EVERY HAND-BACK PASTES. Only the classes with a finding print, plus ONE summary
+# line; a clean "none" drops. The danger is the other direction: brevity that swallows a check
+# that did not run. So a not-checked class ALWAYS prints, and so does a "none" with a caveat.
+# Fixture: an origin ref, so the worktree-rows class is derived rather than not checked. The fixture
+# has no remote, so the line count also guards the `[: 0\n0` error that leaked into every footer of
+# a repo without a remote until this case counted lines.
+oibrief() { oifix; git -C "$D" update-ref refs/remotes/origin/main "$(git -C "$D" rev-parse HEAD)"; }
+oibrief; out="$(oi --brief)"; rc=$?
+assert "--brief on a clean repo → exit 0 and ONLY the summary line, naming what was skipped" 0 "$rc" "$out" \
+  '^clean: 6 of 8 classes · skipped \(no artifact\): gate-ledger audits · not derived: asked, unanswered$' '^  · |^open-items:|SUMMARY'
+[ "$(printf '%s\n' "$out" | grep -c .)" = 1 ] && ok "  · and it is one line, nothing else" \
+  || bad "  · and it is one line, nothing else" "$(printf '%s\n' "$out" | grep -c .) lines"
+oibrief; printf '7~fix-thing~fix the thing\n' | tr '~' '\034' > "$D/open-prs"
+out="$(oi --brief)"; rc=$?
+assert "--brief with one open PR → that class's line plus the summary" 0 "$rc" "$out" \
+  '^  · open PRs \(1\): #7 fix the thing$' 'open PRs: none|issues assigned to'
+assert "  · the summary counts the class with a finding out of the clean ones" 0 "$rc" "$out" '^clean: 5 of 8 classes · '
+[ "$(printf '%s\n' "$out" | grep -c .)" = 2 ] && ok "  · two lines: the finding and the summary" \
+  || bad "  · two lines: the finding and the summary" "$(printf '%s\n' "$out" | grep -c .) lines"
+oibrief; out="$( cd "$D" && PATH="$NOGHBIN" GH_FIXTURE="$D" "$SH" "$OPENITEMS" --brief 2>&1 )"; rc=$?
+assert "--brief with gh unavailable → exit 0, and the not-checked line STILL prints" 0 "$rc" "$out" \
+  '^  · open PRs: not checked — gh unavailable$'
+assert "  · the summary names every not-checked class" 0 "$rc" "$out" \
+  '^clean: 3 of 8 classes · skipped \(no artifact\): gate-ledger audits · not checked: open-prs assigned-issues merged-sweep · not derived: asked, unanswered$'
+# A "none" with a caveat is not clean: a merge commit that is not local could not be verified.
+oibrief; printf '9~%s~2026-08-10T12:00:00Z\n' "0123456789abcdef0123456789abcdef01234567" | tr '~' '\034' > "$D/merged-prs"
+out="$(oi --brief)"; rc=$?
+assert "--brief: a sweep that could not verify a merge commit prints, and is not counted clean" 0 "$rc" "$out" \
+  '#9 not verifiable \(merge commit not local; fetch first\)' 'clean: 6 of 8'
+oibrief; out="$(oi --brief --bogus)"; rc=$?
+assert "--brief with an unknown option → exit 2, never a partial footer" 2 "$rc" "$out" 'unknown option' 'clean:'
+
 # =================================================================================================
 echo
 echo "invocation-log.sh"

@@ -24,17 +24,31 @@
 #           There is deliberately no exit 1: this script renders no negative verdict. It reports;
 #           the model recommends; the human decides.
 #
-# Usage: sh open-items.sh [repo-root]        (default: .)
+# --brief (what the hand-backs paste): only the classes with a finding, plus ONE summary line that
+# names what was clean, skipped and not derived. A "none" line drops; a not-checked line ALWAYS
+# prints — a check that could not run is itself a finding — and so does a "none" with a caveat.
+# Exit codes are the same in both modes.
+# Why: docs/rationale/open-items.md § --brief: the footer names only what needs reading
+#
+# Usage: sh open-items.sh [--brief] [repo-root]        (default: .)
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
+BRIEF=no; ROOT_ARG=""; NPOS=0
+for a in "$@"; do
+  case "$a" in
+    --brief) BRIEF=yes ;;
+    -*) echo "open-items: unknown option '$a' (usage: sh open-items.sh [--brief] [repo-root])" >&2; exit 2 ;;
+    *)  NPOS=$((NPOS+1)); ROOT_ARG="$a" ;;
+  esac
+done
+[ "$NPOS" -le 1 ] || { echo "open-items: at most one argument (repo-root)" >&2; exit 2; }
+
 # Default root = the enclosing git worktree, not the cwd (doctor.sh carries the false-clean
 # incident that forced this; same rule here). An explicit argument wins; outside a repo, cwd.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-ROOT="${1:-${REPO_ROOT:-.}}"
-case "$ROOT" in -*) echo "open-items: unknown option '$ROOT' (usage: sh open-items.sh [repo-root])" >&2; exit 2 ;; esac
-[ $# -le 1 ] || { echo "open-items: at most one argument (repo-root)" >&2; exit 2; }
+ROOT="${ROOT_ARG:-${REPO_ROOT:-.}}"
 cd "$ROOT" 2>/dev/null || { echo "open-items: cannot cd to '$ROOT'" >&2; exit 2; }
 
 CAP="${OPEN_ITEMS_CAP:-10}"
@@ -58,7 +72,7 @@ fi
 # candidate list (origin/HEAD, origin/main, …) and SAY SO — a base that might be the wrong
 # repository must never read like a verified one.
 # Why: docs/rationale/open-items.md § Eighteen false alarms: gh and git answered about different repositories
-BASE_REMOTE=""; GH_NWO=""; BASE_NOTE=""
+BASE_REMOTE=""; GH_NWO=""; BASE_NOTE=""; BASE_WARN=""
 if [ "$GH_OK" = yes ] && [ "$GIT_OK" = yes ]; then
   GH_NWO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
   if [ -n "$GH_NWO" ]; then
@@ -75,10 +89,13 @@ if [ "$GH_OK" = yes ] && [ "$GIT_OK" = yes ]; then
   fi
   if [ -n "$BASE_REMOTE" ]; then
     [ "$BASE_REMOTE" = origin ] || BASE_NOTE=" [base remote: $BASE_REMOTE — resolved from gh, which answers about $GH_NWO; NOT origin]"
-  elif [ "$(git remote 2>/dev/null | grep -c . || echo 0)" -gt 1 ]; then
+  elif [ "$(git remote 2>/dev/null | grep -c . || true)" -gt 1 ]; then
     # Only warn where the bug can actually bite. With zero or one remote the origin/* fallback
     # CANNOT pick the wrong repository, and a warning there would be the noise this fix removes.
+    # `|| true`, not `|| echo 0`: grep -c already prints 0 on no match, and exits 1 — the echo made
+    # it "0\n0", and `[` printed an error into the footer of every repo without a remote.
     BASE_NOTE=" [base remote NOT resolved from gh and this checkout has several remotes — the refs below may belong to a different repository than gh reports on]"
+    BASE_WARN="$BASE_NOTE"            # a caveat: a "none" measured against this base is not clean
   fi
 fi
 
@@ -96,10 +113,18 @@ first_base_ref() {
   return 1
 }
 
-DERIVED=0; SKIPPED=""; NOTCHECKED=""
-line()  { DERIVED=$((DERIVED+1)); printf '  · %s\n' "$1"; }
-nline() { NOTCHECKED="$NOTCHECKED $2"; printf '  · %s: not checked — %s\n' "$1" "$3"; }   # tool/ref unavailable
-sline() { SKIPPED="$SKIPPED $2";       printf '  · %s: skipped — %s\n' "$1" "$3"; }       # artifact class absent here
+DERIVED=0; CLEAN=0; SKIPPED=""; NOTCHECKED=""
+say()   { printf '  · %s\n' "$1"; }
+line()  { DERIVED=$((DERIVED+1)); say "$1"; }                                   # a finding: always printed
+# A derived "none". $2 = a caveat that makes it less than clean (an unverifiable merge commit, an
+# unresolved base) — then it is printed in --brief too, and not counted as clean.
+cline() {
+  DERIVED=$((DERIVED+1))
+  if [ -n "${2:-}" ]; then say "$1"; return 0; fi
+  CLEAN=$((CLEAN+1)); [ "$BRIEF" = yes ] || say "$1"
+}
+nline() { NOTCHECKED="$NOTCHECKED $2"; say "$1: not checked — $3"; }             # tool/ref unavailable
+sline() { SKIPPED="$SKIPPED $2"; [ "$BRIEF" = yes ] || say "$1: skipped — $3"; } # artifact class absent here
 
 # stdin: one item per line → "a · b · c (+N more)" — the cap is visible, never silent.
 cap_join() {
@@ -107,7 +132,7 @@ cap_join() {
        END { if (n > cap) s = s " (+" (n - cap) " more)"; print s }'
 }
 
-echo "open-items: hand-back state, derived from artifacts ($(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?'))"
+[ "$BRIEF" = yes ] || echo "open-items: hand-back state, derived from artifacts ($(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?'))"
 
 # ── 1. Open PRs ──────────────────────────────────────────────────────────────────────────────────
 OPEN_PRS=""; oprc=1
@@ -117,7 +142,7 @@ if [ "$GH_OK" = yes ]; then
   if [ "$oprc" -ne 0 ]; then
     nline "open PRs" open-prs "gh pr list failed"
   elif [ -z "$OPEN_PRS" ]; then
-    line "open PRs: none — 0 open PRs (gh pr list --state open)"
+    cline "open PRs: none — 0 open PRs (gh pr list --state open)"
   else
     n="$(printf '%s\n' "$OPEN_PRS" | grep -c .)"
     items="$(printf '%s\n' "$OPEN_PRS" | awk -F"$FS" '{ printf "#%s %s\n", $1, $3 }' | cap_join)"
@@ -143,7 +168,7 @@ if [ "$GH_OK" = yes ]; then
     if [ "$arc" -ne 0 ]; then
       nline "assigned issues" assigned-issues "gh issue list failed"
     elif [ -z "$ASSIGNED" ]; then
-      line "issues assigned to $LOGIN: none — 0 open issues (gh issue list --assignee $LOGIN)"
+      cline "issues assigned to $LOGIN: none — 0 open issues (gh issue list --assignee $LOGIN)"
     else
       n="$(printf '%s\n' "$ASSIGNED" | grep -c .)"
       items="$(printf '%s\n' "$ASSIGNED" | awk -F"$FS" '{ printf "#%s %s\n", $1, $2 }' | cap_join)"
@@ -177,7 +202,7 @@ else
 "
   done
   if [ -z "$BRLIST" ]; then
-    line "branches with unique commits and no PR: none — 0 branches with commits not on $BASEREF (git cherry)$BASE_NOTE"
+    cline "branches with unique commits and no PR: none — 0 branches with commits not on $BASEREF (git cherry)$BASE_NOTE" "$BASE_WARN"
   else
     note=""
     [ "$oprc" -eq 0 ] || note=" — PR state NOT checked (gh unavailable): some of these may have PRs"
@@ -193,7 +218,7 @@ if [ "$GH_OK" = yes ]; then
   if [ "$mrc" -ne 0 ]; then
     nline "merged-but-unreachable sweep" merged-sweep "gh pr list --state merged failed"
   elif [ -z "$MERGED" ]; then
-    line "merged-but-unreachable sweep: none — 0 merged PRs to sweep (gh pr list --state merged)"
+    cline "merged-but-unreachable sweep: none — 0 merged PRs to sweep (gh pr list --state merged)"
   elif [ "$GIT_OK" != yes ]; then
     nline "merged-but-unreachable sweep" merged-sweep "no git repository to test reachability in"
   else
@@ -215,7 +240,7 @@ if [ "$GH_OK" = yes ]; then
       if [ -n "$UNREACH" ]; then
         line "merged-but-unreachable: MERGED BUT UNREACHABLE —$UNREACH: GitHub says MERGED, but the merge commit is NOT an ancestor of $TARGET (last $nm merged PRs swept)$unvnote$BASE_NOTE"
       else
-        line "merged-but-unreachable sweep: none — all merge commits of the last $nm merged PRs are ancestors of $TARGET$unvnote$BASE_NOTE"
+        cline "merged-but-unreachable sweep: none — all merge commits of the last $nm merged PRs are ancestors of $TARGET$unvnote$BASE_NOTE" "$unvnote$BASE_WARN"
       fi
     fi
   fi
@@ -233,7 +258,7 @@ else
             if (v != "MOOT" && o == "") n++ } END { print n + 0 }' "$LEDGER" 2>/dev/null)"
   case "$nout" in ''|*[!0-9]*) nout=0 ;; esac
   if [ "$nout" = 0 ]; then
-    line "gate-ledger rows without outcome: none — every non-MOOT row carries an outcome tag ($LEDGER)"
+    cline "gate-ledger rows without outcome: none — every non-MOOT row carries an outcome tag ($LEDGER)"
   else
     line "gate-ledger rows without outcome: $nout row(s) still untagged in $LEDGER (MOOT rows excluded — blank is their documented state)"
   fi
@@ -255,7 +280,7 @@ else
     nsince="$(printf '%s\n' "$MERGED" | awk -F"$FS" -v last="$last" '
       NF { d = substr($3, 1, 10); if (d != "" && d > last) n++ } END { print n + 0 }')"
     if [ "$nsince" = 0 ]; then
-      line "merged PRs since the last audit: none — 0 merged PRs newer than $last (newest date in $AUDITS/)"
+      cline "merged PRs since the last audit: none — 0 merged PRs newer than $last (newest date in $AUDITS/)"
     else
       line "merged PRs since the last audit: $nsince merged PR(s) newer than the last audit ($last) — of the last ${nm:-20} merged"
     fi
@@ -269,7 +294,7 @@ else
   SELF="$(git rev-parse --show-toplevel 2>/dev/null)"
   OTHERS="$(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | grep -vxF "$SELF" || true)"
   if [ -z "$OTHERS" ]; then
-    line "other worktrees: none — this is the only worktree (git worktree list)"
+    cline "other worktrees: none — this is the only worktree (git worktree list)"
   else
     items="$(printf '%s\n' "$OTHERS" | while IFS= read -r w; do
         if [ -n "$(git -C "$w" status --porcelain 2>/dev/null | head -1)" ]; then
@@ -328,7 +353,7 @@ else
         [ -n "$parts" ] && printf '%s: %s\n' "$w" "$parts"
       done)"
     if [ -z "$WT_HITS" ]; then
-      line "rows only in a worktree: none — every ledger/run-log/invocation-log row in $nwt worktree(s) is on $WT_BASE$BASE_NOTE"
+      cline "rows only in a worktree: none — every ledger/run-log/invocation-log row in $nwt worktree(s) is on $WT_BASE$BASE_NOTE" "$BASE_WARN"
     else
       line "rows only in a worktree (not on $WT_BASE — they reach it with that branch's PR): $(printf '%s\n' "$WT_HITS" | cap_join)$BASE_NOTE"
     fi
@@ -339,15 +364,22 @@ fi
 # ── 9. Asked, unanswered — NOT derived, and printed as exactly that ──────────────────────────────
 # No artifact exists for a question that went unanswered in chat. Printing "none" here would be the
 # empty-list-reads-as-coverage bias this script exists to remove, so the gap is stated instead.
-echo "  · asked, unanswered: not derived — no artifact exists"
+[ "$BRIEF" = yes ] || echo "  · asked, unanswered: not derived — no artifact exists"
 
 # ── Summary — what was derived, what was skipped, what could not be checked ──────────────────────
-echo
-sk="${SKIPPED# }";    [ -n "$sk" ] || sk="none"
-nc="${NOTCHECKED# }"; [ -n "$nc" ] || nc="none"
-echo "SUMMARY: derived $DERIVED of 8 checkable classes · skipped (artifact absent): $sk · not checked (tool/ref unavailable): $nc"
-echo "         'asked, unanswered' has no artifact and is never derived — carry open questions yourself."
-echo "FACTS ONLY (ADR-0002): what to do next is judgment and stays the model's ▶ Recommended next line."
+sk="${SKIPPED# }"; nc="${NOTCHECKED# }"
+if [ "$BRIEF" = yes ]; then
+  # ONE line. Empty segments drop; the not-checked classes also printed their own lines above.
+  s="clean: $CLEAN of 8 classes"
+  [ -z "$sk" ] || s="$s · skipped (no artifact): $sk"
+  [ -z "$nc" ] || s="$s · not checked: $nc"
+  echo "$s · not derived: asked, unanswered"
+else
+  echo
+  echo "SUMMARY: derived $DERIVED of 8 checkable classes · skipped (artifact absent): ${sk:-none} · not checked (tool/ref unavailable): ${nc:-none}"
+  echo "         'asked, unanswered' has no artifact and is never derived — carry open questions yourself."
+  echo "FACTS ONLY (ADR-0002): what to do next is judgment and stays the model's ▶ Recommended next line."
+fi
 
 if [ "$DERIVED" -eq 0 ]; then
   echo "open-items: nothing could be derived at all this run." >&2

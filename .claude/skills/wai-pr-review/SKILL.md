@@ -113,13 +113,13 @@ necessary aspects as findings.
    ```
 
    Not only in `team` mode, not only when merging, not only when the gate is green — **always**:
-   GO, NO-GO, UNKNOWN, Blocker/Major, contract domain, merge denied. **The chat output is a copy
-   for the human in this session; the PR comment is the artefact** — a review that lives only in a
-   session is invisible to any later reader or approver, and this has happened: the full review
-   was produced in chat and posted nowhere, and *the human noticed, not the skill*. The order is
-   not negotiable: **post the review → add the gate result → then merge or hand off.** If `gh` is
-   unavailable, say so plainly and hand the human the exact command; never silently downgrade to
-   "it's in the chat".
+   GO, NO-GO, UNKNOWN, Blocker/Major, contract domain, merge denied. **The PR comment is the
+   artefact and the only full copy; the chat gets a summary** (*Output format*) — a review that
+   lives only in a session is invisible to any later reader or approver, and this has happened:
+   the full review was produced in chat and posted nowhere, and *the human noticed, not the
+   skill*. The order is not negotiable: **post the review → add the gate result → then merge or
+   hand off.** If `gh` is unavailable, say so plainly and hand the human the review file and the
+   exact command; never silently downgrade to "it's in the chat".
 
    Then the gate. It is a **conjunction of two verdicts**, and you own exactly one of them:
 
@@ -151,12 +151,16 @@ necessary aspects as findings.
    decide here: …*) — a cited family outside that list is advisory only.
 
    - `exit 0` **GO** → and your review is clean → merge (see *How* below).
-   - `exit 1` **NO-GO** → a precondition failed. **The human merges.** Append the reasons **to the
-     review comment on the PR** — that is where the decision is made.
+   - `exit 1` **NO-GO** → a precondition failed. **The human merges.**
    - `exit 2` **UNKNOWN** → something could not be verified (no `gh`, no catalog, no config, an
      unresolvable repo or PR). **The human merges.** There is no path from "I could not check" to
      "go" — and note that UNKNOWN is a bug report about the *gate*, not a finding about the code:
      say which of the two it is when you report it.
+
+   **Every verdict goes into the review comment** — that is where the decision is made. Quote the
+   `VERDICT:` line and the `✗`/`?` lines only, in chat too (the `✓` lines are already in the
+   ledger row): append them to the review file and run
+   `gh pr comment <PR> --edit-last --body-file <f>`; if that fails, post a new comment.
 
    **Do not re-derive the script's answer in prose, and never overrule it.** The whole point is
    that "the model checked" becomes an artefact you can audit. If the script is unavailable
@@ -223,11 +227,9 @@ necessary aspects as findings.
    on the PR? "I posted it" is a memory; the comment is the evidence. If it is not there, post it
    again before you report the run as done.
    (The run-log row for this skill is written by `merge-gate.sh` itself — do not log it again.)
-   **Then derive the closing state:** run `sh ../wai/scripts/open-items.sh` (from this skill's
-   directory — a sibling path, like the classifier's), paste its output verbatim beneath the
-   ▶ Recommended next block, then give your recommendation — in that order: the script derives
-   (exit 0 = emitted; exit 2 = nothing derivable — then say `not checked` yourself), the model
-   recommends.
+   **Then hand back** per `../wai/references/hand-back.md`, ending with
+   `sh ../wai/scripts/open-items.sh --brief` (from this skill's directory) pasted verbatim —
+   `exit 2`: say `not checked`.
 
 ## Review lens
 
@@ -299,6 +301,12 @@ head, hand the rest to the human as a `ready-to-merge` list** (in queue order, w
 state noted), and end the run honestly. Enabling *Require branches to be up to date before
 merging* in the ruleset gives you a server-side backstop.
 
+## Fix loops — one comment per review round
+
+A re-review — after a fix, or a queue's delta — posts **one** comment: a **status table** of the
+prior findings plus the new findings only, the gate result appended (step 6). A landing note is a
+checklist, not prose: `M1 fixed · m2 filed #N · N1 rejected: <why>`.
+
 ## Severity levels
 
 - **Blocker** — must not be merged: security vulnerability, GDPR violation, an ad-hoc
@@ -317,8 +325,13 @@ catalog ID (e.g. `SEC-3`), so it remains verifiable.
 
 ## Output format
 
-**Destination: a PR comment (`gh pr comment`), plus a copy in the chat — in that order.** The PR
-comment is the artefact; the chat is the copy.
+**Destination: the PR comment (`gh pr comment`) — the only full copy.** The chat gets the
+recommendation, the counts per severity, the gate verdict, the comment link and one line per
+Blocker/Major: the human's decision points.
+
+**Budget:** with no Blocker/Major, at most ~400 words. One line per finding, numbered per severity
+(`B1`, `M1`, `m1`, `N1`): `file:line · ID — problem → fix`. Positives take at most 2 lines; omit
+empty sections. A Blocker/Major keeps the space its evidence needs.
 
 Use exactly this structure:
 
@@ -331,39 +344,32 @@ Use exactly this structure:
 **Recommendation:** [Merge | Changes required | Blocked]
 
 ### Blocker
-- [File/spot] · [Catalog ID] — [What is the problem] → [Concrete risk] → [Recommended fix]
+- B1 `file:line` · [Catalog ID] — [problem and its concrete risk] → [fix]
 
 ### Major
-- ...
+- M1 ...
 
 ### Minor
-- ...
+- m1 ...
 
 ### Nits
-- ...
+- N1 ...
 
 ### Positives
-- [What the change solves well — briefly, but name it]
+- [at most 2 lines]
 
 ### Open questions
 - [What you could not judge from the diff and would have the author clarify]
 
 ### ▶ Recommended next
-- [**Outstanding Minors/Nits filed as issues** (link them) — this happens on *every* path, merged
-  or not: a finding that only lives in this review dies with the session.
-  Then: Only Minor/Nit (or clean) & non-contract-domain with green checks and a catalog → in
-  **`solo`**: **merged to `main`**, branch deleted; in **`team`**: **auto-merge armed — the PR
-  merges itself as soon as another human approves it** (I don't merge and I don't approve; armed
-  only because an approval rule is actually enforced on `main`).
-  Blocker/Major → **your decision point**: fix now (wai-implementation on the same branch,
-  then re-review), file as issues, or block — with my recommendation first.
-  Contract-domain / flagged / no enforced approval rule / merge denied by the environment →
-  **left for your merge** (labelled `ready-to-merge`) with the risk note and what was missing.
-  Inside a `wai-team` run under merge policy (b) or (c) → **held for the end of the run**
-  (`wai-team` step 7), nothing merged and nothing armed here.]
+- [Filed: #N, … — on every path. Then one of: merged to `main` (solo) · auto-merge armed,
+  waiting for another human's approval (team) · **your decision** on a Blocker/Major — fix, file
+  or block, my recommendation first · **left for your merge** (`ready-to-merge`): contract
+  domain, flagged, no enforced approval rule, merge denied · held for the end of the `wai-team`
+  run (policy b/c).]
 ```
 
-Omit empty sections. If no blockers/majors exist, make that clear in the recommendation. The
+If no blockers/majors exist, make that clear in the recommendation. The
 **`Reviewed by`** line is **required inside a `wai-team` run** (its literal is what `wai-team`
 §*Attended or unattended* asks for) and optional elsewhere; it names who produced the judgment half,
 so a later reader can tell a fresh-context review from a same-session one.
