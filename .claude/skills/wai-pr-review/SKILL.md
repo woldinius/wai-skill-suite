@@ -109,7 +109,7 @@ necessary aspects as findings.
    decision, before the hand-off:
 
    ```
-   gh pr comment <PR> --body-file <f>    # <f> = the review file (format below); save the URL it prints
+   gh pr comment <PR> --body-file <f> > <f>.url    # <f> = this round's review file (format below)
    ```
 
    Not only in `team` mode, not only when merging, not only when the gate is green — **always**:
@@ -159,11 +159,11 @@ necessary aspects as findings.
 
    **Every verdict goes into the review comment** — that is where the decision is made. Quote the
    `VERDICT:` line and the `✗`/`?` lines only, in chat too (the `✓` lines are already in the
-   ledger row): append them to `<f>`, the review file, and patch the comment by the id in its
-   saved URL (`…#issuecomment-<id>`):
+   ledger row): append them to `<f>`, the review file, and patch the comment by the id in
+   `<f>.url` (`…#issuecomment-<id>`) — never an id remembered from an earlier round:
    `gh api -X PATCH repos/{owner}/{repo}/issues/comments/<id> -F body=@<f>` — the patch replaces
-   the whole body. No URL → post `<f>` as a new comment. Never `--edit-last`: it edits the
-   account's newest comment, which may be the human's.
+   the whole body. No URL, or the PATCH fails → post `<f>` as a new comment. Never `--edit-last`:
+   it edits the account's newest comment, which may be the human's.
 
    **Do not re-derive the script's answer in prose, and never overrule it.** The whole point is
    that "the model checked" becomes an artefact you can audit. If the script is unavailable
@@ -226,9 +226,9 @@ necessary aspects as findings.
    the PR `ready-to-merge`, list it in a short merge queue for the human, and move on. If `gh`
    is unavailable entirely, fall back to the proposed merge + the findings listed in the review.
 
-   **Last: check that it landed.** `gh pr view <PR> --comments` — is the review actually visible
-   on the PR? "I posted it" is a memory; the comment is the evidence. If it is not there, post it
-   again before you report the run as done.
+   **Last: check that it landed.** `gh pr view <PR> --comments` — is the review, with its
+   `VERDICT:` line, actually visible on the PR? "I posted it" is a memory; the comment is the
+   evidence. If it is not there, post it again before you report the run as done.
    (The run-log row for this skill is written by `merge-gate.sh` itself — do not log it again.)
    **Then hand back** per `../wai/references/hand-back.md`, ending with
    `sh ../wai/scripts/open-items.sh --brief` (from this skill's directory) pasted verbatim —

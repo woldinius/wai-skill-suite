@@ -1473,6 +1473,15 @@ assert "--brief: two remotes gh does not resolve → the branch 'none' prints wi
   '^  · branches with unique commits and no PR: none — .*base remote NOT resolved from gh'
 assert "  · and neither caveated 'none' counts as clean → clean: 4 of 8" 0 "$rc" "$out" \
   '^open items — clean: 4 of 8 classes · '
+# The third site of that caveat is the merged sweep, which needs a merged PR to sweep: a merged row
+# at the fixture's HEAD is an ancestor of the base, but the base itself is unresolved (review of
+# #86, m6 — without a merged row, dropping this site's caveat passed every case).
+printf '5~%s~2026-08-10T12:00:00Z\n' "$(git -C "$D" rev-parse HEAD)" | tr '~' '\034' > "$D/merged-prs"
+out="$(oi --brief)"; rc=$?
+assert "--brief: a clean sweep against an unresolved base prints with its caveat" 0 "$rc" "$out" \
+  '^  · merged-but-unreachable sweep: none — all merge commits of the last 1 merged PRs are ancestors of origin/main \[base remote NOT resolved from gh'
+assert "  · and it is not counted clean either → clean: 3 of 8" 0 "$rc" "$out" \
+  '^open items — clean: 3 of 8 classes · '
 oibrief; out="$(oi --brief --bogus)"; rc=$?
 assert "--brief with an unknown option → exit 2, never a partial footer" 2 "$rc" "$out" 'unknown option' 'clean:'
 

@@ -1866,6 +1866,11 @@ PRR="$ROOT/.claude/skills/wai-pr-review/SKILL.md"
 if grep -q 'the only full copy' "$PRR"; then
   ok "wai-pr-review: the PR comment is the only full copy of a review"
 else bad "wai-pr-review: the PR comment is the only full copy of a review" "the 'only full copy' rule is gone — the review is written twice again"; fi
+# The verdict is patched into the review by its saved id. `--edit-last` edits the account's newest
+# comment, and the agent runs on the human's auth (review of #86, M1).
+if grep -q 'issues/comments/<id>' "$PRR" && grep -q 'Never `--edit-last`' "$PRR"; then
+  ok "wai-pr-review: the verdict is patched into the review by id, never with --edit-last"
+else bad "wai-pr-review: the verdict is patched into the review by id, never with --edit-last" "the PATCH-by-id line or the never-edit-last rule is gone"; fi
 if grep -q 'with no Blocker/Major, at most ~400 words' "$PRR"; then
   ok "wai-pr-review: the review format states its budget"
 else bad "wai-pr-review: the review format states its budget" "no 'with no Blocker/Major, at most ~400 words' line in the output format"; fi
