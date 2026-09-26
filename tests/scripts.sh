@@ -1743,6 +1743,188 @@ assert "a malformed --since date → exit 2" 2 "$rc_" "$out" 'wants YYYY-MM-DD'
 out="$(rc --since=)"; rc_=$?
 assert "--since= (empty inline value) → exit 2, never silently 'all rows'" 2 "$rc_" "$out" 'must not silently'
 
+# =================================================================================================
+echo
+echo "session-cost.sh"
+# Q5's instrument: token counters from Claude Code session transcripts. 0 = the counters were
+# printed, 2 = no dir, no readable transcript, or misuse — no exit 1: it renders no verdict. The
+# fixtures are JSONL in the shape Claude Code writes: the top-level "type" AFTER the message object,
+# a usage object whose nested "iterations" repeats the keys (here at 7777, so a parser that reads
+# the repeat is caught), and a timestamp on every line, so the no-clock assertion has something to
+# leak. Every `--dir` points into $TMP; the default-dir cases pin CLAUDE_CONFIG_DIR, so no case
+# ever reads the transcripts of the person running the suite.
+# =================================================================================================
+SCOST="$ROOT/.claude/skills/wai-retro/scripts/session-cost.sh"
+SA="aaaa1111-0000-4000-8000-00000000000a"
+SB="bbbb2222-0000-4000-8000-00000000000b"
+SCTEXT='[{"type":"text","text":"fixture message text"}]'
+# scline REQ MSGID MODEL IN CC CR OUT [CONTENT] — one assistant line; REQ "" = no requestId
+scline() {
+  _rq=""; [ -z "$1" ] || _rq="\"requestId\":\"$1\","
+  _ct="${8:-$SCTEXT}"
+  printf '{"parentUuid":"p0","isSidechain":false,"message":{"model":"%s","id":"%s","type":"message","role":"assistant","content":%s,"stop_reason":"end_turn","usage":{"input_tokens":%s,"cache_creation_input_tokens":%s,"cache_read_input_tokens":%s,"output_tokens":%s,"output_tokens_details":{"thinking_tokens":5555},"iterations":[{"input_tokens":7777,"cache_creation_input_tokens":7777,"cache_read_input_tokens":7777,"output_tokens":7777,"type":"message"}]}},%s"type":"assistant","uuid":"u0","timestamp":"2026-09-20T21:47:13.456Z"}\n' \
+    "$3" "$2" "$_ct" "$4" "$5" "$6" "$7" "$_rq"
+}
+scdir() { N=$((N+1)); D="$TMP/sc$N"; mkdir -p "$D"; }
+sc() { "$SH" "$SCOST" --dir "$D" "$@" 2>&1; }
+
+# THE PASS PATH, and the streaming rule: one response written over three lines (Claude Code writes
+# a line per content block) counts ONCE, with the usage of its line with the largest output_tokens.
+scdir
+{ scline req_A1 msg_A1 m-big 3 100 1000 5
+  scline req_A1 msg_A1 m-big 3 100 1000 40
+  scline req_A1 msg_A1 m-big 3 100 1000 12
+} > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert "a response streamed over three lines → counted ONCE, at its largest output_tokens, exit 0" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 40 · fresh input 103 · cache read 1000 · avg context per response 1103'
+
+# THE ESCAPED KEY. A tool result that quotes transcript JSON carries it as a string, so its quotes
+# are escaped — \"usage\" — and it must never count, whether it sits in a user line's tool result
+# or in an assistant line's tool input (the model writing a fixture like this one). The text block
+# holds an ODD number of escaped quotes, as prose and code often do: a parser that splits at an
+# escaped quote, or unescapes before it parses, loses the real response behind it or reads 900000.
+scdir
+{ printf '%s\n' '{"parentUuid":"p1","isSidechain":false,"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_q","content":"{\"message\":{\"model\":\"m-quoted\",\"id\":\"msg_q\",\"usage\":{\"input_tokens\":900000,\"output_tokens\":900000}},\"requestId\":\"req_quoted\",\"type\":\"assistant\"}"}]},"uuid":"u1","timestamp":"2026-09-20T21:48:02.000Z"}'
+  scline req_E1 msg_E1 m-big 1 1 10 7 '[{"type":"text","text":"a quoted key \"usage\":{ and one stray \" quote"},{"type":"tool_use","id":"toolu_w","name":"Write","input":{"content":"{\"message\":{\"model\":\"m-quoted\",\"usage\":{\"output_tokens\":900000}},\"type\":\"assistant\"}"}}]'
+} > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert "an ESCAPED usage key (transcript JSON quoted in a tool result or tool input) is never counted" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 7 · fresh input 2 · cache read 10' '900000|m-quoted'
+
+# A STRING ENDING IN A BACKSLASH. JSON writes it "C:\\" — an escaped backslash, then the real
+# closing quote. Every escape PAIR is dropped, not only \": dropping \" alone eats that quote, and
+# the parse loses the response behind it.
+scdir
+scline req_P1 msg_P1 m-big 1 2 30 11 '[{"type":"text","text":"C:\\"}]' > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert 'a string ending in an escaped backslash ("C:\\") before usage → the response still counts' 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 11 · fresh input 3 · cache read 30'
+
+# THE ITERATIONS REPEAT, and exact keys. The usage object below lists cache_creation_input_tokens
+# BEFORE input_tokens and output_tokens_details BEFORE output_tokens, so a key matched by suffix or
+# prefix reads the wrong number; the nested iterations array repeats every key at 7777.
+scdir
+printf '%s\n' '{"parentUuid":"p2","isSidechain":false,"message":{"model":"m-big","id":"msg_I1","type":"message","role":"assistant","content":[{"type":"text","text":"fixture message text"}],"usage":{"cache_creation_input_tokens":20,"input_tokens":2,"output_tokens_details":{"thinking_tokens":5555},"cache_read_input_tokens":2000,"output_tokens":60,"iterations":[{"input_tokens":7777,"cache_creation_input_tokens":7777,"cache_read_input_tokens":7777,"output_tokens":7777,"type":"message"},{"input_tokens":7777,"output_tokens":7777}]}},"requestId":"req_I1","type":"assistant","uuid":"u2","timestamp":"2026-09-20T22:05:41.000Z"}' > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert "a nested iterations block is NOT double-counted — the usage object's own keys, exact, first" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 60 · fresh input 22 · cache read 2000' '7777|5555'
+# …and ITERATIONS FIRST. The repeat may precede the object's own keys; first occurrence is taken at
+# the usage object's own depth only, so it never falls into the nested array.
+scdir
+printf '%s\n' '{"parentUuid":"p5","isSidechain":false,"message":{"model":"m-big","id":"msg_I2","type":"message","role":"assistant","content":[{"type":"text","text":"fixture message text"}],"usage":{"iterations":[{"input_tokens":7777,"cache_creation_input_tokens":7777,"cache_read_input_tokens":7777,"output_tokens":7777,"type":"message"}],"input_tokens":2,"cache_creation_input_tokens":20,"cache_read_input_tokens":2000,"output_tokens":60}},"requestId":"req_I2","type":"assistant","uuid":"u5","timestamp":"2026-09-20T22:06:12.000Z"}' > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert "  · an iterations block BEFORE the usage keys is still never read" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 60 · fresh input 22 · cache read 2000' '7777'
+
+# THE TOP-LEVEL TYPE DECIDES. A user line may carry a structured tool result that nests an
+# assistant-shaped usage record, and a tool INPUT is a JSON object that may hold usage-shaped keys
+# ahead of the real usage object. Neither is a response, and neither adds a token.
+scdir
+{ printf '%s\n' '{"parentUuid":"p3","isSidechain":false,"type":"user","message":{"role":"user","content":"x"},"toolUseResult":{"type":"assistant","message":{"model":"m-nested","usage":{"input_tokens":800000,"output_tokens":800000}},"requestId":"req_nested"},"uuid":"u3","timestamp":"2026-09-20T22:10:00.000Z"}'
+  scline req_T1 msg_T1 m-big 1 0 3000 8 '[{"type":"tool_use","id":"toolu_t","name":"X","input":{"type":"assistant","usage":{"input_tokens":800000,"output_tokens":800000}}}]'
+} > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert "the TOP-LEVEL type decides, and only message.usage counts — nested usage-shaped keys never do" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 8 · fresh input 1 · cache read 3000' '800000|m-nested'
+
+# THE FALLBACK KEY, and the placeholder. Without a requestId, message.id identifies the response.
+# A "<synthetic>" line (Claude Code's own placeholder, zero usage) is not a response — and it puts
+# the top-level type BEFORE the message, the second key order seen in real transcripts, so the
+# skip count below also proves that order is read.
+scdir
+{ printf '%s\n' '{"parentUuid":"p4","isSidechain":false,"type":"assistant","uuid":"u4","timestamp":"2026-09-20T22:11:00.000Z","message":{"id":"syn-1","model":"<synthetic>","role":"assistant","type":"message","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0},"content":[{"type":"text","text":"fixture message text"}]},"requestId":"req_syn","isApiErrorMessage":true}'
+  scline '' msg_F1 m-big 1 10 4000 3
+  scline '' msg_F1 m-big 1 10 4000 9
+} > "$D/$SA.jsonl"
+out="$(sc)"; rc_=$?
+assert "no requestId → one response per message.id (streamed twice, counted once, at 9)" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 9 · fresh input 11 · cache read 4000'
+assert "  · a <synthetic> placeholder is not a response — skipped, and the skip is counted" 0 "$rc_" "$out" \
+  'not counted: 1 synthetic line '
+
+# SUBAGENTS APART. <id>/subagents/*.jsonl belongs to session <id>, on its own line; a .meta.json
+# beside it is not a transcript.
+scdir; mkdir -p "$D/$SA/subagents"
+scline req_M1 msg_M1 m-big 10 0 90 20 > "$D/$SA.jsonl"
+scline req_S1 msg_S1 m-small 5 50 500 30 | sed 's/"isSidechain":false/"isSidechain":true/' > "$D/$SA/subagents/agent-a1.jsonl"
+printf '{"agentType":"general-purpose"}\n' > "$D/$SA/subagents/agent-a1.meta.json"
+scline req_B1 msg_B1 m-big 1 1 1 3 > "$D/$SB.jsonl"
+out="$(sc --session aaaa)"; rc_=$?
+assert "subagent transcripts are counted on their OWN line, never folded into the main thread" 0 "$rc_" "$out" \
+  'subagents \(1 transcript\): 1 response · output 30 · fresh input 55 · cache read 500 · avg context per response 555'
+assert "  · the main thread holds only its own responses" 0 "$rc_" "$out" \
+  'main thread \(1 transcript\): 1 response · output 20 · fresh input 10 · cache read 90 · avg context per response 100'
+assert "  · main + subagents on a third line" 0 "$rc_" "$out" \
+  'main \+ subagents: 2 responses · output 50 · fresh input 65 · cache read 590 · avg context per response 328'
+assert "  · output tokens per model, as one line, largest first" 0 "$rc_" "$out" \
+  'output per model: m-small 30 · m-big 20'
+
+# THE SESSION FILTER. The same dir holds session B; --session <prefix> reads only what matches.
+assert "--session <prefix> reads only the matching session, its subagents included" 0 "$rc_" "$out" \
+  "session $SA" "session $SB"
+assert "  · and the total covers that one session" 0 "$rc_" "$out" 'total — 1 session$'
+out="$(sc)"; rc_=$?
+assert "  · unfiltered, the other session is listed too" 0 "$rc_" "$out" "^  session $SB\$"
+assert "  · and the total says 2 sessions" 0 "$rc_" "$out" 'total — 2 sessions$' 'total — 1 session$'
+out="$(sc --session zzzz)"; rc_=$?
+assert "  · a prefix that matches nothing → exit 2, the prefix named" 2 "$rc_" "$out" "for session prefix 'zzzz'"
+
+# NO CLOCK, NO CONTENT, NO PRICE. Every fixture line above carries a timestamp and a message text;
+# the output carries neither, and it states that it prints no price.
+out="$(sc)"; rc_=$?
+assert "NO clock time in the output — every line read carried a timestamp, none leaks" 0 "$rc_" "$out" \
+  'COUNTS ONLY' '[0-9]{1,2}:[0-9]{2}|[0-9]{4}-[0-9]{2}-[0-9]{2}'
+assert "  · no message content, and no price, currency or percentage" 0 "$rc_" "$out" \
+  'Prices are not in the transcript' 'fixture message text|[$%]|USD|EUR'
+
+# FAIL CLOSED: nothing to read is exit 2, never an all-zero report that reads like a free session.
+out="$("$SH" "$SCOST" --dir "$TMP/sc-nowhere" 2>&1)"; rc_=$?
+assert "a missing dir → exit 2, and the path that was tried is named" 2 "$rc_" "$out" \
+  "no transcript dir at $TMP/sc-nowhere"
+scdir; mkdir -p "$D/$SA/subagents"; printf '{}\n' > "$D/$SA/subagents/agent-a1.meta.json"
+out="$(sc)"; rc_=$?
+assert "a dir with no *.jsonl → exit 2, named — an empty dir is not a zero-cost session" 2 "$rc_" "$out" \
+  'no readable \*\.jsonl in .*sc[0-9]+'
+out="$(sc --bogus)"; rc_=$?
+assert "an unknown option → exit 2" 2 "$rc_" "$out" 'unknown argument'
+out="$("$SH" "$SCOST" --session= 2>&1)"; rc_=$?
+assert "--session= (empty inline value) → exit 2, never silently every session" 2 "$rc_" "$out" 'must not silently'
+# A FAILING awk. The counters are captured before anything prints, so a parse that dies leaves
+# stdout EMPTY — no header, no partial counters — and exit 2 says so on stderr. The stub is an awk
+# that fails on every call, first on PATH for this one run.
+SCFAKE="$TMP/sc-fakeawk"; mkdir -p "$SCFAKE"
+printf '#!/bin/sh\necho "awk: simulated failure" >&2\nexit 2\n' > "$SCFAKE/awk"; chmod +x "$SCFAKE/awk"
+scdir; scline req_W1 msg_W1 m-big 1 0 0 5 > "$D/$SA.jsonl"
+out="$( PATH="$SCFAKE:$PATH" "$SH" "$SCOST" --dir "$D" 2>"$D.err" )"; rc_=$?
+assert "a failing awk → exit 2 and NOTHING on stdout — no header, no partial counters" 2 "$rc_" "$out" '' '.'
+assert "  · stderr names it: nothing was counted" 0 0 "$(cat "$D.err")" 'could not be parsed — nothing was counted'
+
+# THE DEFAULT DIR: $CLAUDE_CONFIG_DIR/projects/<slug>, the slug being the repo toplevel with one '-'
+# per character outside [A-Za-z0-9] — a space, '.', '_' and a two-byte letter (assembled at run
+# time) each become ONE '-', as Claude Code names the dir.
+N=$((N+1)); SCR="$TMP/sc-repo$N/my repo.v2_x$(printf '\303\266')y"; gitrepo "$SCR"; gitcommit "$SCR" 'chore: base'
+SCSLUG="$(printf '%s' "$TMP/sc-repo$N/" | tr -c 'A-Za-z0-9' '-')my-repo-v2-x-y"
+SCCFG="$TMP/sc-cfg$N"; mkdir -p "$SCCFG/projects/$SCSLUG"
+scline req_D1 msg_D1 m-big 1 0 0 4 > "$SCCFG/projects/$SCSLUG/$SA.jsonl"
+out="$( cd "$SCR" && CLAUDE_CONFIG_DIR="$SCCFG" "$SH" "$SCOST" 2>&1 )"; rc_=$?
+assert "default dir: \$CLAUDE_CONFIG_DIR/projects/<slug of the repo toplevel>, one '-' per character" 0 "$rc_" "$out" \
+  "^session-cost: .*/projects/$SCSLUG\$"
+# An extractor writes nothing: no run-log row in the repo it ran from, no file in the transcript dir.
+if [ ! -e "$SCR/docs" ] && [ "$(find "$SCCFG" -type f | wc -l | tr -d ' ')" = 1 ]; then
+  ok "  · it wrote nothing — no run-log row in the repo, no file beside the transcripts"
+else bad "  · it wrote nothing — no run-log row in the repo, no file beside the transcripts" "$(find "$SCR/docs" "$SCCFG" -type f 2>&1)"; fi
+# A LINKED WORKTREE has a slug of its own, and Claude Code files a worktree agent's transcript under
+# the parent session's dir — so where the worktree's slug has no dir, the main checkout's is next.
+SCWT="$TMP/sc-wt$N"; git -C "$SCR" worktree add -q "$SCWT" -b sc-wt >/dev/null 2>&1
+out="$( cd "$SCWT" && CLAUDE_CONFIG_DIR="$SCCFG" "$SH" "$SCOST" 2>&1 )"; rc_=$?
+assert "  · in a linked worktree without a dir of its own, the main checkout's slug is read" 0 "$rc_" "$out" \
+  "^session-cost: .*/projects/$SCSLUG\$"
+N=$((N+1)); mkdir -p "$TMP/sc-plain$N"
+out="$( cd "$TMP/sc-plain$N" && CLAUDE_CONFIG_DIR="$TMP/sc-none$N" "$SH" "$SCOST" 2>&1 )"; rc_=$?
+assert "  · no dir under the derived slug → exit 2, naming the path it tried" 2 "$rc_" "$out" \
+  "no transcript dir at $TMP/sc-none$N/projects/-.*sc-plain$N"
+
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once
 # counted as `ok`, and "220 cases, all green" read as health. CI sums cases as $1+$5 of this line.

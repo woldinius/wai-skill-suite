@@ -82,6 +82,11 @@ nothing from the file would move that count.) This skill stays a non-reader.
      per skill, `starts vs. subject rows` — invocation **starts** beside run-log rows, which count
      **subjects handled** (one per verdict, and a review can run the gate twice). Two units,
      **not a rate**: narrate them side by side, never divide one by the other.
+   - *Optional* — **context cost**, when the session transcripts are on this machine:
+     `sh scripts/session-cost.sh [--session <id-prefix>]` (from this skill's directory) prints raw
+     token counters per session, the main thread and subagents apart, no prices. `exit 0` =
+     printed · `exit 2` = nothing was counted (no transcript dir, no readable transcript, or
+     misuse) — then say `not measured`.
    - **The closing picture** comes from `sh ../wai/scripts/open-items.sh --brief` (from this
      skill's directory) at hand-back — `exit 0` = emitted · `exit 2` = nothing derivable, say
      `not checked`.

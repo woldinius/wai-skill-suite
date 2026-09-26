@@ -7,6 +7,14 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ## [Unreleased]
 
+### Added
+
+- **`session-cost.sh` gives Q5 its first measurement.** An optional `wai-retro` extractor sums
+  the per-response usage records in Claude Code's session transcripts: responses, output, fresh
+  input, cache reads and average context per response, the main thread and subagents apart; no
+  prices, no content, no timestamps. Q5 stays open. Rationale: `docs/rationale/session-cost.md`.
+  ([#87](https://github.com/woldinius/wai-skill-suite/pull/87))
+
 ### Changed
 
 - **Lean output.** `open-items.sh --brief` prints only classes with findings plus one summary

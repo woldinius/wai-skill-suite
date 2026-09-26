@@ -157,7 +157,7 @@ model cooperating:
 |---|---|---|
 | **Server-side** | branch protection on `main`, required checks, CODEOWNERS | No — the model does not run there |
 | **Local hooks** | [`pre-commit`](.githooks/pre-commit) (no commits on the default branch), [`pre-push`](.githooks/pre-push) (no pushes to a branch whose PR is merged) — **wire them once: `git config core.hooksPath .githooks`** | Only visibly, via `--no-verify` |
-| **Scripts a skill invokes** | `merge-gate.sh`, `catalog-lint.sh`, the audit and protocol lints — 29 scripts across the suite | In principle yes — which is why this was **measured**, not assumed ([Test 0](docs/empirics.md)) |
+| **Scripts a skill invokes** | `merge-gate.sh`, `catalog-lint.sh`, the audit and protocol lints — 30 scripts across the suite | In principle yes — which is why this was **measured**, not assumed ([Test 0](docs/empirics.md)) |
 
 The merge policy itself is **policy-as-code**: the guardrail floor is hardcoded in the scripts,
 the repo-specific half lives in `docs/architecture/merge-gate.conf` — and config can only ever
@@ -187,7 +187,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took eleven repair commits in two days
 ([retrospective](docs/retrospective-2026-07.md)); the gate once failed *open* under zsh and later
-could never say GO at all. That is why [`tests/`](tests/) exists — 515 cases, **founded** on bugs
+could never say GO at all. That is why [`tests/`](tests/) exists — 544 cases, **founded** on bugs
 that shipped and grown into the regression guards around them, run on two shells in CI because
 shellcheck passed a construct that is a syntax error in the `/bin/sh` of macOS. (While the repo was
 private, the macOS job was dropped — its runners burned the Actions budget until no check could run
@@ -468,10 +468,10 @@ install.sh                                       # idempotent installer (inject/
   wai-team/                                      # mandated lifecycle orchestrator (merge queue) + scripts
   wai-architecture-audit/                        # + audit playbook
   wai-security-audit/                            # + security playbook + CVE/attack-path scripts
-  wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh
+  wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh, session-cost.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 515 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 544 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, catalog, open questions, known criticism, publication rule, learnings
 ```
 

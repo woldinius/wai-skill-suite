@@ -110,3 +110,4 @@ They are records and stay as written; newer rows carry the normal UTC timestamp.
 | 2026-09-15T22:13Z | 84 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
 | 2026-09-16T05:41Z | 85 | GO | ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS; ✓ no excluded domain touched (guardrail floor, contract domain, destructive migration, erasure) | |
 | 2026-09-26T14:04Z | 86 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
+| 2026-09-26T19:47Z | 87 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
