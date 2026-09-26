@@ -440,6 +440,8 @@ The claims above are checkable, and the failures are part of the record on purpo
   and [`TEMPLATE.md`](docs/field-reports/TEMPLATE.md) is the paste-sized way to send it. The
   dataset *In the field* summarizes:
   [six weeks, 259 gate verdicts](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md).
+- [`docs/experiments/`](docs/experiments/) — controlled measurements of the suite itself; the first:
+  [lean output, A/B in sandboxes](docs/experiments/2026-09-26-lean-output-ab.md) (2026-09-26).
 - [`docs/adr/`](docs/adr/) — the four decisions that shaped the architecture, with the
   cases where the scripts lost.
 - `docs/architecture/audits/` — the suite auditing itself with its own audit skill (first
@@ -472,7 +474,7 @@ install.sh                                       # idempotent installer (inject/
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
 tests/                                           # 544 cases for the deciding scripts — founded on bugs that shipped
-docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, catalog, open questions, known criticism, publication rule, learnings
+docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, experiments, catalog, open questions, known criticism, publication rule, learnings
 ```
 
 > After running `install.sh` in a target project, `.claude/.wai-suite-manifest` records the
