@@ -87,9 +87,9 @@ nothing from the file would move that count.) This skill stays a non-reader.
      token counters per session, the main thread and subagents apart, no prices. `exit 0` =
      printed · `exit 2` = nothing was counted (no transcript dir, no readable transcript, or
      misuse) — then say `not measured`.
-   - **The closing picture** comes from `sh ../wai/scripts/open-items.sh` (from this skill's
-     directory) at hand-back — `exit 0` = footer emitted (empty lines name their derivation) ·
-     `exit 2` = nothing derivable, then say `not checked` yourself.
+   - **The closing picture** comes from `sh ../wai/scripts/open-items.sh --brief` (from this
+     skill's directory) at hand-back — `exit 0` = emitted · `exit 2` = nothing derivable, say
+     `not checked`.
 
 3. **Level 1 — suite performance (narrate the pasted numbers).** What the gate, the skills and
    the checks did over the period: verdict totals and the fp/fn rates from the gate report; the
