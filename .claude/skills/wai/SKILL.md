@@ -202,4 +202,5 @@ has their own learning ledger, and does nothing for everyone else).
 
 Shared references: catalog `docs/architecture/quality-attributes.md`; git
 `references/agent-git-protocol.md`; contract `references/contract-protocol.md`; issues
-`references/issues-protocol.md`; grilling `references/grilling-protocol.md`.
+`references/issues-protocol.md`; grilling `references/grilling-protocol.md`; hand-back
+`references/hand-back.md`.

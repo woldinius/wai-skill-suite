@@ -389,6 +389,9 @@ Cross-skill rules live next to the router and are referenced by every relevant s
   — the **interrogation primitive** ("grill me"): one question at a time with a recommended
   answer, facts looked up vs. decisions asked, alternatives for imprecise requirements, hard
   shared-understanding gate.
+- [`.claude/skills/wai/references/hand-back.md`](.claude/skills/wai/references/hand-back.md)
+  — the **hand-back shape**: result, your decisions, next, then the `open-items.sh --brief`
+  footer; the detail stays in the linked artifact.
 
 > **Portability:** the lifecycle skills expect `docs/architecture/quality-attributes.md`. If it's
 > missing they say so (→ run `wai-init`) and meanwhile work from their built-in short list of

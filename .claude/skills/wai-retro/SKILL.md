@@ -138,13 +138,13 @@ nothing from the file would move that count.) This skill stays a non-reader.
 
 8. **Log the run and hand back.** `sh ../wai/scripts/run-log.sh wai-retro "<period>"
    "<half-sentence result>"` (from this skill's directory) — fail-open: `exit 0` even when the
-   write fails, `exit 2` only on misuse (missing arguments). Then the open-items footer (step 2)
-   verbatim beneath ▶ Recommended next, then the recommendation — the script derives, the model
-   recommends, in that order.
+   write fails, `exit 2` only on misuse (missing arguments). Then hand back per
+   `../wai/references/hand-back.md`, ending with the `--brief` footer (step 2) verbatim.
 
 ## Report format
 
-Use exactly this structure for `docs/architecture/retrospectives/<YYYY-MM-DD>.md`:
+Use exactly this structure for `docs/architecture/retrospectives/<YYYY-MM-DD>.md` — the
+narrative at most one page besides the pasted numbers:
 
 ```
 ## Suite retrospective: [repo] · [YYYY-MM-DD]
