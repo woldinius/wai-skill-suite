@@ -1853,15 +1853,15 @@ if grep -q 'full plan text' "$ROOT/.claude/skills/wai-requirements-planning/SKIL
   ok "planning posts the full plan text to the issue, with the visible-split fallback"
 else bad "planning posts the full plan text to the issue, with the visible-split fallback" "full-text or never-truncate-silently sentence missing"; fi
 
-# Lean output: the anchors that keep the operational output short. Measured 2026-09-26 over PRs
-# #56–#85 — `gh api repos/woldinius/wai-skill-suite/issues/<n>/comments` and `gh pr view <n>
-# --json body`; review comment = a body starting `## PR Review`; medians over the PRs that have
-# comments: a review comment ran 4,700 characters, all of a PR's comments 5,700, a PR body 4,800.
-# The population grows with every comment, so the date is part of the figure (a later run is in
-# docs/rationale/open-items.md). A budget that lives only in a PR description is gone the next
-# time someone edits the template, so four rules are pinned here: the review is written once, its
-# budget line, the brief footer in every skill that pastes one, and the hand-back shape those
-# skills name.
+# Lean output: the anchors that keep the operational output short. PR body median 5,033
+# characters · review comment median 4,491 · comments per PR median 8,639 — measured 2026-09-26
+# over the merged/open PRs among #56–#85 with `gh pr view <n> --json body` and
+# `gh api repos/woldinius/wai-skill-suite/issues/<n>/comments`; review comment = a body starting
+# `## PR Review`; medians over the PRs that have comments. The population grows with every
+# comment, so the date is part of the figure. A budget that lives only in a PR description is gone
+# the next time someone edits the template, so four rules are pinned here: the review is written
+# once, its budget line, the brief footer in every skill that pastes one, and the hand-back shape
+# those skills name.
 PRR="$ROOT/.claude/skills/wai-pr-review/SKILL.md"
 if grep -q 'the only full copy' "$PRR"; then
   ok "wai-pr-review: the PR comment is the only full copy of a review"

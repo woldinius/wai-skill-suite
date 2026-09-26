@@ -78,13 +78,13 @@ overrides — instead of a copy step nobody watches.
 Added 2026-09-26, with the lean-output change. The full footer is fourteen lines, and on a quiet
 repo nearly all of its class lines say *none*. Pasted at the end of every hand-back, it was often
 the longest part of one, and the lines that mattered (an open PR, an untagged ledger row) sat
-among the ones that did not. The operational output around it had grown too. Measured 2026-09-26
-over PRs #56–#85 — `gh api repos/woldinius/wai-skill-suite/issues/<n>/comments` and
-`gh pr view <n> --json body`; review comment = a body starting `## PR Review`; medians over the
-PRs that have comments: a PR body ran 4,800 characters, a review comment 4,700, all comments on
-a PR 5,700. The population grows with every new comment, which is why the date is part of the
-figure: re-run later the same day, over 16 PRs and 9 review comments, the same method gave 5,033,
-4,491 and 8,639. The footer was one of the fixed costs in that output.
+among the ones that did not. The operational output around it had grown too: PR body median
+5,033 characters · review comment median 4,491 · comments per PR median 8,639 — measured
+2026-09-26 over the merged/open PRs among #56–#85 with `gh pr view <n> --json body` and
+`gh api repos/woldinius/wai-skill-suite/issues/<n>/comments`; review comment = a body starting
+`## PR Review`; medians over the PRs that have comments. The population grows with every new
+comment, which is why the date is part of the figure. The footer was one of the fixed costs in
+that output.
 
 `--brief` prints only the classes with a finding, then one line:
 `open items — clean: 6 of 8 classes · skipped (no artifact): audits · not derived: asked, unanswered`. Three
