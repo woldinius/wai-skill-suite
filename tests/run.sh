@@ -60,9 +60,11 @@ assert() {
 }
 
 # ── merge-gate.sh ───────────────────────────────────────────────────────────────────────────────
-# A fresh fixture is a GREEN, solo repo: two required checks, both SUCCESS, an innocuous file.
+# A fresh fixture is a GREEN, solo repo: two required checks, both SUCCESS, an innocuous file. It is
+# a real git repository on `main`, because outside one the gate writes no row at all (#89, below).
 gfix() {
   N=$((N+1)); D="$TMP/g$N"; mkdir -p "$D/docs/architecture"
+  git init -q -b main "$D" >/dev/null 2>&1
   printf '# Q\n\n**Repo mode:** solo\n\n- **SEC-1 · Auth** — a. *Red Flag:* b.\n' > "$D/docs/architecture/quality-attributes.md"
   printf 'CONTRACT_PATHS="apps/api/src/billing/* apps/api/src/auth/*"\nMIGRATION_PATHS="migrations/*"\n' > "$D/docs/architecture/merge-gate.conf"
   printf 'acme/repo\n'                        > "$D/repo"
@@ -230,8 +232,7 @@ else bad "  · the ledger row landed at the REPO root" "no row in $D/docs/archit
 if [ ! -e "$D/.claude/skills/wai-pr-review/docs" ]; then
   ok "  · and NOTHING was planted inside .claude/skills/ (the install payload stays clean)"
 else bad "  · and NOTHING was planted inside .claude/skills/" "stray tree: $D/.claude/skills/wai-pr-review/docs"; fi
-# Outside any git repo the cwd stays the base — every other fixture in this file IS that case
-# (gfix dirs are plain directories), so the fallback is pinned by the whole suite around this.
+# Outside any git repo there is no root, and no row is written at all: pinned below (#89).
 
 # WHERE A ROW LIVES (ledger-home decision 2026-08-18, revised in #66). The gate writes its row wherever
 # it runs; that row was squash-deleted twice (#28, #31) when it rode a feature branch's stale ledger
@@ -397,6 +398,130 @@ gfix; printf 'MERGED\n' > "$D/state"
 if grep -qE '^\| .* \| 1 \| MOOT \|' "$D/docs/architecture/gate-ledger.md" 2>/dev/null && grep -qF '| wai-pr-review | PR #1 | MOOT |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
   ok "the MOOT short-circuit writes both books before its first output line, too"
 else bad "the MOOT short-circuit writes both books before its first output line, too" "a MOOT row is missing in the ledger or the run log"; fi
+
+# A GATE THAT RAN LEAVES A ROW — the no-gh UNKNOWN too (#89). The tool check exited 2 before either
+# writer ran, so a run without gh read exactly like a run that never happened. The PATH below holds
+# the toolbox and git and no gh at all (the stub dir carries a gh, so it stays off this PATH); its
+# sh is this harness's own, so the gate runs under the shell the suite runs under.
+NOGHBIN="$TMP/noghbin"; mkdir -p "$NOGHBIN"
+for t in sh git date awk sed grep tr head tail cat mkdir dirname; do
+  tp="$(command -v "$t" 2>/dev/null)" && ln -sf "$tp" "$NOGHBIN/$t"
+done
+gfix; printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n| 2026-09-01T00:00Z | 7 | GO | x | ok |\n' \
+  > "$D/docs/architecture/gate-ledger.md"
+out="$( cd "$D" && PATH="$NOGHBIN" "$NOGHBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "gh absent from PATH → UNKNOWN, exit 2, with its VERDICT line (#89)" 2 "$rc" "$out" 'VERDICT: UNKNOWN' 'VERDICT: (GO|NO-GO)'
+_lr="$(grep -c '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null)"
+if [ "$_lr" = 2 ] && tail -1 "$D/docs/architecture/gate-ledger.md" | grep -qF '| 1 | UNKNOWN | ? gh is not installed'; then
+  ok "  · exactly one new ledger row: UNKNOWN, with the reason"
+else bad "  · exactly one new ledger row: UNKNOWN, with the reason" "rows: ${_lr:-0} (1 seeded), last: $(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
+_rr="$(grep -c '^| 20' "$D/docs/architecture/run-log.md" 2>/dev/null)"
+if [ "$_rr" = 1 ] && grep -qF '| wai-pr-review | PR #1 | UNKNOWN |' "$D/docs/architecture/run-log.md"; then
+  ok "  · and exactly one run-log row"
+else bad "  · and exactly one run-log row" "run-log rows: ${_rr:-0}"; fi
+# Books before output (#64): with stdout AND stderr closed, the first write of either kills the run.
+gfix; ( cd "$D" && PATH="$NOGHBIN" "$NOGHBIN/sh" "$GATE" 1 >&- 2>&- ) || true
+if grep -qF '| 1 | UNKNOWN |' "$D/docs/architecture/gate-ledger.md" 2>/dev/null && grep -qF '| wai-pr-review | PR #1 | UNKNOWN |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "  · both books before any output (stdout and stderr closed)"
+else bad "  · both books before any output (stdout and stderr closed)" "a row is missing in the ledger or the run log"; fi
+gfix; out="$( cd "$D" && PATH="$NOGHBIN" MERGE_GATE_LEDGER=/proc/nonexistent/x/gate.md RUN_LOG=/proc/nonexistent/x/run.md "$NOGHBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "  · an unwritable ledger and run log never change the verdict (fail-open)" 2 "$rc" "$out" 'VERDICT: UNKNOWN'
+# …and so does EVERY early UNKNOWN in a repo, "as on every other path" (#89's acceptance). stdout
+# and stderr are closed, so a path that printed before booking loses its rows. An unknown field is `?`.
+early_case() {   # $1 = name, $2 = the PR cell, $3 = a fragment of the reason; the gate has run
+  if grep -qF "| $2 | UNKNOWN | ? $3" "$D/docs/architecture/gate-ledger.md" 2>/dev/null &&
+     grep -qF "| wai-pr-review | PR #$2 | UNKNOWN |" "$D/docs/architecture/run-log.md" 2>/dev/null; then ok "$1"
+  else bad "$1" "ledger: $(grep '^| 20' "$D/docs/architecture/gate-ledger.md" 2>&1 | tail -1) · run log: $(grep '^| 20' "$D/docs/architecture/run-log.md" 2>&1 | tail -1)"; fi
+}
+gclosed() { ( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" "$@" >&- 2>&- ) || true; }
+gfix; : > "$D/base-fail"; gclosed 1
+early_case "an unresolvable PR books both rows before any output (#89)" 1 "could not resolve PR #1"
+gfix; : > "$D/repo-fail"; gclosed 1
+early_case "  · an unresolvable repository, too" 1 "could not resolve which repository"
+gfix; gclosed
+early_case "  · no PR given and none found: the PR is booked as ?" '?' "no PR given and none found"
+gfix; gclosed 1 --bogus
+early_case "  · a misuse (an unknown option), too" 1 "unknown option '--bogus'"
+# The parser goes on after a misuse, so a PR number AFTER it is booked too (review of #94).
+gfix; gclosed --bogus 5
+early_case "  · a misuse before the PR: parsing goes on, and PR 5 is booked" 5 "unknown option '--bogus'"
+NOAUTH="$TMP/noauth"; mkdir -p "$NOAUTH"   # a gh that is installed and not logged in
+printf '#!/bin/sh\n[ "$1" = auth ] && exit 1\nexec "%s/gh" "$@"\n' "$STUB" > "$NOAUTH/gh"; chmod +x "$NOAUTH/gh"
+gfix; ( cd "$D" && PATH="$NOAUTH:$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 >&- 2>&- ) || true
+early_case "  · gh installed but not logged in, too" 1 "gh is not authenticated"
+# NO REPO ROOT, NO ROW (#89). Without git, or outside any repo, a row could only land in the cwd —
+# for the documented call a skill directory, inside the tree install.sh copies into every repo (the
+# 0.3.0 incident). A wrong row is worse than a missing one: neither book is written, one stderr note
+# names the skipped rows, and the verdict and the exit code stay what they were.
+NOGITBIN="$TMP/nogitbin"; mkdir -p "$NOGITBIN" "$TMP/ghfix-none"   # gh (the stub), the toolbox, no git
+for t in sh date awk sed grep tr head tail cat mkdir dirname; do ln -sf "$NOGHBIN/$t" "$NOGITBIN/$t"; done
+ln -sf "$STUB/gh" "$NOGITBIN/gh"
+gfix; mkdir -p "$D/.claude/skills/wai-pr-review"; find "$D" | sort > "$TMP/before$N"
+out="$( cd "$D/.claude/skills/wai-pr-review" && PATH="$NOGITBIN" GH_FIXTURE="$TMP/ghfix-none" "$NOGITBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "git absent, run from the skill dir → exit 2, and one note names the skipped rows (#89)" 2 "$rc" "$out" \
+  'skipped the gate-ledger row and the run-log row'
+find "$D" | sort > "$TMP/after$N"
+if cmp -s "$TMP/before$N" "$TMP/after$N"; then ok "  · and no file was created anywhere under the fixture"
+else bad "  · and no file was created anywhere under the fixture" "new: $(grep -vxF -f "$TMP/before$N" "$TMP/after$N" | tr '\n' ' ')"; fi
+# The other half: git present, not inside any repo. The GO stands; only the rows are skipped. (The gh
+# stub logs its own calls into the fixture; that log is the stub's, so it is left out of the count.)
+gfix; rm -rf "$D/.git"; find "$D" ! -name gh-calls.log | sort > "$TMP/before$N"
+out="$(gate)"; rc=$?
+assert "  · not inside a repo, git present → the GO stands, with the same note" 0 "$rc" "$out" \
+  'skipped the gate-ledger row and the run-log row'
+find "$D" ! -name gh-calls.log | sort > "$TMP/after$N"
+if cmp -s "$TMP/before$N" "$TMP/after$N"; then ok "  · and no file was created there either"
+else bad "  · and no file was created there either" "new: $(grep -vxF -f "$TMP/before$N" "$TMP/after$N" | tr '\n' ' ')"; fi
+# AN EXPLICIT PATH STILL WINS WITHOUT A REPO ROOT: the caller named the file, so both rows land there
+# and nowhere else. Only the override clauses in book() write them here, so without either clause
+# this case fails (review of #94).
+gfix; mkdir -p "$D/.claude/skills/wai-pr-review"; find "$D" | sort > "$TMP/before$N"; OVR="$TMP/ovr$N"
+out="$( cd "$D/.claude/skills/wai-pr-review" && PATH="$NOGITBIN" GH_FIXTURE="$TMP/ghfix-none" \
+  MERGE_GATE_LEDGER="$OVR/gate.md" RUN_LOG="$OVR/run.md" "$NOGITBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "git absent, MERGE_GATE_LEDGER and RUN_LOG set → exit 2, and no skip note" 2 "$rc" "$out" \
+  'VERDICT: UNKNOWN' 'skipped'
+_lr="$(grep -c '^| 20' "$OVR/gate.md" 2>/dev/null)"; _rr="$(grep -c '^| 20' "$OVR/run.md" 2>/dev/null)"
+if [ "$_lr" = 1 ] && [ "$_rr" = 1 ] && grep -qF '| 1 | UNKNOWN | ? git is not installed' "$OVR/gate.md" &&
+   grep -qF '| wai-pr-review | PR #1 | UNKNOWN |' "$OVR/run.md"; then ok "  · one row in each book, at exactly the named paths"
+else bad "  · one row in each book, at exactly the named paths" "ledger rows: ${_lr:-0} · run-log rows: ${_rr:-0}"; fi
+find "$D" | sort > "$TMP/after$N"
+if cmp -s "$TMP/before$N" "$TMP/after$N"; then ok "  · and no file under the fixture"
+else bad "  · and no file under the fixture" "new: $(grep -vxF -f "$TMP/before$N" "$TMP/after$N" | tr '\n' ' ')"; fi
+
+# A USAGE QUERY IS NOT A GATE RUN (review of #94): `-h`/`--help` prints the usage and exits before
+# either writer, so it leaves no row. It exits 2, never 0: exit 0 is GO's alone (the gate's rule 1).
+# The second call puts it after a PR and a misuse, so it wins over a parse that goes on, too.
+nobooks() { [ ! -e "$D/docs/architecture/gate-ledger.md" ] && [ ! -e "$D/docs/architecture/run-log.md" ]; }
+gfix; out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" --help 2>&1 )"; rc=$?
+assert "--help → the usage, exit 2, and no VERDICT line (review of #94)" 2 "$rc" "$out" \
+  '^Usage: +sh merge-gate\.sh \[PR-number\]' 'VERDICT:'
+if nobooks; then ok "  · and no row in either book"
+else bad "  · and no row in either book" "ledger: $(grep '^| 20' "$D/docs/architecture/gate-ledger.md" 2>&1 | tail -1) · run log: $(grep '^| 20' "$D/docs/architecture/run-log.md" 2>&1 | tail -1)"; fi
+gfix; out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 5 --bogus -h 2>&1 )"; rc=$?
+if [ "$rc" = 2 ] && printf '%s\n' "$out" | grep -q '^Usage:' && nobooks; then ok "  · -h after a PR and a misuse: the same, and no row"
+else bad "  · -h after a PR and a misuse: the same, and no row" "exit $rc · $(printf '%s' "$out" | tr '\n' '/')"; fi
+
+# THE PR CELL IS DIGITS OR `?` (review of #94). An early path books an argument no gh call has
+# validated, and `merge-gate.sh 'a|b'` wrote a six-cell row: gate-stats then read `b` as the verdict
+# and the why cell as an outcome tag. The real gh cannot resolve such a PR; base-fail stands in.
+gfix; : > "$D/base-fail"; gclosed 'a|b'
+early_case "a PR argument that is not a number is booked as ? (review of #94)" '?' "could not resolve PR #a/b"
+_nf="$(grep '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null | tail -1 | awk -F'|' '{ print NF }')"
+if [ "${_nf:-0}" -eq 7 ]; then ok "  · 'a|b' adds no table cell: the row keeps its five"
+else bad "  · 'a|b' adds no table cell: the row keeps its five" "fields: ${_nf:-none} (7 = five cells)"; fi
+out="$(sh "$ROOT/.claude/skills/wai-pr-review/scripts/gate-stats.sh" "$D/docs/architecture/gate-ledger.md" 2>&1)"; rc=$?
+assert "  · and gate-stats counts that row as UNKNOWN, with no unmatched tag" 0 "$rc" "$out" \
+  'GO 0 · NO-GO 0 · UNKNOWN 1 · MOOT 0' 'unmatched'
+
+# AN EARLY UNKNOWN IS QUOTABLE LIKE ANY VERDICT (review of #94). A review quotes only the gate's
+# VERDICT: and ✗/? lines from stdout, so the `?` line is printed there, right before VERDICT:.
+gfix; : > "$D/base-fail"
+out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 2>/dev/null )"; rc=$?
+_pv="$(printf '%s\n' "$out" | awk '/^VERDICT: UNKNOWN/ { print prev; exit } { prev = $0 }')"
+case "$rc|$_pv" in
+  "2|  ? could not resolve PR #1 in "*) ok "an early UNKNOWN prints its ? line on stdout, right before VERDICT:" ;;
+  *) bad "an early UNKNOWN prints its ? line on stdout, right before VERDICT:" "exit $rc · stdout: $(printf '%s' "$out" | tr '\n' '/')" ;;
+esac
 
 # A ROW IS A LINE (this repo, 2026-09-13). Tagging the last row's outcome with a tool that trimmed the
 # trailing newline left the file without one; the next verdict was appended ONTO that row — 13
@@ -712,6 +837,38 @@ assert "AGENTS.md citing a baseline ID the catalog tailored away → the adopt-o
 lfix; rm -f "$D/CLAUDE.md" "$D/AGENTS.md"
 out="$(lint)"; rc=$?
 assert "no CLAUDE.md and no AGENTS.md → not an error, OK" 0 "$rc" "$out" 'VERDICT: OK' 'CLAUDE.md|AGENTS.md'
+
+# THE DOCUMENTED CALL (#88). wai-pr-review runs `sh ../wai-init/scripts/catalog-lint.sh` from its own
+# directory; read against the cwd, every default path missed and that call exited 2 on every run.
+# Inside a git repo the defaults now resolve against the worktree root, as in the seven scripts fixed
+# in 0.3.0. The copy sits under wai-init/, which no check reads, so the verdict stays the fixture's.
+# Outside a repo the cwd stays the base: every other fixture in this section is that case.
+lskill() {   # the documented call, from .claude/skills/wai-pr-review; "$@" = an explicit argument
+  mkdir -p "$D/.claude/skills/wai-init/scripts" && cp "$LINT" "$D/.claude/skills/wai-init/scripts/"
+  ( cd "$D/.claude/skills/wai-pr-review" && sh ../wai-init/scripts/catalog-lint.sh "$@" 2>&1 )
+}
+lfix; ( cd "$D" && git init -q . ) 2>/dev/null
+out="$(lskill)"; rc=$?
+root_out="$(lint)"
+assert "the documented call, from the skill dir of a git repo → exit 0 (#88)" 0 "$rc" "$out" 'VERDICT: OK'
+if [ "$out" = "$root_out" ]; then ok "  · and the same output, line for line, as from the repo root"
+else bad "  · and the same output, line for line, as from the repo root" "from the root: $(printf '%s' "$root_out" | tr '\n' '/')"; fi
+# A red lint stays red: resolving the catalog alone would read docs/ from the skill dir, find
+# nothing there, and pass — a false OK, the worse half of the same bug.
+lfix; ( cd "$D" && git init -q . ) 2>/dev/null
+printf 'The plan anchors this to `PAY-9`.\n' > "$D/docs/plan.md"
+out="$(lskill)"; rc=$?
+assert "  · a red lint stays red from there: docs/ is read at the repo root" 1 "$rc" "$out" \
+  'cited in docs/ but neither live nor retired nor in the baseline: PAY-9'
+# An explicit argument still wins, read against the cwd it was typed in; the consumers stay the
+# repo's. The root catalog is red here (a duplicate), so a lint that ignored the argument shows it.
+lfix; ( cd "$D" && git init -q . ) 2>/dev/null
+mkdir -p "$D/alt"; cp "$D/docs/architecture/quality-attributes.md" "$D/alt/qa.md"
+printf -- '- **SEC-1 · Auth again** — a. *Red Flag:* b.\n' >> "$D/docs/architecture/quality-attributes.md"
+printf 'Every review cites `GDPR-4`.\n' > "$D/CLAUDE.md"
+out="$(lskill ../../../alt/qa.md)"; rc=$?
+assert "  · an explicit argument still wins, read from the cwd; CLAUDE.md is read at the root" 1 "$rc" "$out" \
+  'cited in CLAUDE.md but neither live nor retired nor in the baseline: GDPR-4' 'duplicate IDs: SEC-1'
 
 # ── dep-cve-scan.sh ─────────────────────────────────────────────────────────────────────────────
 # The whole point: a scanner that did NOT run must read as `not_measured`, NEVER as 0 / clean. And a

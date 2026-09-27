@@ -143,9 +143,9 @@ necessary aspects as findings.
    repo-specific half (which paths *are* the contract domain, where migrations and erasure modules
    live) comes from `docs/architecture/merge-gate.conf`, written by `wai-init`.
 
-   The script **appends every verdict** to `docs/architecture/gate-ledger.md` — do not log it
-   yourself, and never backfill or edit a past row; a verdict with no ledger row means it was never
-   run. The human tags each row's outcome (`ok`/`fp`/`fn`, plus `nil` and `lost` for a
+   The script **appends every verdict** to `docs/architecture/gate-ledger.md` — never log, backfill
+   or edit a row yourself; a verdict with no row was never run (outside a repo, none is written by
+   design). The human tags each row's outcome (`ok`/`fp`/`fn`, plus `nil` and `lost` for a
    reconstructed row) later; the file explains how. Read the numbers with `scripts/gate-stats.sh`.
    The gate's output also names the families whose citations decide in this repo (*citations
    decide here: …*) — a cited family outside that list is advisory only.

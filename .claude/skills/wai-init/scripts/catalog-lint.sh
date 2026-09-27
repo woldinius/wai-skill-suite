@@ -11,11 +11,21 @@
 #   exit 2  the catalog could not be read at all
 #
 # Usage: sh catalog-lint.sh [path-to-catalog]     (default: docs/architecture/quality-attributes.md)
+#        Every default path is read from the repo root; outside a git repo, from the cwd.
 
 set -eu
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX pattern semantics required
 
+# DEFAULT PATHS ARE REPO-RELATIVE, NOT CWD-RELATIVE — merge-gate.sh's rule: the documented calls run
+# from a skill's directory. Inside a git worktree the lint works from its root; outside one the cwd
+# stays the base. An explicit argument still wins, read against the cwd it was given in.
+# Why: docs/rationale/catalog-lint.md § Default paths resolve against the repo root
 CAT="${1:-docs/architecture/quality-attributes.md}"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -n "$REPO_ROOT" ]; then
+  if [ -n "${1:-}" ]; then case "$CAT" in /*) ;; *) CAT="$PWD/$CAT" ;; esac; fi
+  cd "$REPO_ROOT" 2>/dev/null || { echo "catalog-lint: cannot enter the repo root $REPO_ROOT" >&2; exit 2; }
+fi
 [ -f "$CAT" ] || { echo "catalog-lint: no catalog at $CAT" >&2; exit 2; }
 
 # The BASELINE — the suite's own full catalog, shipped inside wai-init. Two checks need it,

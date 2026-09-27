@@ -160,3 +160,20 @@ The shipped baseline was the first file this caught: its preamble told authors t
 contradicts check 7's mint-at-100 rule. It now reads "minted at ≥ 100 (e.g. MAINT-100)", plain
 text, so it is no citation. (Quoted here without backticks for the same reason: this file is in
 `docs/`, and a backticked example would be the very finding it describes.)
+
+## Default paths resolve against the repo root
+
+`wai-pr-review` documents `sh ../wai-init/scripts/catalog-lint.sh`, run from its own directory, and
+`wai-init` documents `sh scripts/catalog-lint.sh` from its. Every default path here (the catalog,
+the baseline, `docs/`, `.claude/skills/`, `CLAUDE.md`, `AGENTS.md`) was read against the cwd, so
+the documented call found no catalog and exited 2 on every run (#88). The 0.3.0 fix that re-rooted
+seven scripts (#29) never reached this one; the 2026-09-26 lean-output A/B
+(`docs/experiments/2026-09-26-lean-output-ab.md`) hit it in 3 of 4 sandbox runs.
+
+The script now works from `git rev-parse --show-toplevel`, as `open-items.sh` does, so its output
+is the same line for line from the root and from any directory below it. Two edges keep their
+meaning: outside a git repo the cwd stays the base, and an explicit argument still wins, made
+absolute before the script changes directory, so a relative path means what the caller typed.
+Re-rooting the catalog alone would have been the worse half-fix: `docs/` and the agent files would
+still be read from the skill directory, where there are none, and the lint would pass — a false OK
+where the old bug at least said exit 2.

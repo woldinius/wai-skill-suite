@@ -248,7 +248,7 @@ find the domain set written out anywhere else, that copy is the bug — fix it b
 ## Branch
 
 - **One branch per requirement, owned by you:** `agent/<handle>/<type>-<slug>`, cut from the
-  latest `origin/main` (`<type>` ∈ feat | fix | refactor | perf | chore | docs, matching
+  latest `origin/main` (`<type>` ∈ feat | fix | refactor | perf | test | chore | docs, matching
   Conventional Commits). Example: `agent/jane-doe/feat-token-budget`. The handle segment is
   what keeps two developers working the same requirement from landing on the same branch.
 - **Reuse your own branch; never take over someone else's.** Before branching, check whether a
@@ -328,9 +328,10 @@ This is the **only** place the commit format is defined; the skills point here r
 carrying their own copy of it.
 
 - **Atomic, Conventional Commits:** one focused commit per coherent step. `<type>` ∈ feat | fix |
-  refactor | perf | chore | docs; `<scope>` is the affected component or app. **A subject of at
-  most 72 characters and a body of at most 5 lines.** The body says *why* — no narrative, never
-  *how*; the PR carries the detail. Add `BREAKING CHANGE:` when applicable.
+  refactor | perf | test | chore | docs; `<scope>` is the affected component or app. Use `test`
+  for a commit that only adds or changes tests. **A subject of at most 72 characters and a body of
+  at most 5 lines.** The body says *why* — no narrative, never *how*; the PR carries the detail.
+  Add `BREAKING CHANGE:` when applicable.
 
   ```
   feat(billing): add a per-user token budget

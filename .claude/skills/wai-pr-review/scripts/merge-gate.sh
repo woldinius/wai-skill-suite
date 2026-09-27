@@ -29,6 +29,7 @@
 #           PR-number defaults to the PR for the current branch.
 #           --repo (or $GH_REPO) says WHICH repository to ask about. Without it the repo is read
 #           from the git remote — which is a guess, and a wrong one costs a bogus verdict.
+#         sh merge-gate.sh -h | --help   prints this usage and exits 2: no verdict, no row.
 # Config: docs/architecture/merge-gate.conf   (written by wai-init; see the template there)
 
 set -eu
@@ -45,7 +46,10 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 # Why: docs/rationale/merge-gate.md § Why a script and not a paragraph
 
 PR=""
+ARG_ERR=""                     # the FIRST misuse, booked and exited 2 by early_unknown, never here
 REPO_SEL="${GH_REPO:-}"        # --repo, or $GH_REPO. Empty = read it from the git remote.
+# Parsing goes on after a misuse, so a PR number after it is still booked (review of #94).
+arg_err() { [ -n "$ARG_ERR" ] || ARG_ERR="$1"; }
 while [ $# -gt 0 ]; do
   case "$1" in
     # A VALUELESS --repo must not fall through to the remote guess. `--repo` exists precisely
@@ -53,14 +57,17 @@ while [ $# -gt 0 ]; do
     # silent fallback would restore the exact failure the flag was added to prevent, and the run
     # would look like it honoured the selector. Exit 2 — could not check, never a verdict.
     --repo)   shift
-              [ $# -gt 0 ] && [ -n "${1:-}" ] || { echo "merge-gate: --repo needs a value (OWNER/NAME)" >&2; exit 2; }
-              REPO_SEL="$1" ;;
-    --repo=)  echo "merge-gate: --repo= needs a value (OWNER/NAME)" >&2; exit 2 ;;
+              if [ $# -gt 0 ] && [ -n "${1:-}" ]; then REPO_SEL="$1"
+              else arg_err "--repo needs a value (OWNER/NAME)"; fi ;;
+    --repo=)  arg_err "--repo= needs a value (OWNER/NAME)" ;;
     --repo=*) REPO_SEL="${1#--repo=}" ;;
-    -*)       echo "merge-gate: unknown option '$1'" >&2; exit 2 ;;
+    # A USAGE QUERY IS NOT A GATE RUN: the usage, then an exit before anything is booked, so no
+    # row. Exit 2, never 0: exit 0 is GO's alone (rule 1). (Review of #94.)
+    -h|--help) sed -n '/^# Usage:/,/^# Config:/s/^# \{0,1\}//p' "$0" || true; exit 2 ;;
+    -*)       arg_err "unknown option '$1'" ;;
     *)        [ -n "$PR" ] || PR="$1" ;;
   esac
-  [ $# -gt 0 ] && shift
+  [ $# -eq 0 ] || shift          # never a failing last command: a valueless --repo ends the list
 done
 
 # DEFAULT PATHS ARE REPO-RELATIVE, NOT CWD-RELATIVE. The documented invocations run the suite's
@@ -68,7 +75,7 @@ done
 # ("no quality catalog" — in a repo that has one) and planted a stray gate-ledger inside
 # .claude/skills/ — the very tree install.sh copies into every target repo (2026-08-18, live).
 # So the default base is the enclosing git worktree; an explicit argument or env override still
-# wins, and outside any repo the cwd stays the base (fixtures and bare dirs keep working).
+# wins. Outside any repo the cwd stays the base for READING; no row is written there (see book()).
 # Deliberately --show-toplevel, NOT the --git-common-dir parent: rows belong to the worktree that
 # produced them. In a LINKED worktree the row therefore lands in THAT worktree's
 # docs/architecture/gate-ledger.md — its branch is the PR that carries the row to the default branch
@@ -178,7 +185,7 @@ LEDGER_HDR
   # line — and gate-stats.sh, which recognises rows by their leading `| YYYY-`, never sees it. So
   # the newline is restored first. Why (this repo, 2026-09-13): docs/rationale/merge-gate.md § Books before output
   [ -s "$_led" ] && [ -n "$(tail -c 1 "$_led" 2>/dev/null)" ] && printf '\n' >> "$_led" 2>/dev/null || true
-  printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
+  printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR_CELL" "$1" "$_lw" >> "$_led" 2>/dev/null || true
 }
 
 # derive_ledger_note — WHERE A ROW LIVES (the ledger-home decision, 2026-08-18, revised in #66).
@@ -249,17 +256,57 @@ derive_ledger_note() {
 # emit_ledger's reason: a missing or failing logger must never change a merge decision.
 RUNLOG_SH="$(dirname "$0")/../../wai/scripts/run-log.sh"
 emit_runlog() {
-  [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-pr-review "PR #$PR" "$1" >/dev/null 2>&1 || true
+  [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-pr-review "PR #$PR_CELL" "$1" >/dev/null 2>&1 || true
 }
 
-# --- 0. Toolchain -------------------------------------------------------------------------------
-command -v gh  >/dev/null 2>&1 || { echo "merge-gate: gh is not installed — cannot verify anything." >&2; exit 2; }
-command -v git >/dev/null 2>&1 || { echo "merge-gate: git is not installed." >&2; exit 2; }
-gh auth status >/dev/null 2>&1 || { echo "merge-gate: gh is not authenticated — cannot verify anything." >&2; exit 2; }
+# book LABEL WHY — the verdict's books: the ledger row, the run-log row, then the note. Every verdict
+# goes through here. NO REPO ROOT, NO ROW: without git, or outside any repo, a default path could
+# only fall back to the cwd — for the documented call a skill directory, inside the tree install.sh
+# copies — and a wrong row is worse than a missing one. Such a book is skipped and ONE stderr note
+# names what was skipped; the verdict and the exit code do not change. An explicit
+# MERGE_GATE_LEDGER / RUN_LOG still wins. Why: docs/rationale/merge-gate.md § No repo root, no row
+# THE PR CELL IS DIGITS OR `?`, in both books: an early path books an argument no gh call has
+# validated, and a raw `a|b` split the row into six cells (review of #94). The terminal keeps it raw.
+book() {
+  case "$PR" in ''|*[!0-9]*) PR_CELL='?' ;; *) PR_CELL="$PR" ;; esac
+  _skip=""
+  if [ -n "$REPO_ROOT" ] || [ -n "${MERGE_GATE_LEDGER:-}" ]; then emit_ledger "$1" "$2"
+  else _skip="the gate-ledger row"; fi
+  if [ -n "$REPO_ROOT" ] || [ -n "${RUN_LOG:-}" ]; then emit_runlog "$1"
+  else _skip="${_skip:+$_skip and }the run-log row"; fi
+  [ -z "$_skip" ] || echo "merge-gate: no repo root (git missing, or not inside a repo) — skipped $_skip for this $1 verdict; a row belongs in its repo, never in the cwd." >&2
+  derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+}
+
+# early_unknown REASON [LINE...] — EVERY UNKNOWN THAT ENDS THE RUN BEFORE THE CHECKS IS BOOKED, like
+# every verdict below: the ledger row and the run-log row first (fail-open, so an unwritable book
+# never changes the exit 2), then each LINE on stderr, the `?` line and the VERDICT line on stdout
+# (quotable like any verdict's — review of #94), and the note; exit 2. A PR that is unknown or
+# not a number is booked as `?` (book). No early exit prints before this; -h/--help is no gate run.
+# Why: docs/rationale/merge-gate.md § Every early exit leaves a row
+early_unknown() {
+  unknown "$1"; shift
+  book UNKNOWN "$REASONS"
+  for _l in "$@"; do printf '%s\n' "$_l" >&2; done
+  printf '%b' "$REASONS"
+  echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human."
+  [ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
+  exit 2
+}
+
+# --- 0. Arguments and toolchain -----------------------------------------------------------------
+[ -z "$ARG_ERR" ] || early_unknown "$ARG_ERR" "merge-gate: $ARG_ERR"
+command -v gh >/dev/null 2>&1 || early_unknown "gh is not installed — cannot verify anything" \
+  "merge-gate: gh is not installed — cannot verify anything."
+command -v git >/dev/null 2>&1 || early_unknown "git is not installed — cannot verify anything" \
+  "merge-gate: git is not installed."
+gh auth status >/dev/null 2>&1 || early_unknown "gh is not authenticated — cannot verify anything" \
+  "merge-gate: gh is not authenticated — cannot verify anything."
 
 if [ -z "$PR" ]; then
   PR="$(gh pr view --json number --jq .number 2>/dev/null || true)"
-  [ -n "$PR" ] || { echo "merge-gate: no PR given and none found for the current branch." >&2; exit 2; }
+  [ -n "$PR" ] || early_unknown "no PR given and none found for the current branch" \
+    "merge-gate: no PR given and none found for the current branch."
 fi
 
 # --- 0b. WHICH repository, and WHICH base? ------------------------------------------------------
@@ -270,19 +317,19 @@ fi
 if [ -n "$REPO_SEL" ]; then
   REPO="$REPO_SEL"                              # told explicitly — no guessing, nothing to fail
 elif ! REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)" || [ -z "$REPO" ]; then
-  echo "merge-gate: could not resolve WHICH repository to ask about." >&2
-  echo "  Looked it up from this checkout's git remote via 'gh repo view'; it failed or printed nothing." >&2
-  echo "  This is a TOOL failure, not a verdict. Say which repo explicitly:" >&2
-  echo "      sh merge-gate.sh $PR --repo OWNER/NAME     (or export GH_REPO=OWNER/NAME)" >&2
-  echo "  If the checkout has several remotes, 'gh repo set-default OWNER/NAME' fixes it for good." >&2
-  exit 2
+  early_unknown "could not resolve which repository to ask about — gh repo view failed or printed nothing; a tool failure, not a verdict" \
+    "merge-gate: could not resolve WHICH repository to ask about." \
+    "  Looked it up from this checkout's git remote via 'gh repo view'; it failed or printed nothing." \
+    "  This is a TOOL failure, not a verdict. Say which repo explicitly:" \
+    "      sh merge-gate.sh $PR --repo OWNER/NAME     (or export GH_REPO=OWNER/NAME)" \
+    "  If the checkout has several remotes, 'gh repo set-default OWNER/NAME' fixes it for good."
 fi
 
 if ! BASE="$(gh pr view "$PR" --repo "$REPO" --json baseRefName --jq .baseRefName 2>/dev/null)" || [ -z "$BASE" ]; then
-  echo "merge-gate: could not resolve PR #$PR in '$REPO' — 'gh pr view' failed or printed nothing." >&2
-  echo "  This is a TOOL failure, not a verdict. Check the PR number and the repository:" >&2
-  echo "      sh merge-gate.sh <PR> --repo OWNER/NAME" >&2
-  exit 2
+  early_unknown "could not resolve PR #$PR in '$REPO' — gh pr view failed or printed nothing; a tool failure, not a verdict" \
+    "merge-gate: could not resolve PR #$PR in '$REPO' — 'gh pr view' failed or printed nothing." \
+    "  This is a TOOL failure, not a verdict. Check the PR number and the repository:" \
+    "      sh merge-gate.sh <PR> --repo OWNER/NAME"
 fi
 
 # --- Is the PR already merged? Then this gate is MOOT --------------------------------------------
@@ -293,9 +340,7 @@ fi
 STATE="$(gh pr view "$PR" --repo "$REPO" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
 if [ "$STATE" = "MERGED" ]; then
   # Books first, output second — the verdict block below says why.
-  emit_ledger MOOT "PR already merged before the gate ran"
-  emit_runlog MOOT
-  derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+  book MOOT "PR already merged before the gate ran"
   echo "merge-gate: PR #$PR ($REPO → $BASE) is already MERGED — this gate is MOOT."
   echo "  Nothing is left to prevent. Any review findings are FOLLOW-UPS, not gate conditions."
   echo "  If you authored this code, this is a self-review of your own just-merged work."
@@ -489,8 +534,8 @@ fi
 
 # --- Emit to the ledger — BEFORE the first line of output ---------------------------------------
 # The gate writes its OWN verdict to an append-only ledger, for the exact reason the gate exists:
-# "the model checked" cannot be audited, but a line the SCRIPT wrote can. The row is written by
-# emit_ledger() (defined near the top, and also called on the MOOT short-circuit).
+# "the model checked" cannot be audited, but a line the SCRIPT wrote can. The rows are written by
+# book() (defined near the top, and also called on the MOOT short-circuit and every early UNKNOWN).
 # BOOKS BEFORE OUTPUT. The verdict is final here; nothing below changes it. Both books are written
 # before anything reaches stdout, so a caller who trims the output (`| head -6`) and thereby closes
 # the pipe cannot kill this script BETWEEN the two writers. emit_ledger therefore writes nothing to
@@ -500,9 +545,7 @@ fi
 # what /bin/sh IS on macOS; shellcheck passes it, the shell does not. This is the FOURTH artefact in
 # the suite to relearn that (ADR-0002), and tests/run.sh caught it on the first run — as designed.
 case "$VERDICT" in 0) _v=GO ;; 1) _v=NO-GO ;; 2) _v=UNKNOWN ;; *) _v='?' ;; esac
-emit_ledger "$_v" "$REASONS"
-emit_runlog "$_v"
-derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+book "$_v" "$REASONS"
 
 # --- Verdict ------------------------------------------------------------------------------------
 echo "merge-gate: PR #$PR ($REPO → $BASE, mode: $MODE)"
