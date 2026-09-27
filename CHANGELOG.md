@@ -5,6 +5,15 @@ Notable changes to the wAI skill suite. Format loosely follows
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
+## [Unreleased]
+
+### Changed
+
+- **Grilling asks in rounds.** Each round asks every open decision whose prerequisites are settled
+  ("one at a time" stays an opt-out), in a numbered format; facts are looked up in the background;
+  it stops with an *Assumptions I made* line; `wai-team` runs self-answer nothing. `REFERENCES.md`
+  records what came from mattpocock/skills; its MIT notice ships beside the protocol.
+
 ## [0.5.0] — 2026-09-27
 
 Lean, measured: operational output shrinks (review −64 %, hand-back −68 % in a controlled A/B)

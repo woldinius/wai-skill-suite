@@ -85,10 +85,10 @@ human gave you in chat, and note the gap in the plan.
 
    **Grill-me mode** — when the human asks for it ("grill me"), or the
    requirement is high-stakes/fuzzy (contract domain, token economy, new architecture), switch
-   to the interrogation protocol in `references/grilling-protocol.md` (in the `wai` skill):
-   **one question at a time** in dependency order, each with a **recommended answer**,
-   facts looked up in the repo instead of asked, no question cap, and a **hard gate** — no plan
+   to `references/grilling-protocol.md` (in the `wai` skill): questions in **rounds**, each with
+   a **recommended answer**, facts looked up instead of asked, and a **hard gate** — no plan
    until the human confirms shared understanding.
+   **Unattended** (a `wai-team` run): no decision is self-answered — the protocol's §*Unattended runs*.
 
    **Offer alternatives when the requirement is imprecise** (both modes): don't just refine
    the stated path — propose **2–3 alternative solution options** with one-line trade-offs,

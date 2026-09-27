@@ -51,7 +51,7 @@ repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explici
 | [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 87 IDs / ~510 lines). Every other skill reads the catalog at runtime, so its size is expected to be the suite's biggest cost lever (unmeasured — Q5). Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
 | [`wai-cicd`](.claude/skills/wai-cicd/SKILL.md) | Setup (backend+web) | once per repo · proving | **One-time:** GitHub-native CI/CD (Actions, GHCR) + deploy to your own server via Compose/SSH — Dockerfile, Compose, Caddy, the **merge gate** + branch protection. Other delivery systems are out of scope by design. | "set up CI/CD", "deploy to my server", "wire required checks" |
 | [`wai-mobile-release`](.claude/skills/wai-mobile-release/SKILL.md) | Setup (iOS/Android) | once per repo · proving | **One-time:** build, code signing (match / Play App Signing), the **mobile merge gate**, and store delivery (TestFlight / Play tracks). | "set up the iOS build", "Fastlane", "TestFlight", "Play Console" |
-| [`wai-requirements-planning`](.claude/skills/wai-requirements-planning/SKILL.md) | Plan | daily | Prepare a requirement; interview — or **grill-me mode** (one question at a time, recommended answers, alternatives for imprecise asks); decompose **per surface + contract-first**; diagrams over text; small items become issues, not planning docs. | "plan this requirement", "how do we build X", "grill me" |
+| [`wai-requirements-planning`](.claude/skills/wai-requirements-planning/SKILL.md) | Plan | daily | Prepare a requirement; interview — or **grill-me mode** (questions in rounds, recommended answers, alternatives for imprecise asks); decompose **per surface + contract-first**; diagrams over text; small items become issues, not planning docs. | "plan this requirement", "how do we build X", "grill me" |
 | [`wai-implementation`](.claude/skills/wai-implementation/SKILL.md) | Implement | daily | Concrete implementation — plan with risk/blast-radius first, then code, with per-surface concern sets. Default for code changes. | "implement X", "fix", "returns error 503", "refactor" |
 | [`wai-testing`](.claude/skills/wai-testing/SKILL.md) | Test | daily | Deterministic tests + the testing strategy: per-surface levels, **contract tests both sides**, token economy as a mandatory target (no real models/billing). | "write tests for X", "is this covered", "cover the billing path" |
 | [`wai-pr-review`](.claude/skills/wai-pr-review/SKILL.md) | Review | daily | Evaluate a PR/diff against the catalog, ordered by severity; classify by surface; token/billing & contract are human-gated domains. | "review this PR", "can this be merged", "check this diff" |
@@ -187,7 +187,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took eleven repair commits in two days
 ([retrospective](docs/retrospective-2026-07.md)); the gate once failed *open* under zsh and later
-could never say GO at all. That is why [`tests/`](tests/) exists — 573 cases, **founded** on bugs
+could never say GO at all. That is why [`tests/`](tests/) exists — 579 cases, **founded** on bugs
 that shipped and grown into the regression guards around them, run on two shells in CI because
 shellcheck passed a construct that is a syntax error in the `/bin/sh` of macOS. (While the repo was
 private, the macOS job was dropped — its runners burned the Actions budget until no check could run
@@ -386,9 +386,10 @@ Cross-skill rules live next to the router and are referenced by every relevant s
   durable issue format (behavioral, checkbox criteria, out-of-scope), label taxonomy,
   dedupe-by-concept, and the per-skill read/write matrix.
 - [`.claude/skills/wai/references/grilling-protocol.md`](.claude/skills/wai/references/grilling-protocol.md)
-  — the **interrogation primitive** ("grill me"): one question at a time with a recommended
-  answer, facts looked up vs. decisions asked, alternatives for imprecise requirements, hard
-  shared-understanding gate.
+  — the **interrogation primitive** ("grill me"): questions in rounds over every open decision
+  whose prerequisites are settled ("one at a time" on request), each with a recommended answer;
+  facts looked up in the background, decisions asked; alternatives for imprecise requirements; a
+  hard shared-understanding gate; and in unattended runs, no self-answered decisions.
 - [`.claude/skills/wai/references/hand-back.md`](.claude/skills/wai/references/hand-back.md)
   — the **hand-back shape**: result, your decisions, next, then the `open-items.sh --brief`
   footer; the detail stays in the linked artifact.
@@ -473,7 +474,7 @@ install.sh                                       # idempotent installer (inject/
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh, session-cost.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 573 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 579 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, experiments, catalog, open questions, known criticism, publication rule, learnings
 ```
 

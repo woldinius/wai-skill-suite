@@ -118,8 +118,11 @@ this skill adds orchestration, **not** new authority.
 3. **Run the cycle per issue — serial by default, the review on fresh context.** For each issue,
    on its own `agent/<handle>/<type>-<slug>` branch: `wai-requirements-planning` (proportional — a
    well-specified small issue skips the plan doc, per the planning skill's own rules) →
-   `wai-implementation` (includes the plan-delta check) → `wai-testing` → `wai-pr-review`. Under
-   a **packaged mandate** the cycle runs once per **package**, on the package's one branch — the
+   `wai-implementation` (includes the plan-delta check) → `wai-testing` → `wai-pr-review`.
+   **Planning self-answers nothing:** open decisions become **marked assumptions** on the decision
+   list; fuzzy **and** high-stakes → the issue waits there for an attended grill
+   (`grilling-protocol.md` §*Unattended runs*).
+   Under a **packaged mandate** the cycle runs once per **package**, on the package's one branch — the
    issues inside are still claimed one by one, counterproofed one by one, and each closes through
    its own `Closes #N`; the package shares the branch and the PR, never the evidence.
    **`wai-pr-review` runs on fresh context** (see *Attended or unattended*), and the merge policy
@@ -245,10 +248,8 @@ the hand-backs in between. Cardinality was never the safety property — **atten
 
 Two consequences, and they are the whole point of this section:
 
-1. **The merge policy is confirmed at kickoff, never assumed** (under *Mandate first*). The default
-   is the repo's own mode: in `solo`, each clean PR merges under the gate as its cycle ends — that
-   is what solo means, and it keeps the tempo. (b) holds the clean PRs for one question at the end;
-   (c) hands everything over. What a run never does is follow a policy the human did not confirm.
+1. **The merge policy is confirmed at kickoff, never assumed** (under *Mandate first*): a run
+   never follows a policy the human did not confirm.
 2. **The review phase runs on FRESH CONTEXT.** The gate is a conjunction: the script owns the
    mechanics, the model owns *"no Blocker, no Major"* — and in an unattended run that judgment half
    is produced by the same session that just built the thing, under maximum completion pressure,
@@ -345,7 +346,7 @@ append-only gate ledger and the git log — never narrated from memory.
 - #N [title] — measured: [what was run · what it showed] · claimed defect no longer exists · [hardened so it keeps holding | closed as-is]
 
 ### ▶ Your decision list
-- #N / PR #P — [Blocker/Major finding or excluded-domain merge] · [recommendation]
+- #N / PR #P — [Blocker/Major finding, excluded-domain merge, marked assumption, or grill needed] · [recommendation]
 
 ### Withheld from autonomy — held for you
 - #N / PR #P — [why: path not in AUTONOMY_SAFE_PATHS · excluded domain · Blocker/Major · UNKNOWN]

@@ -414,5 +414,5 @@ This skill is the **review** stage in the lifecycle plan → implement → revie
   `references/agent-git-protocol.md` — identity & repo mode, the gated merge, the canonical
   §*Excluded domains* set that `merge-gate.sh` delegates to via `excluded-domains.sh`, and the
   absolute rule that **skills never approve a PR**. Contract rules:
-  `references/contract-protocol.md`, issue rules: `references/issues-protocol.md`, interrogation:
-  `references/grilling-protocol.md` (all in the `wai` skill).
+  `references/contract-protocol.md`, issue rules: `references/issues-protocol.md` (both in the
+  `wai` skill).
