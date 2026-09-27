@@ -84,10 +84,11 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
   resolve against the git worktree root, like the seven scripts fixed in 0.3.0; an explicit
   argument still wins; outside a repo the cwd stays the base.
   ([#88](https://github.com/woldinius/wai-skill-suite/issues/88))
-- **`merge-gate.sh` without `gh` leaves its rows.** The tool check exited 2 before either writer
-  ran, so a gate that ran read as one that never did. That UNKNOWN now writes one ledger row and one
-  run-log row before its first output line, then prints its `VERDICT:` line; logging stays
-  fail-open. ([#89](https://github.com/woldinius/wai-skill-suite/issues/89))
+- **`merge-gate.sh` books every early UNKNOWN.** No `gh`, `gh` logged out, no git, a bad argument,
+  an unresolvable repository or PR: each exited 2 before either writer, so the run read as never
+  run. Each now writes one ledger row and one run-log row (`?` where unknown) before any output,
+  fail-open, then prints `VERDICT: UNKNOWN`.
+  ([#89](https://github.com/woldinius/wai-skill-suite/issues/89))
 - **`retro-compliance.sh` no longer calls two units a rate.** The line labelled `compliance:` set
   invocation-log rows against run-log rows per skill (a line such as `wai-implementation invoked 3
   · logged 15` — an illustration, not a measured number).

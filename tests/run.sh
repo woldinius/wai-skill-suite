@@ -425,6 +425,31 @@ if grep -qF '| 1 | UNKNOWN |' "$D/docs/architecture/gate-ledger.md" 2>/dev/null 
 else bad "  · both books before any output (stdout and stderr closed)" "a row is missing in the ledger or the run log"; fi
 gfix; out="$( cd "$D" && PATH="$NOGHBIN" MERGE_GATE_LEDGER=/proc/nonexistent/x/gate.md RUN_LOG=/proc/nonexistent/x/run.md "$NOGHBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
 assert "  · an unwritable ledger and run log never change the verdict (fail-open)" 2 "$rc" "$out" 'VERDICT: UNKNOWN'
+# …and so does EVERY early UNKNOWN, "as on every other path" (#89's acceptance). stdout and stderr
+# are closed, so a path that printed before booking loses its rows. A field nobody can know is `?`.
+early_case() {   # $1 = name, $2 = the PR cell, $3 = a fragment of the reason; the gate has run
+  if grep -qF "| $2 | UNKNOWN | ? $3" "$D/docs/architecture/gate-ledger.md" 2>/dev/null &&
+     grep -qF "| wai-pr-review | PR #$2 | UNKNOWN |" "$D/docs/architecture/run-log.md" 2>/dev/null; then ok "$1"
+  else bad "$1" "ledger: $(grep '^| 20' "$D/docs/architecture/gate-ledger.md" 2>&1 | tail -1) · run log: $(grep '^| 20' "$D/docs/architecture/run-log.md" 2>&1 | tail -1)"; fi
+}
+gclosed() { ( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" "$@" >&- 2>&- ) || true; }
+gfix; : > "$D/base-fail"; gclosed 1
+early_case "an unresolvable PR books both rows before any output (#89)" 1 "could not resolve PR #1"
+gfix; : > "$D/repo-fail"; gclosed 1
+early_case "  · an unresolvable repository, too" 1 "could not resolve which repository"
+gfix; gclosed
+early_case "  · no PR given and none found: the PR is booked as ?" '?' "no PR given and none found"
+gfix; gclosed 1 --bogus
+early_case "  · a misuse (an unknown option), too" 1 "unknown option '--bogus'"
+NOAUTH="$TMP/noauth"; mkdir -p "$NOAUTH"   # a gh that is installed and not logged in
+printf '#!/bin/sh\n[ "$1" = auth ] && exit 1\nexec "%s/gh" "$@"\n' "$STUB" > "$NOAUTH/gh"; chmod +x "$NOAUTH/gh"
+gfix; ( cd "$D" && PATH="$NOAUTH:$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 >&- 2>&- ) || true
+early_case "  · gh installed but not logged in, too" 1 "gh is not authenticated"
+NOGITBIN="$TMP/nogitbin"; mkdir -p "$NOGITBIN"   # gh (the stub) and the toolbox, no git
+for t in sh date awk sed grep tr head tail cat mkdir dirname; do ln -sf "$NOGHBIN/$t" "$NOGITBIN/$t"; done
+ln -sf "$STUB/gh" "$NOGITBIN/gh"
+gfix; ( cd "$D" && PATH="$NOGITBIN" GH_FIXTURE="$D" "$NOGITBIN/sh" "$GATE" 1 >&- 2>&- ) || true
+early_case "  · git not installed, too" 1 "git is not installed"
 
 # A ROW IS A LINE (this repo, 2026-09-13). Tagging the last row's outcome with a tool that trimmed the
 # trailing newline left the file without one; the next verdict was appended ONTO that row — 13

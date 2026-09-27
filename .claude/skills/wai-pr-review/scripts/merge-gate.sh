@@ -45,6 +45,7 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 # Why: docs/rationale/merge-gate.md § Why a script and not a paragraph
 
 PR=""
+ARG_ERR=""                     # a misuse, booked and exited 2 by early_unknown (below), never here
 REPO_SEL="${GH_REPO:-}"        # --repo, or $GH_REPO. Empty = read it from the git remote.
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -53,11 +54,11 @@ while [ $# -gt 0 ]; do
     # silent fallback would restore the exact failure the flag was added to prevent, and the run
     # would look like it honoured the selector. Exit 2 — could not check, never a verdict.
     --repo)   shift
-              [ $# -gt 0 ] && [ -n "${1:-}" ] || { echo "merge-gate: --repo needs a value (OWNER/NAME)" >&2; exit 2; }
-              REPO_SEL="$1" ;;
-    --repo=)  echo "merge-gate: --repo= needs a value (OWNER/NAME)" >&2; exit 2 ;;
+              if [ $# -gt 0 ] && [ -n "${1:-}" ]; then REPO_SEL="$1"
+              else ARG_ERR="--repo needs a value (OWNER/NAME)"; break; fi ;;
+    --repo=)  ARG_ERR="--repo= needs a value (OWNER/NAME)"; break ;;
     --repo=*) REPO_SEL="${1#--repo=}" ;;
-    -*)       echo "merge-gate: unknown option '$1'" >&2; exit 2 ;;
+    -*)       ARG_ERR="unknown option '$1'"; break ;;
     *)        [ -n "$PR" ] || PR="$1" ;;
   esac
   [ $# -gt 0 ] && shift
@@ -252,27 +253,36 @@ emit_runlog() {
   [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-pr-review "PR #$PR" "$1" >/dev/null 2>&1 || true
 }
 
-# --- 0. Toolchain -------------------------------------------------------------------------------
-# WITHOUT gh THE VERDICT IS UNKNOWN, AND IT IS BOOKED: both rows before the first output line, like
-# every verdict below. Logging fails open here too, so an unwritable book never changes the exit 2.
-# Why: docs/rationale/merge-gate.md § A gate without gh still leaves a row
-if ! command -v gh >/dev/null 2>&1; then
-  [ -n "$PR" ] || PR='?'        # without gh no PR can be looked up; the row says so
-  unknown "gh is not installed — cannot verify anything"
+# early_unknown REASON [LINE...] — EVERY UNKNOWN THAT ENDS THE RUN BEFORE THE CHECKS IS BOOKED, like
+# every verdict below: the ledger row and the run-log row first (fail-open, so an unwritable book
+# never changes the exit 2), then each LINE on stderr, the VERDICT line and the note; exit 2. A
+# field that cannot be known is booked as `?`. No early exit may print before calling this.
+# Why: docs/rationale/merge-gate.md § Every early exit leaves a row
+early_unknown() {
+  [ -n "$PR" ] || PR='?'
+  unknown "$1"; shift
   emit_ledger UNKNOWN "$REASONS"
   emit_runlog UNKNOWN
-  derive_ledger_note            # after BOTH books; without gh it makes no network call
-  echo "merge-gate: gh is not installed — cannot verify anything." >&2
+  derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+  for _l in "$@"; do printf '%s\n' "$_l" >&2; done
   echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human."
   [ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
   exit 2
-fi
-command -v git >/dev/null 2>&1 || { echo "merge-gate: git is not installed." >&2; exit 2; }
-gh auth status >/dev/null 2>&1 || { echo "merge-gate: gh is not authenticated — cannot verify anything." >&2; exit 2; }
+}
+
+# --- 0. Arguments and toolchain -----------------------------------------------------------------
+[ -z "$ARG_ERR" ] || early_unknown "$ARG_ERR" "merge-gate: $ARG_ERR"
+command -v gh >/dev/null 2>&1 || early_unknown "gh is not installed — cannot verify anything" \
+  "merge-gate: gh is not installed — cannot verify anything."
+command -v git >/dev/null 2>&1 || early_unknown "git is not installed — cannot verify anything" \
+  "merge-gate: git is not installed."
+gh auth status >/dev/null 2>&1 || early_unknown "gh is not authenticated — cannot verify anything" \
+  "merge-gate: gh is not authenticated — cannot verify anything."
 
 if [ -z "$PR" ]; then
   PR="$(gh pr view --json number --jq .number 2>/dev/null || true)"
-  [ -n "$PR" ] || { echo "merge-gate: no PR given and none found for the current branch." >&2; exit 2; }
+  [ -n "$PR" ] || early_unknown "no PR given and none found for the current branch" \
+    "merge-gate: no PR given and none found for the current branch."
 fi
 
 # --- 0b. WHICH repository, and WHICH base? ------------------------------------------------------
@@ -283,19 +293,19 @@ fi
 if [ -n "$REPO_SEL" ]; then
   REPO="$REPO_SEL"                              # told explicitly — no guessing, nothing to fail
 elif ! REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null)" || [ -z "$REPO" ]; then
-  echo "merge-gate: could not resolve WHICH repository to ask about." >&2
-  echo "  Looked it up from this checkout's git remote via 'gh repo view'; it failed or printed nothing." >&2
-  echo "  This is a TOOL failure, not a verdict. Say which repo explicitly:" >&2
-  echo "      sh merge-gate.sh $PR --repo OWNER/NAME     (or export GH_REPO=OWNER/NAME)" >&2
-  echo "  If the checkout has several remotes, 'gh repo set-default OWNER/NAME' fixes it for good." >&2
-  exit 2
+  early_unknown "could not resolve which repository to ask about — gh repo view failed or printed nothing; a tool failure, not a verdict" \
+    "merge-gate: could not resolve WHICH repository to ask about." \
+    "  Looked it up from this checkout's git remote via 'gh repo view'; it failed or printed nothing." \
+    "  This is a TOOL failure, not a verdict. Say which repo explicitly:" \
+    "      sh merge-gate.sh $PR --repo OWNER/NAME     (or export GH_REPO=OWNER/NAME)" \
+    "  If the checkout has several remotes, 'gh repo set-default OWNER/NAME' fixes it for good."
 fi
 
 if ! BASE="$(gh pr view "$PR" --repo "$REPO" --json baseRefName --jq .baseRefName 2>/dev/null)" || [ -z "$BASE" ]; then
-  echo "merge-gate: could not resolve PR #$PR in '$REPO' — 'gh pr view' failed or printed nothing." >&2
-  echo "  This is a TOOL failure, not a verdict. Check the PR number and the repository:" >&2
-  echo "      sh merge-gate.sh <PR> --repo OWNER/NAME" >&2
-  exit 2
+  early_unknown "could not resolve PR #$PR in '$REPO' — gh pr view failed or printed nothing; a tool failure, not a verdict" \
+    "merge-gate: could not resolve PR #$PR in '$REPO' — 'gh pr view' failed or printed nothing." \
+    "  This is a TOOL failure, not a verdict. Check the PR number and the repository:" \
+    "      sh merge-gate.sh <PR> --repo OWNER/NAME"
 fi
 
 # --- Is the PR already merged? Then this gate is MOOT --------------------------------------------

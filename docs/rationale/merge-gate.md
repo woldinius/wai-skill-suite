@@ -237,17 +237,20 @@ worktree half).
 The 2026-08-18 retrospective keeps its recommendation as written, with a dated note pointing here: a
 record of a decision is not rewritten when the decision changes.
 
-## A gate without gh still leaves a row
+## Every early exit leaves a row
 
-Until #89 the toolchain check ran before either writer: with no `gh` on the PATH the script printed
-one line to stderr, exited 2, and wrote no row to either book. By the ledger's own rule a verdict
-with no row reads as never run, so a gate that had run looked exactly like one that never did. The
-2026-09-26 lean-output A/B (`docs/experiments/2026-09-26-lean-output-ab.md`) hit this in 4 of 4
-sandbox runs, and each logged its review by hand.
+Until #89 the early exits ran before either writer: no `gh`, `gh` not logged in, no git, a misused
+argument, a repository or PR that could not be resolved — each printed to stderr, exited 2, and
+wrote no row to either book. By the ledger's own rule a verdict with no row reads as never run, so
+a gate that had run looked exactly like one that never did. The 2026-09-26 lean-output A/B
+(`docs/experiments/2026-09-26-lean-output-ab.md`) hit the missing `gh` in 4 of 4 sandbox runs, and
+each logged its review by hand.
 
-That path now takes the shape of every other verdict: the UNKNOWN row with its reason, then the
-run-log row, then the output — the stderr line as before, plus a `VERDICT: UNKNOWN` line a review
-can quote. Logging fails open as it does everywhere, so an unwritable book never changes the exit 2.
-Without `gh` no PR number can be looked up, so a run given none books `?` in the PR cell. The other
-early exits (`gh` not authenticated, an unresolvable repository or PR) still write no row; #89
-covered the missing `gh`.
+Every such exit now goes through one function, `early_unknown`, and takes the shape of every other
+verdict: the UNKNOWN ledger row with its reason, then the run-log row, then the output — the stderr
+lines as before, plus a `VERDICT: UNKNOWN` line a review can quote. A misused argument is only
+recorded while the arguments are parsed, because the writers are defined after the parser; the
+same function books it. Logging fails open as it does everywhere, so an unwritable book never
+changes the exit 2. A field that cannot be known is booked as `?`: the PR cell, when no number was
+given and none could be found. Without git the repo root is unknown, so these rows land in the cwd,
+the rule outside any repo.
