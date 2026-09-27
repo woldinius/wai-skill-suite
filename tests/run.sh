@@ -60,9 +60,11 @@ assert() {
 }
 
 # ── merge-gate.sh ───────────────────────────────────────────────────────────────────────────────
-# A fresh fixture is a GREEN, solo repo: two required checks, both SUCCESS, an innocuous file.
+# A fresh fixture is a GREEN, solo repo: two required checks, both SUCCESS, an innocuous file. It is
+# a real git repository on `main`, because outside one the gate writes no row at all (#89, below).
 gfix() {
   N=$((N+1)); D="$TMP/g$N"; mkdir -p "$D/docs/architecture"
+  git init -q -b main "$D" >/dev/null 2>&1
   printf '# Q\n\n**Repo mode:** solo\n\n- **SEC-1 · Auth** — a. *Red Flag:* b.\n' > "$D/docs/architecture/quality-attributes.md"
   printf 'CONTRACT_PATHS="apps/api/src/billing/* apps/api/src/auth/*"\nMIGRATION_PATHS="migrations/*"\n' > "$D/docs/architecture/merge-gate.conf"
   printf 'acme/repo\n'                        > "$D/repo"
@@ -230,8 +232,7 @@ else bad "  · the ledger row landed at the REPO root" "no row in $D/docs/archit
 if [ ! -e "$D/.claude/skills/wai-pr-review/docs" ]; then
   ok "  · and NOTHING was planted inside .claude/skills/ (the install payload stays clean)"
 else bad "  · and NOTHING was planted inside .claude/skills/" "stray tree: $D/.claude/skills/wai-pr-review/docs"; fi
-# Outside any git repo the cwd stays the base — every other fixture in this file IS that case
-# (gfix dirs are plain directories), so the fallback is pinned by the whole suite around this.
+# Outside any git repo there is no root, and no row is written at all: pinned below (#89).
 
 # WHERE A ROW LIVES (ledger-home decision 2026-08-18, revised in #66). The gate writes its row wherever
 # it runs; that row was squash-deleted twice (#28, #31) when it rode a feature branch's stale ledger
@@ -425,8 +426,8 @@ if grep -qF '| 1 | UNKNOWN |' "$D/docs/architecture/gate-ledger.md" 2>/dev/null 
 else bad "  · both books before any output (stdout and stderr closed)" "a row is missing in the ledger or the run log"; fi
 gfix; out="$( cd "$D" && PATH="$NOGHBIN" MERGE_GATE_LEDGER=/proc/nonexistent/x/gate.md RUN_LOG=/proc/nonexistent/x/run.md "$NOGHBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
 assert "  · an unwritable ledger and run log never change the verdict (fail-open)" 2 "$rc" "$out" 'VERDICT: UNKNOWN'
-# …and so does EVERY early UNKNOWN, "as on every other path" (#89's acceptance). stdout and stderr
-# are closed, so a path that printed before booking loses its rows. A field nobody can know is `?`.
+# …and so does EVERY early UNKNOWN in a repo, "as on every other path" (#89's acceptance). stdout
+# and stderr are closed, so a path that printed before booking loses its rows. An unknown field is `?`.
 early_case() {   # $1 = name, $2 = the PR cell, $3 = a fragment of the reason; the gate has run
   if grep -qF "| $2 | UNKNOWN | ? $3" "$D/docs/architecture/gate-ledger.md" 2>/dev/null &&
      grep -qF "| wai-pr-review | PR #$2 | UNKNOWN |" "$D/docs/architecture/run-log.md" 2>/dev/null; then ok "$1"
@@ -445,11 +446,29 @@ NOAUTH="$TMP/noauth"; mkdir -p "$NOAUTH"   # a gh that is installed and not logg
 printf '#!/bin/sh\n[ "$1" = auth ] && exit 1\nexec "%s/gh" "$@"\n' "$STUB" > "$NOAUTH/gh"; chmod +x "$NOAUTH/gh"
 gfix; ( cd "$D" && PATH="$NOAUTH:$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 >&- 2>&- ) || true
 early_case "  · gh installed but not logged in, too" 1 "gh is not authenticated"
-NOGITBIN="$TMP/nogitbin"; mkdir -p "$NOGITBIN"   # gh (the stub) and the toolbox, no git
+# NO REPO ROOT, NO ROW (#89). Without git, or outside any repo, a row could only land in the cwd —
+# for the documented call a skill directory, inside the tree install.sh copies into every repo (the
+# 0.3.0 incident). A wrong row is worse than a missing one: neither book is written, one stderr note
+# names the skipped rows, and the verdict and the exit code stay what they were.
+NOGITBIN="$TMP/nogitbin"; mkdir -p "$NOGITBIN" "$TMP/ghfix-none"   # gh (the stub), the toolbox, no git
 for t in sh date awk sed grep tr head tail cat mkdir dirname; do ln -sf "$NOGHBIN/$t" "$NOGITBIN/$t"; done
 ln -sf "$STUB/gh" "$NOGITBIN/gh"
-gfix; ( cd "$D" && PATH="$NOGITBIN" GH_FIXTURE="$D" "$NOGITBIN/sh" "$GATE" 1 >&- 2>&- ) || true
-early_case "  · git not installed, too" 1 "git is not installed"
+gfix; mkdir -p "$D/.claude/skills/wai-pr-review"; find "$D" | sort > "$TMP/before$N"
+out="$( cd "$D/.claude/skills/wai-pr-review" && PATH="$NOGITBIN" GH_FIXTURE="$TMP/ghfix-none" "$NOGITBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "git absent, run from the skill dir → exit 2, and one note names the skipped rows (#89)" 2 "$rc" "$out" \
+  'skipped the gate-ledger row and the run-log row'
+find "$D" | sort > "$TMP/after$N"
+if cmp -s "$TMP/before$N" "$TMP/after$N"; then ok "  · and no file was created anywhere under the fixture"
+else bad "  · and no file was created anywhere under the fixture" "new: $(grep -vxF -f "$TMP/before$N" "$TMP/after$N" | tr '\n' ' ')"; fi
+# The other half: git present, not inside any repo. The GO stands; only the rows are skipped. (The gh
+# stub logs its own calls into the fixture; that log is the stub's, so it is left out of the count.)
+gfix; rm -rf "$D/.git"; find "$D" ! -name gh-calls.log | sort > "$TMP/before$N"
+out="$(gate)"; rc=$?
+assert "  · not inside a repo, git present → the GO stands, with the same note" 0 "$rc" "$out" \
+  'skipped the gate-ledger row and the run-log row'
+find "$D" ! -name gh-calls.log | sort > "$TMP/after$N"
+if cmp -s "$TMP/before$N" "$TMP/after$N"; then ok "  · and no file was created there either"
+else bad "  · and no file was created there either" "new: $(grep -vxF -f "$TMP/before$N" "$TMP/after$N" | tr '\n' ' ')"; fi
 
 # A ROW IS A LINE (this repo, 2026-09-13). Tagging the last row's outcome with a tool that trimmed the
 # trailing newline left the file without one; the next verdict was appended ONTO that row — 13

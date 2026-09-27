@@ -252,5 +252,19 @@ lines as before, plus a `VERDICT: UNKNOWN` line a review can quote. A misused ar
 recorded while the arguments are parsed, because the writers are defined after the parser; the
 same function books it. Logging fails open as it does everywhere, so an unwritable book never
 changes the exit 2. A field that cannot be known is booked as `?`: the PR cell, when no number was
-given and none could be found. Without git the repo root is unknown, so these rows land in the cwd,
-the rule outside any repo.
+given and none could be found. Without a repo root no row is written at all (next section).
+
+## No repo root, no row
+
+Until 2026-09-27 the books followed the rule for reading: outside any git worktree, or without git,
+a default path fell back to the cwd. For the documented call that cwd is a skill directory, inside
+the tree `install.sh` copies into every target repo — the 0.3.0 incident, a stray gate-ledger in
+the install payload, one missing binary away. `run-log.sh` states the suite's rule: a wrong row is
+worse than a missing one.
+
+So `book()`, which every verdict goes through, writes a default book only when the repo root is
+known. Otherwise it skips the book, prints one stderr note naming the skipped rows, and leaves the
+verdict and the exit code as they were; reading still falls back to the cwd, because a read plants
+nothing. An explicit `MERGE_GATE_LEDGER` or `RUN_LOG` still wins: the caller named that file. The
+gate's test fixtures became git repositories for the same reason, since the cwd fallback their plain
+directories used to exercise is gone.

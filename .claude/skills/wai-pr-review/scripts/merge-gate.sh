@@ -69,7 +69,7 @@ done
 # ("no quality catalog" — in a repo that has one) and planted a stray gate-ledger inside
 # .claude/skills/ — the very tree install.sh copies into every target repo (2026-08-18, live).
 # So the default base is the enclosing git worktree; an explicit argument or env override still
-# wins, and outside any repo the cwd stays the base (fixtures and bare dirs keep working).
+# wins. Outside any repo the cwd stays the base for READING; no row is written there (see book()).
 # Deliberately --show-toplevel, NOT the --git-common-dir parent: rows belong to the worktree that
 # produced them. In a LINKED worktree the row therefore lands in THAT worktree's
 # docs/architecture/gate-ledger.md — its branch is the PR that carries the row to the default branch
@@ -253,6 +253,22 @@ emit_runlog() {
   [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-pr-review "PR #$PR" "$1" >/dev/null 2>&1 || true
 }
 
+# book LABEL WHY — the verdict's books: the ledger row, the run-log row, then the note. Every verdict
+# goes through here. NO REPO ROOT, NO ROW: without git, or outside any repo, a default path could
+# only fall back to the cwd — for the documented call a skill directory, inside the tree install.sh
+# copies — and a wrong row is worse than a missing one. Such a book is skipped and ONE stderr note
+# names what was skipped; the verdict and the exit code do not change. An explicit
+# MERGE_GATE_LEDGER / RUN_LOG still wins. Why: docs/rationale/merge-gate.md § No repo root, no row
+book() {
+  _skip=""
+  if [ -n "$REPO_ROOT" ] || [ -n "${MERGE_GATE_LEDGER:-}" ]; then emit_ledger "$1" "$2"
+  else _skip="the gate-ledger row"; fi
+  if [ -n "$REPO_ROOT" ] || [ -n "${RUN_LOG:-}" ]; then emit_runlog "$1"
+  else _skip="${_skip:+$_skip and }the run-log row"; fi
+  [ -z "$_skip" ] || echo "merge-gate: no repo root (git missing, or not inside a repo) — skipped $_skip for this $1 verdict; a row belongs in its repo, never in the cwd." >&2
+  derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+}
+
 # early_unknown REASON [LINE...] — EVERY UNKNOWN THAT ENDS THE RUN BEFORE THE CHECKS IS BOOKED, like
 # every verdict below: the ledger row and the run-log row first (fail-open, so an unwritable book
 # never changes the exit 2), then each LINE on stderr, the VERDICT line and the note; exit 2. A
@@ -261,9 +277,7 @@ emit_runlog() {
 early_unknown() {
   [ -n "$PR" ] || PR='?'
   unknown "$1"; shift
-  emit_ledger UNKNOWN "$REASONS"
-  emit_runlog UNKNOWN
-  derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+  book UNKNOWN "$REASONS"
   for _l in "$@"; do printf '%s\n' "$_l" >&2; done
   echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human."
   [ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
@@ -316,9 +330,7 @@ fi
 STATE="$(gh pr view "$PR" --repo "$REPO" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
 if [ "$STATE" = "MERGED" ]; then
   # Books first, output second — the verdict block below says why.
-  emit_ledger MOOT "PR already merged before the gate ran"
-  emit_runlog MOOT
-  derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+  book MOOT "PR already merged before the gate ran"
   echo "merge-gate: PR #$PR ($REPO → $BASE) is already MERGED — this gate is MOOT."
   echo "  Nothing is left to prevent. Any review findings are FOLLOW-UPS, not gate conditions."
   echo "  If you authored this code, this is a self-review of your own just-merged work."
@@ -512,8 +524,8 @@ fi
 
 # --- Emit to the ledger — BEFORE the first line of output ---------------------------------------
 # The gate writes its OWN verdict to an append-only ledger, for the exact reason the gate exists:
-# "the model checked" cannot be audited, but a line the SCRIPT wrote can. The row is written by
-# emit_ledger() (defined near the top, and also called on the MOOT short-circuit).
+# "the model checked" cannot be audited, but a line the SCRIPT wrote can. The rows are written by
+# book() (defined near the top, and also called on the MOOT short-circuit and every early UNKNOWN).
 # BOOKS BEFORE OUTPUT. The verdict is final here; nothing below changes it. Both books are written
 # before anything reaches stdout, so a caller who trims the output (`| head -6`) and thereby closes
 # the pipe cannot kill this script BETWEEN the two writers. emit_ledger therefore writes nothing to
@@ -523,9 +535,7 @@ fi
 # what /bin/sh IS on macOS; shellcheck passes it, the shell does not. This is the FOURTH artefact in
 # the suite to relearn that (ADR-0002), and tests/run.sh caught it on the first run — as designed.
 case "$VERDICT" in 0) _v=GO ;; 1) _v=NO-GO ;; 2) _v=UNKNOWN ;; *) _v='?' ;; esac
-emit_ledger "$_v" "$REASONS"
-emit_runlog "$_v"
-derive_ledger_note            # after BOTH books — it may call gh; see the function's comment
+book "$_v" "$REASONS"
 
 # --- Verdict ------------------------------------------------------------------------------------
 echo "merge-gate: PR #$PR ($REPO → $BASE, mode: $MODE)"
