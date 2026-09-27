@@ -2041,6 +2041,59 @@ assert "all 8 footer skills paste open-items.sh --brief" 0 "$([ -z "$no_brief" ]
 [ -f "$ROOT/.claude/skills/wai/references/hand-back.md" ] || no_hb="$no_hb (the file itself)"
 assert "hand-back.md exists, and all 8 footer skills name it" 0 "$([ -z "$no_hb" ] && echo 0 || echo 1)" "missing:$no_hb"
 
+# Grilling v2: the protocol asks in ROUNDS over the frontier (upstream mattpocock/skills since
+# a4b2009), and every rule that keeps a round honest is prose — so each is pinned here, and a trim
+# that deletes one goes red instead of quiet. Flattened: every one of these claims wraps. The
+# adapted wording is MIT-licensed, so its copyright line and notice are pinned with it.
+GRP="$ROOT/.claude/skills/wai/references/grilling-protocol.md"
+grl_has() { tr '\n' ' ' < "$1" | tr -s ' ' | grep -qF -- "$2"; }
+if grl_has "$GRP" '**Ask in rounds over the frontier.**' \
+   && grl_has "$GRP" 'every open decision whose prerequisites are settled' \
+   && grl_has "$GRP" 'waits for a later round' \
+   && grl_has "$GRP" '**Opt-out:** when the human asks for "one at a time"'; then
+  ok "grilling asks the whole frontier per round, and 'one at a time' is the human's opt-out"
+else bad "grilling asks the whole frontier per round, and 'one at a time' is the human's opt-out" "the rounds rule, the frontier or the opt-out is gone from grilling-protocol.md"; fi
+# Review of #98, m1: four rules could be deleted with every anchor green — the frontier recompute,
+# the background Explore lookup, the hard gate and planning's unattended line. Each has its own now.
+if grl_has "$GRP" "Recompute the frontier after each round's answers."; then
+  ok "grilling recomputes the frontier after each round's answers"
+else bad "grilling recomputes the frontier after each round's answers" "rule 1 no longer recomputes the frontier after each round"; fi
+if grl_has "$GRP" 'do it **in the background** through a subagent (the built-in `Explore`)' \
+   && grl_has "$GRP" 'so only the questions that depend on its result wait'; then
+  ok "grilling looks facts up through a background Explore subagent; only dependent questions wait"
+else bad "grilling looks facts up through a background Explore subagent; only dependent questions wait" "rule 3's background Explore lookup, or its only-dependents-wait clause, is gone"; fi
+if grl_has "$GRP" 'Stop when the frontier is empty and nothing is silently assumed' \
+   && grl_has "$GRP" '**Assumptions I made:**'; then
+  ok "grilling stops on an empty frontier, and the playback names its assumptions"
+else bad "grilling stops on an empty frontier, and the playback names its assumptions" "the stopping rule or the 'Assumptions I made' line is gone"; fi
+if grl_has "$GRP" '**Hard gate.** Do **not** start planning output or implementation until the human confirms shared understanding has been reached.'; then
+  ok "grilling keeps its hard gate: nothing starts until the human confirms shared understanding"
+else bad "grilling keeps its hard gate: nothing starts until the human confirms shared understanding" "rule 7's hard-gate sentence is gone from grilling-protocol.md"; fi
+if grep -q '^## Question format' "$GRP" && grl_has "$GRP" '**Q<n> · <title>**' \
+   && grl_has "$GRP" '→ **Recommended:**' && grl_has "$GRP" 'answer by number' \
+   && grl_has "$GRP" 'at most 4 questions, 2–4 options each'; then
+  ok "grilling pins its question format: numbered, the recommendation on its own line, the UI when a round fits"
+else bad "grilling pins its question format: numbered, the recommendation on its own line, the UI when a round fits" "§Question format, its Q<n> title, the Recommended line, answer-by-number or the UI limits are gone"; fi
+if grep -q '^## Unattended runs' "$GRP" && grl_has "$GRP" 'no decision is self-answered' \
+   && grl_has "$GRP" '**marked assumption**' && grl_has "$GRP" 'waits for an attended grill'; then
+  ok "grilling: an unattended run self-answers no decision, and fuzzy + high-stakes waits for a grill"
+else bad "grilling: an unattended run self-answers no decision, and fuzzy + high-stakes waits for a grill" "§Unattended runs or one of its three rules is gone from grilling-protocol.md"; fi
+if grl_has "$ROOT/.claude/skills/wai-team/SKILL.md" '**Planning self-answers nothing:**' \
+   && grl_has "$ROOT/.claude/skills/wai-team/SKILL.md" 'waits there for an attended grill (`grilling-protocol.md` §*Unattended runs*)'; then
+  ok "wai-team wires the unattended grilling rule into its per-issue cycle"
+else bad "wai-team wires the unattended grilling rule into its per-issue cycle" "step 3 no longer says planning self-answers nothing, or no longer points at §Unattended runs"; fi
+PLN="$ROOT/.claude/skills/wai-requirements-planning/SKILL.md"
+if grl_has "$PLN" '**Unattended** (a `wai-team` run): no decision is self-answered' \
+   && grl_has "$PLN" "the protocol's §*Unattended runs*"; then
+  ok "planning wires the unattended grilling rule into its grill-me step"
+else bad "planning wires the unattended grilling rule into its grill-me step" "step 1's unattended line, or its pointer at §Unattended runs, is gone"; fi
+GNOTE="$ROOT/.claude/skills/wai/references/third-party-notices.md"
+if grep -qF 'Copyright (c) 2026 Matt Pocock' "$ROOT/REFERENCES.md" \
+   && grep -qF 'Copyright (c) 2026 Matt Pocock' "$GNOTE" 2>/dev/null \
+   && grep -qF 'Permission is hereby granted' "$GNOTE" 2>/dev/null; then
+  ok "REFERENCES.md carries upstream's MIT copyright line, and the notice ships beside the protocol"
+else bad "REFERENCES.md carries upstream's MIT copyright line, and the notice ships beside the protocol" "the copyright line is gone from REFERENCES.md, or third-party-notices.md lost it or the permission notice"; fi
+
 strays="$(find "$ROOT/.claude/skills" -maxdepth 2 -name 'README.md' | tr '\n' ' ')"
 assert "no README.md inside a skill folder" 0 "$([ -z "$strays" ] && echo 0 || echo 1)" "found: $strays"
 

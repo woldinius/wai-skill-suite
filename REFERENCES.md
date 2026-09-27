@@ -199,13 +199,50 @@ very PR that added the diff-first rule (#50), whose review declared itself a sel
 for unattended runs, open for attended ones — and named as such.
 
 ### mattpocock/skills
-<https://github.com/mattpocock/skills> (MIT)
-**2026-07-09 · partially adopted**
+<https://github.com/mattpocock/skills> (MIT) · Copyright (c) 2026 Matt Pocock
+**2026-07-09 · partially adopted** · **2026-09-27 · `skills/productivity/grilling/SKILL.md` re-read
+at 85f83d3, with its docs page and wrappers: grilling v2**
 
-The `grilling` primitive — one question at a time, a recommended answer attached, a hard confirm gate
-— became the **"grill me" mode** (`wai/references/grilling-protocol.md`). The Agent-Brief format
-for filed issues shaped `wai/references/issues-protocol.md`. The two-axis PR review (standards
-vs. spec) informed `wai-pr-review/references/review-lenses.md`.
+The Agent-Brief format for filed issues shaped `wai/references/issues-protocol.md`. The two-axis PR
+review (standards vs. spec) informed `wai-pr-review/references/review-lenses.md`. The `grilling`
+primitive became the **"grill me" mode** (`wai/references/grilling-protocol.md`) in its
+one-question-at-a-time form; upstream has asked in **rounds** since a4b2009 (2026-07-16), and the
+re-read brought the protocol up to that.
+
+**Adapted text** — close to upstream's wording, so the MIT notice travels with it, in
+[`third-party-notices.md`](.claude/skills/wai/references/third-party-notices.md) beside the
+protocol (`install.sh` ships `.claude/skills/`, not this file):
+
+- the opening — interview *relentlessly* to a *shared understanding*, the plan as a *design tree*;
+- rule 1's frontier (every open decision whose prerequisites are settled) and its later-round rule,
+  and rule 6's stop (the frontier empty, nothing silently assumed) — from the round-based version;
+- rule 3's facts/decisions sentence;
+- rule 5's *"some plans need three questions, some fifty"* (upstream's
+  `.out-of-scope/question-limits.md`);
+- rule 7's gate — nothing is acted on until the human confirms the shared understanding.
+
+**Adopted as ideas, in our own words:** a recommended answer on every question (rule 2); "one at a
+time" as the human's opt-out (rule 1); numbered questions answerable by number, the recommendation
+on its own line (§*Question format*); facts looked up by a background subagent, so only the
+questions that depend on them wait (rule 3); and, from `question-limits.md`, a redundant or trivial
+question as a quality bug, not a quantity bug, and the human steering with natural language
+instead of a cap (both rule 5).
+
+**Ours:** the question UI for a round that fits it; the *Assumptions I made* line; and §*Unattended
+runs* — a `wai-team` run self-answers no decision, and a fuzzy and high-stakes issue waits for an
+attended grill (wired into `wai-team` step 3 and planning step 1). Upstream declines an async mode
+for the same reason: a grill nobody answers yields the agent's opinion.
+
+**Rejected — with the reason:**
+
+- **The building-block/wrapper split** — `grilling` as a model-invoked primitive, `grill-me` and
+  `grill-with-docs` as one-line skills that load it. Here the planning skill reads the protocol
+  directly; separate skills would add routing text to every session, and upstream's own docs
+  report that a skill naming another does not reliably load it.
+- **Writing the `CONTEXT.md` glossary during the session** (`grill-with-docs`). It commits
+  decisions to the repo before the hard gate has confirmed them. Here the record is written once,
+  after the gate, into the planning artifact and the existing `docs/` (§*Recording the outcome*);
+  the suite keeps no `CONTEXT.md`.
 
 ---
 
