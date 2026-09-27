@@ -29,6 +29,7 @@
 #           PR-number defaults to the PR for the current branch.
 #           --repo (or $GH_REPO) says WHICH repository to ask about. Without it the repo is read
 #           from the git remote — which is a guess, and a wrong one costs a bogus verdict.
+#         sh merge-gate.sh -h | --help   prints this usage and exits 2: no verdict, no row.
 # Config: docs/architecture/merge-gate.conf   (written by wai-init; see the template there)
 
 set -eu
@@ -45,8 +46,10 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 # Why: docs/rationale/merge-gate.md § Why a script and not a paragraph
 
 PR=""
-ARG_ERR=""                     # a misuse, booked and exited 2 by early_unknown (below), never here
+ARG_ERR=""                     # the FIRST misuse, booked and exited 2 by early_unknown, never here
 REPO_SEL="${GH_REPO:-}"        # --repo, or $GH_REPO. Empty = read it from the git remote.
+# Parsing goes on after a misuse, so a PR number after it is still booked (review of #94).
+arg_err() { [ -n "$ARG_ERR" ] || ARG_ERR="$1"; }
 while [ $# -gt 0 ]; do
   case "$1" in
     # A VALUELESS --repo must not fall through to the remote guess. `--repo` exists precisely
@@ -55,13 +58,16 @@ while [ $# -gt 0 ]; do
     # would look like it honoured the selector. Exit 2 — could not check, never a verdict.
     --repo)   shift
               if [ $# -gt 0 ] && [ -n "${1:-}" ]; then REPO_SEL="$1"
-              else ARG_ERR="--repo needs a value (OWNER/NAME)"; break; fi ;;
-    --repo=)  ARG_ERR="--repo= needs a value (OWNER/NAME)"; break ;;
+              else arg_err "--repo needs a value (OWNER/NAME)"; fi ;;
+    --repo=)  arg_err "--repo= needs a value (OWNER/NAME)" ;;
     --repo=*) REPO_SEL="${1#--repo=}" ;;
-    -*)       ARG_ERR="unknown option '$1'"; break ;;
+    # A USAGE QUERY IS NOT A GATE RUN: the usage, then an exit before anything is booked, so no
+    # row. Exit 2, never 0: exit 0 is GO's alone (rule 1). (Review of #94.)
+    -h|--help) sed -n '/^# Usage:/,/^# Config:/s/^# \{0,1\}//p' "$0" || true; exit 2 ;;
+    -*)       arg_err "unknown option '$1'" ;;
     *)        [ -n "$PR" ] || PR="$1" ;;
   esac
-  [ $# -gt 0 ] && shift
+  [ $# -eq 0 ] || shift          # never a failing last command: a valueless --repo ends the list
 done
 
 # DEFAULT PATHS ARE REPO-RELATIVE, NOT CWD-RELATIVE. The documented invocations run the suite's
@@ -179,7 +185,7 @@ LEDGER_HDR
   # line — and gate-stats.sh, which recognises rows by their leading `| YYYY-`, never sees it. So
   # the newline is restored first. Why (this repo, 2026-09-13): docs/rationale/merge-gate.md § Books before output
   [ -s "$_led" ] && [ -n "$(tail -c 1 "$_led" 2>/dev/null)" ] && printf '\n' >> "$_led" 2>/dev/null || true
-  printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR" "$1" "$_lw" >> "$_led" 2>/dev/null || true
+  printf '| %s | %s | %s | %s | |\n' "$(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || echo '?')" "$PR_CELL" "$1" "$_lw" >> "$_led" 2>/dev/null || true
 }
 
 # derive_ledger_note — WHERE A ROW LIVES (the ledger-home decision, 2026-08-18, revised in #66).
@@ -250,7 +256,7 @@ derive_ledger_note() {
 # emit_ledger's reason: a missing or failing logger must never change a merge decision.
 RUNLOG_SH="$(dirname "$0")/../../wai/scripts/run-log.sh"
 emit_runlog() {
-  [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-pr-review "PR #$PR" "$1" >/dev/null 2>&1 || true
+  [ -f "$RUNLOG_SH" ] && sh "$RUNLOG_SH" wai-pr-review "PR #$PR_CELL" "$1" >/dev/null 2>&1 || true
 }
 
 # book LABEL WHY — the verdict's books: the ledger row, the run-log row, then the note. Every verdict
@@ -259,7 +265,10 @@ emit_runlog() {
 # copies — and a wrong row is worse than a missing one. Such a book is skipped and ONE stderr note
 # names what was skipped; the verdict and the exit code do not change. An explicit
 # MERGE_GATE_LEDGER / RUN_LOG still wins. Why: docs/rationale/merge-gate.md § No repo root, no row
+# THE PR CELL IS DIGITS OR `?`, in both books: an early path books an argument no gh call has
+# validated, and a raw `a|b` split the row into six cells (review of #94). The terminal keeps it raw.
 book() {
+  case "$PR" in ''|*[!0-9]*) PR_CELL='?' ;; *) PR_CELL="$PR" ;; esac
   _skip=""
   if [ -n "$REPO_ROOT" ] || [ -n "${MERGE_GATE_LEDGER:-}" ]; then emit_ledger "$1" "$2"
   else _skip="the gate-ledger row"; fi
@@ -271,14 +280,15 @@ book() {
 
 # early_unknown REASON [LINE...] — EVERY UNKNOWN THAT ENDS THE RUN BEFORE THE CHECKS IS BOOKED, like
 # every verdict below: the ledger row and the run-log row first (fail-open, so an unwritable book
-# never changes the exit 2), then each LINE on stderr, the VERDICT line and the note; exit 2. A
-# field that cannot be known is booked as `?`. No early exit may print before calling this.
+# never changes the exit 2), then each LINE on stderr, the `?` line and the VERDICT line on stdout
+# (quotable like any verdict's — review of #94), and the note; exit 2. A PR that is unknown or
+# not a number is booked as `?` (book). No early exit prints before this; -h/--help is no gate run.
 # Why: docs/rationale/merge-gate.md § Every early exit leaves a row
 early_unknown() {
-  [ -n "$PR" ] || PR='?'
   unknown "$1"; shift
   book UNKNOWN "$REASONS"
   for _l in "$@"; do printf '%s\n' "$_l" >&2; done
+  printf '%b' "$REASONS"
   echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human."
   [ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
   exit 2

@@ -442,6 +442,9 @@ gfix; gclosed
 early_case "  · no PR given and none found: the PR is booked as ?" '?' "no PR given and none found"
 gfix; gclosed 1 --bogus
 early_case "  · a misuse (an unknown option), too" 1 "unknown option '--bogus'"
+# The parser goes on after a misuse, so a PR number AFTER it is booked too (review of #94).
+gfix; gclosed --bogus 5
+early_case "  · a misuse before the PR: parsing goes on, and PR 5 is booked" 5 "unknown option '--bogus'"
 NOAUTH="$TMP/noauth"; mkdir -p "$NOAUTH"   # a gh that is installed and not logged in
 printf '#!/bin/sh\n[ "$1" = auth ] && exit 1\nexec "%s/gh" "$@"\n' "$STUB" > "$NOAUTH/gh"; chmod +x "$NOAUTH/gh"
 gfix; ( cd "$D" && PATH="$NOAUTH:$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 >&- 2>&- ) || true
@@ -469,6 +472,56 @@ assert "  · not inside a repo, git present → the GO stands, with the same not
 find "$D" ! -name gh-calls.log | sort > "$TMP/after$N"
 if cmp -s "$TMP/before$N" "$TMP/after$N"; then ok "  · and no file was created there either"
 else bad "  · and no file was created there either" "new: $(grep -vxF -f "$TMP/before$N" "$TMP/after$N" | tr '\n' ' ')"; fi
+# AN EXPLICIT PATH STILL WINS WITHOUT A REPO ROOT: the caller named the file, so both rows land there
+# and nowhere else. Only the override clauses in book() write them here, so without either clause
+# this case fails (review of #94).
+gfix; mkdir -p "$D/.claude/skills/wai-pr-review"; find "$D" | sort > "$TMP/before$N"; OVR="$TMP/ovr$N"
+out="$( cd "$D/.claude/skills/wai-pr-review" && PATH="$NOGITBIN" GH_FIXTURE="$TMP/ghfix-none" \
+  MERGE_GATE_LEDGER="$OVR/gate.md" RUN_LOG="$OVR/run.md" "$NOGITBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "git absent, MERGE_GATE_LEDGER and RUN_LOG set → exit 2, and no skip note" 2 "$rc" "$out" \
+  'VERDICT: UNKNOWN' 'skipped'
+_lr="$(grep -c '^| 20' "$OVR/gate.md" 2>/dev/null)"; _rr="$(grep -c '^| 20' "$OVR/run.md" 2>/dev/null)"
+if [ "$_lr" = 1 ] && [ "$_rr" = 1 ] && grep -qF '| 1 | UNKNOWN | ? git is not installed' "$OVR/gate.md" &&
+   grep -qF '| wai-pr-review | PR #1 | UNKNOWN |' "$OVR/run.md"; then ok "  · one row in each book, at exactly the named paths"
+else bad "  · one row in each book, at exactly the named paths" "ledger rows: ${_lr:-0} · run-log rows: ${_rr:-0}"; fi
+find "$D" | sort > "$TMP/after$N"
+if cmp -s "$TMP/before$N" "$TMP/after$N"; then ok "  · and no file under the fixture"
+else bad "  · and no file under the fixture" "new: $(grep -vxF -f "$TMP/before$N" "$TMP/after$N" | tr '\n' ' ')"; fi
+
+# A USAGE QUERY IS NOT A GATE RUN (review of #94): `-h`/`--help` prints the usage and exits before
+# either writer, so it leaves no row. It exits 2, never 0: exit 0 is GO's alone (the gate's rule 1).
+# The second call puts it after a PR and a misuse, so it wins over a parse that goes on, too.
+nobooks() { [ ! -e "$D/docs/architecture/gate-ledger.md" ] && [ ! -e "$D/docs/architecture/run-log.md" ]; }
+gfix; out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" --help 2>&1 )"; rc=$?
+assert "--help → the usage, exit 2, and no VERDICT line (review of #94)" 2 "$rc" "$out" \
+  '^Usage: +sh merge-gate\.sh \[PR-number\]' 'VERDICT:'
+if nobooks; then ok "  · and no row in either book"
+else bad "  · and no row in either book" "ledger: $(grep '^| 20' "$D/docs/architecture/gate-ledger.md" 2>&1 | tail -1) · run log: $(grep '^| 20' "$D/docs/architecture/run-log.md" 2>&1 | tail -1)"; fi
+gfix; out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 5 --bogus -h 2>&1 )"; rc=$?
+if [ "$rc" = 2 ] && printf '%s\n' "$out" | grep -q '^Usage:' && nobooks; then ok "  · -h after a PR and a misuse: the same, and no row"
+else bad "  · -h after a PR and a misuse: the same, and no row" "exit $rc · $(printf '%s' "$out" | tr '\n' '/')"; fi
+
+# THE PR CELL IS DIGITS OR `?` (review of #94). An early path books an argument no gh call has
+# validated, and `merge-gate.sh 'a|b'` wrote a six-cell row: gate-stats then read `b` as the verdict
+# and the why cell as an outcome tag. The real gh cannot resolve such a PR; base-fail stands in.
+gfix; : > "$D/base-fail"; gclosed 'a|b'
+early_case "a PR argument that is not a number is booked as ? (review of #94)" '?' "could not resolve PR #a/b"
+_nf="$(grep '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null | tail -1 | awk -F'|' '{ print NF }')"
+if [ "${_nf:-0}" -eq 7 ]; then ok "  · 'a|b' adds no table cell: the row keeps its five"
+else bad "  · 'a|b' adds no table cell: the row keeps its five" "fields: ${_nf:-none} (7 = five cells)"; fi
+out="$(sh "$ROOT/.claude/skills/wai-pr-review/scripts/gate-stats.sh" "$D/docs/architecture/gate-ledger.md" 2>&1)"; rc=$?
+assert "  · and gate-stats counts that row as UNKNOWN, with no unmatched tag" 0 "$rc" "$out" \
+  'GO 0 · NO-GO 0 · UNKNOWN 1 · MOOT 0' 'unmatched'
+
+# AN EARLY UNKNOWN IS QUOTABLE LIKE ANY VERDICT (review of #94). A review quotes only the gate's
+# VERDICT: and ✗/? lines from stdout, so the `?` line is printed there, right before VERDICT:.
+gfix; : > "$D/base-fail"
+out="$( cd "$D" && PATH="$STUB:$PATH" GH_FIXTURE="$D" sh "$GATE" 1 2>/dev/null )"; rc=$?
+_pv="$(printf '%s\n' "$out" | awk '/^VERDICT: UNKNOWN/ { print prev; exit } { prev = $0 }')"
+case "$rc|$_pv" in
+  "2|  ? could not resolve PR #1 in "*) ok "an early UNKNOWN prints its ? line on stdout, right before VERDICT:" ;;
+  *) bad "an early UNKNOWN prints its ? line on stdout, right before VERDICT:" "exit $rc · stdout: $(printf '%s' "$out" | tr '\n' '/')" ;;
+esac
 
 # A ROW IS A LINE (this repo, 2026-09-13). Tagging the last row's outcome with a tool that trimmed the
 # trailing newline left the file without one; the next verdict was appended ONTO that row — 13

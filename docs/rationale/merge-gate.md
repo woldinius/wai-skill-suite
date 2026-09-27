@@ -248,11 +248,17 @@ each logged its review by hand.
 
 Every such exit now goes through one function, `early_unknown`, and takes the shape of every other
 verdict: the UNKNOWN ledger row with its reason, then the run-log row, then the output — the stderr
-lines as before, plus a `VERDICT: UNKNOWN` line a review can quote. A misused argument is only
-recorded while the arguments are parsed, because the writers are defined after the parser; the
-same function books it. Logging fails open as it does everywhere, so an unwritable book never
-changes the exit 2. A field that cannot be known is booked as `?`: the PR cell, when no number was
-given and none could be found. Without a repo root no row is written at all (next section).
+lines as before, plus the `?` line and a `VERDICT: UNKNOWN` line, the two a review quotes. A
+misused argument is only recorded while the arguments are parsed, because the writers are defined
+after the parser; the same function books the first misuse, and parsing goes on, so a PR number
+after it is still booked. Logging fails open as it does everywhere, so an unwritable book never
+changes the exit 2. The PR cell holds digits or `?`: `?` when no number was given and none could be
+found, and when the value is not a number. An early path books an argument no `gh` call has
+validated, and in the review of #94 `merge-gate.sh 'a|b'` wrote a six-cell row that `gate-stats.sh`
+could not count as UNKNOWN. Without a repo root no row is written at all (next section).
+
+A usage query is not a gate run: `-h` or `--help` prints the usage and exits 2 before either
+writer, so it leaves no row. It exits 2 and not 0, because exit 0 is GO's alone.
 
 ## No repo root, no row
 
