@@ -93,6 +93,12 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
   for a new ledger documents the tag; existing ledgers keep their header. Rationale:
   `docs/rationale/gate-stats.md` § *A reconstructed row has no outcome*.
 
+### Evidence
+
+- **Lean output, measured.** A controlled A/B (two sandbox runs per arm): the review −64 %,
+  the hand-back −68 %; output tokens −1 %, cache reads +13 %, both inside the run-to-run
+  spread. [Experiment](docs/experiments/2026-09-26-lean-output-ab.md); #88–#92 filed.
+
 ## [0.4.0] — 2026-09-14
 
 The field's second dataset turned into five fixes: the classifier stops reading mentions as acts,
