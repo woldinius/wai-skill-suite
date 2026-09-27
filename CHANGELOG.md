@@ -5,7 +5,11 @@ Notable changes to the wAI skill suite. Format loosely follows
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
-## [Unreleased]
+## [0.5.1] — 2026-09-27
+
+Grilling in rounds: each round asks every open decision whose prerequisites are settled, and the
+playback closes with the assumptions made. Measured against 0.5.0 with a simulated product owner:
+interruptions −68 %, planner tokens −37 %, plan quality within the noise.
 
 ### Changed
 
