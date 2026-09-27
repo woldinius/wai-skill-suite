@@ -11,10 +11,34 @@ lifecycle run writes, and what it costs?
   `remove`, `list`, `low --threshold N`, JSON persistence, `unittest`), through plan → implement →
   test → review → hand-back, following the skill files installed in the sandbox.
 - **Per run:** a fresh sandbox repo (the `minimum` catalog variant copied in, the arm's suite
-  installed with its own `install.sh`), one fresh agent, the same model, an identical prompt except
-  the path. Local only: no GitHub, so the gate returns UNKNOWN.
-- **Two runs per arm (n = 2).** Tokens from each agent's transcript via `session-cost.sh`; artifact
-  sizes from the sandbox. The sandboxes were deleted afterwards.
+  installed with its own `install.sh`), one fresh agent, the same model, the prompt below with only
+  the path changed. Local only: no GitHub, so the gate returns UNKNOWN.
+- **Two runs per arm (n = 2).** The sandboxes were deleted after this report was reviewed.
+
+**Metrics.** *Review:* words in the review file the run wrote (it stands in for the PR comment).
+*Hand-back:* words in the agent's final report. *Commit messages:* characters of
+`git log main..<branch> --format=%B`. *Plan:* words in `docs/planning/**/*.md`. *Tokens and
+responses:* `session-cost.sh` on the agent's transcript (one response per request id, at its
+largest output count).
+
+<details><summary>The prompt (identical for all four runs, path removed)</summary>
+
+```
+Build a small piece of software in the git repo at <sandbox> using the wAI skill suite installed
+in that repo. Rules: work only inside that repo; use the suite by READING each skill's
+instructions from .claude/skills/<skill>/SKILL.md inside that repo (no Skill tool, no subagents);
+local only — no GitHub, no gh, no push, no network, and where a skill step needs GitHub, skip it
+and say so in one line; no questions to the user — decide sensibly and state the assumption.
+The software: inventory, a Python 3 command-line tool and library, standard library only, that
+tracks stock items — add <name> <qty>, remove <name> <qty>, list, and low --threshold N — persisted
+as a JSON file, with unit tests run by python3 -m unittest.
+Lifecycle, each step begun with a plain-text line [[STEP <name>]]: plan (wai-requirements-planning)
+· implement (wai-implementation, branch agent/sandbox/feat-inventory) · test (wai-testing) ·
+review (wai-pr-review: review the branch against main as if it were the PR, write it to review.md,
+run the scripts the skill names where they run locally) · handback (the final message, as the
+skills instruct).
+```
+</details>
 
 ## Results
 
@@ -34,18 +58,24 @@ lifecycle run writes, and what it costs?
 
 - **What a human reads fell sharply and consistently.** Every B run is below every A run on both
   the review and the hand-back; the difference is larger than the spread between runs.
-- **Total tokens did not move.** Output −1 % is far inside the spread: the two runs of one arm differ by about 17 %; cache
-  reads rose with the number of responses. Visible text is about a fifth of the output tokens (a
-  characters ÷ 3.6 estimate); the rest is reasoning. Shorter artifacts cannot move a total they are
-  a fifth of.
+- **Token totals did not fall.** Output −1 % and cache reads +13 % (all tokens +12 %) — both inside
+  the spread: the two runs of one arm differ by about 17 %. The visible text saved is about 20 k
+  characters a run (≈ 6 k tokens, 3 % of output, a characters ÷ 3.6 estimate); the rest of the
+  output is reasoning.
+- **Turns moved the other way.** Every B run took more responses than every A run (61, 66 vs 47,
+  53). Whether the output rules cost turns is open; on the means, cache reads follow responses.
 - **Quality held on this task.** All four runs ended green; every run counterproofed its tests
-  (45–78 deliberate breaks, all caught); every review found real defects.
+  (50 · 49 · 45 · 78 deliberate breaks, all caught); every review reproduced a real defect — a
+  save that exits 1 after writing, so a retry applies twice (A1, `RES-3`); two Unicode spellings of
+  one name splitting its stock (A2, B1, `MAINT-9`); a read-only file rewritten anyway (B2,
+  `MAINT-9`).
 
-**What follows.** The lean changes did their job for the reader. Cost is driven by reasoning and by
-the number of turns — neither is touched by output rules, and both need their own measurement.
+**What follows.** The lean changes did their job for the reader and did not lower the token bill.
+Reasoning effort and turn count are the cost levers still to measure.
 
 **Limits.** n = 2 per arm, one small task; each run wrote its own code, so the review findings
 differ; same model throughout; no GitHub (gate UNKNOWN, `wai-init` skipped — the catalog was
-seeded); a split by lifecycle step was not measurable (step markers rarely reached visible text).
+seeded); no split by lifecycle step (the step markers reached visible text inconsistently, 9 of
+20 times).
 
-**Suite defects the runs found independently** (filed): #88 · #89 · #90 · #91 · #92.
+**Found on the way** (filed): two suite defects, #88 · #89, and three gaps, #90 · #91 · #92.
