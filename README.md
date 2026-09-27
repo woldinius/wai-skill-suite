@@ -441,8 +441,10 @@ The claims above are checkable, and the failures are part of the record on purpo
   and [`TEMPLATE.md`](docs/field-reports/TEMPLATE.md) is the paste-sized way to send it. The
   dataset *In the field* summarizes:
   [six weeks, 259 gate verdicts](docs/field-reports/2026-09-06-two-months-of-gate-259-verdicts.md).
-- [`docs/experiments/`](docs/experiments/) — controlled measurements of the suite itself; the first:
-  [lean output, A/B in sandboxes](docs/experiments/2026-09-26-lean-output-ab.md) (2026-09-26).
+- [`docs/experiments/`](docs/experiments/) — controlled measurements of the suite itself:
+  [lean output, A/B in sandboxes](docs/experiments/2026-09-26-lean-output-ab.md) (2026-09-26) ·
+  [grilling in rounds, A/B with a simulated product owner](docs/experiments/2026-09-27-grilling-rounds-ab.md)
+  (2026-09-27).
 - [`docs/adr/`](docs/adr/) — the four decisions that shaped the architecture, with the
   cases where the scripts lost.
 - `docs/architecture/audits/` — the suite auditing itself with its own audit skill (first
