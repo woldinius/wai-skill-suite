@@ -260,7 +260,7 @@ sits inside a checkout, it installs *from that checkout* — so the tree you rev
 you get, not whatever the remote's default branch holds.
 
 ```bash
-git clone --depth 1 --branch v0.5.0 https://github.com/woldinius/wai-skill-suite.git /tmp/wai
+git clone --depth 1 --branch v0.5.1 https://github.com/woldinius/wai-skill-suite.git /tmp/wai
 sh /tmp/wai/install.sh            # installs into the current directory
 rm -rf /tmp/wai
 ```
@@ -270,7 +270,7 @@ same version. (An earlier README once pinned to a tag before that tag existed �
 `tests/numbers-lint.sh` now checks every version reference here against `git tag`.)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.5.0/install.sh | SKILLS_REF=v0.5.0 sh
+curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.5.1/install.sh | SKILLS_REF=v0.5.1 sh
 ```
 
 What the script does — and deliberately does **not** do:
