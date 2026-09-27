@@ -5,7 +5,12 @@ Notable changes to the wAI skill suite. Format loosely follows
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
-## [Unreleased]
+## [0.5.0] — 2026-09-27
+
+Lean, measured: operational output shrinks (review −64 %, hand-back −68 % in a controlled A/B)
+while the record stays detailed; `session-cost.sh` makes context cost measurable; the field
+fixes of #84 land; the gate books every early exit, and `catalog-lint` finds its repo from the
+directory the skills document.
 
 ### Added
 
