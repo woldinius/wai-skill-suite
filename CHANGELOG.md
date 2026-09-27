@@ -17,8 +17,8 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 ### Evidence
 
 - **Grilling in rounds, measured.** A controlled A/B with a simulated product owner (two
-  planning runs per arm): interruptions −68 %, planner tokens −37 %, more decisions asked,
-  plan quality within the noise (blind grading against the owner's brief).
+  planning runs per arm): interruptions −68 %, planner tokens −37 %; the decisions asked and
+  the plan quality within the noise (blind grading against the owner's brief).
   [Experiment](docs/experiments/2026-09-27-grilling-rounds-ab.md).
 
 ## [0.5.0] — 2026-09-27

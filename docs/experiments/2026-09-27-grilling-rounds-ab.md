@@ -21,18 +21,20 @@ time. Does that save the human interruptions and the run tokens, and does the pl
   vetoes only what contradicts the brief.
 - **The channel is files.** The planner writes each message to `grill/q-<n>.md` and ends its
   turn, as in a chat; the owner replies in `grill/a-<n>.md`. The main session relayed only the
-  file names.
+  file names (one exception: see *Limits*).
 - **Grading, blind.** A third agent received the four plans renamed `P1`–`P4` in random order,
   with the requirement and the brief, and graded each brief item: *match*, *absent* (silent, open,
   or only a risk) or *contradicts*.
 - **Two runs per arm (n = 2).** The sandboxes were deleted after this report was reviewed.
 
 **Metrics.** *Interruptions:* messages to the owner before the plan was written (question rounds
-and the playback). *Decisions asked:* numbered questions across all rounds. *Words the owner
-read:* those messages, without the plan sent for approval (three of four runs sent it).
-*Tokens and responses:* `session-cost.sh` on the planner's transcript.
+and the playback). *Numbered questions:* the question numbers across all rounds; *asks, as the
+owner counted them:* its own log, which counts a second ask under one number separately. *Words
+the owner read:* those messages, without the plan sent for approval (three of four runs sent it).
+*Tokens and responses:* `session-cost.sh` on the planner's transcript; *all tokens* = output +
+fresh input + cache read.
 
-<details><summary>The requirement, the brief (hidden from the planner), and both prompts (paths removed)</summary>
+<details><summary>Requirement, brief (hidden from the planner) and both prompts</summary>
 
 The requirement (`REQUIREMENT.md`):
 
@@ -45,6 +47,10 @@ working.
 The brief:
 
 ```
+# Product owner brief (hidden from the planner)
+
+You own `inventory`, a small shop's stock tool. Your decisions, and ONLY these:
+
 1. Locations are free-text names (a shop has at most ~10). Existing data goes into a location called `main`.
 2. Existing single-location JSON files migrate automatically on first load; keep a `.bak` copy of the old file.
 3. Transfers: `move <item> <qty> <from> <to>`, all-or-nothing — fail if the source has too little; never a partial move.
@@ -57,6 +63,7 @@ The brief:
 10. One user at a time; no locking — document that.
 11. Quantities are whole pieces only (integers).
 12. A location can be removed only when empty; otherwise it is an error.
+
 Anything else: you have no preference.
 ```
 
@@ -104,44 +111,55 @@ The first file is grill/q-1.md.
 | Metric | A1 | A2 | B1 | B2 | mean A | mean B | Δ |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Interruptions before the plan | 7 | 12 | 3 | 3 | 9.5 | 3 | **−68 %** |
-| Decisions asked | 6 | 11 | 15 | 9 | 8.5 | 12 | +41 % |
+| Numbered questions | 6 | 11 | 15 | 9 | 8.5 | 12 | +41 % |
+| Asks, as the owner counted them | 6 | 25 | 15 | 9 | 15.5 | 12 | −23 % |
 | Words the owner read before the plan | 2,777 | 4,929 | 3,730 | 2,745 | 3,853 | 3,238 | −16 % |
 | Responses | 60 | 72 | 32 | 45 | 66 | 38.5 | −42 % |
 | Output tokens | 100,923 | 118,464 | 146,272 | 121,818 | 109,694 | 134,045 | +22 % |
 | Fresh input tokens | 213,048 | 210,032 | 394,391 | 234,375 | 211,540 | 314,383 | +49 % |
 | Cache-read tokens | 8.2 M | 10.5 M | 4.6 M | 6.7 M | 9.4 M | 5.7 M | −40 % |
 | All tokens | 8.5 M | 10.9 M | 5.2 M | 7.1 M | 9.7 M | 6.1 M | **−37 %** |
+| Average context per response | 140,241 | 149,227 | 156,474 | 154,189 | 144,734 | 155,332 | +7 % |
 | Plan (words) | 3,357 | 4,274 | 5,408 | 3,443 | 3,816 | 4,426 | +16 % |
 | Brief items: match · absent · contradicts | 11 · 1 · 0 | 12 · 0 · 0 | 10 · 0 · 2 | 11 · 1 · 0 | | | |
 
 ## Reading
 
-- **Fewer interruptions, more decisions.** Both B runs stopped the owner three times before the
-  plan, the A runs 7 and 12 times, and B asked more decisions in them. A round asks the whole
-  frontier, so the owner answers in batches: each B message was longer (670–1,770 words against
-  270–840); in total the owner read 16 % less.
-- **The token bill fell with the turn count.** Responses −42 %, cache reads −40 %, all tokens
-  −37 %; every B run is below every A run. Output (+22 %) and fresh input (+49 %) rose: fewer,
-  larger turns. In the lean-output A/B ([2026-09-26](2026-09-26-lean-output-ab.md)) the turn count
-  rose and the bill did not fall; here the turn count is the lever, and it moved the bill.
-- **Plan quality held.** All four plans match 10–12 of the 12 brief items. Item 9 (how item names
-  match) is absent from A1 and B2; neither interview asked it. B1's two contradictions (negative
-  and fractional numbers from old files carried over) trace to one answer of the simulated owner:
-  asked in round 2 whether odd numbers in old files are carried over unchanged, it chose that
-  option and confirmed the reading in the playback. The plan follows the answer.
-- **The playback catches what the questions miss, in both arms.** B's playbacks listed the
-  planner's assumptions and drew two vetoes each (the `move` syntax in both; whole-number
-  quantities; name matching). A2's playback caught name matching; A1's playback passed, and its
-  plan approval caught the `move` syntax.
+- **Fewer interruptions; the decisions asked within the noise.** Both B runs stopped the owner
+  three times before the plan, the A runs 7 and 12 times. How many decisions reached the owner
+  depends on the count: by numbered questions B asked more (12 against 8.5), by the owner's own
+  count fewer (12 against 15.5) — A's single questions often carried a second ask. A round asks
+  the whole frontier, so B's question rounds ran 814–1,766 words against 272–495 for A's single
+  questions; in total the owner read about as much (−16 %, inside the spread).
+- **The token bill fell with the turn count.** Responses −42 %, cache reads −40 %, all tokens −37 %;
+  every B run is below every A run. The context per response stayed alike (+7 %); output (+22 %) and
+  fresh input (+49 %) rose: fewer, larger turns. In the lean-output A/B
+  ([2026-09-26](2026-09-26-lean-output-ab.md)) the turn count rose and the bill did not fall; here
+  the turn count is the lever, and it moved the bill.
+- **Plan quality: within the noise.** All four plans match 10–12 of the 12 brief items. Item 9 (how
+  item names match) is absent from A1 and B2; neither interview asked it (for A1, see *Limits*).
+  B1's two contradictions (negative and fractional numbers from old files carried over) trace to one
+  answer of the simulated owner: asked in round 2 whether odd numbers in old files are carried over
+  unchanged, it chose that option and confirmed the reading in the playback. The plan follows the
+  answer.
+- **The playback catches what the questions miss, in both arms.** B's playbacks listed the planner's
+  assumptions and drew two vetoes each (the `move` syntax in both; whole-number quantities; name
+  matching), and B2's plan approval vetoed an added rule (never remove the last location). A2's
+  playback caught name matching; A1's playback passed, and its plan approval caught the `move`
+  syntax.
 
 **What follows.** Rounds cut the interruptions by two thirds and the planner's tokens by a third,
-at plan quality within the noise of this sample — the first change in this release line that
-lowered the token bill, through the turn count.
+at plan quality within the noise of this sample — the first measured change in this release
+line to lower the token bill, through the turn count.
 
 **Limits.** n = 2 per arm, one requirement, one brief. The simulated owner is an instrument with
-its own errors: once it added a decision the plan lacked, against its rules — that answer was
-re-issued under the rules before the planner read it (A1, plan approval); once it answered
-against its own brief (B1, above); at least once it named a detail next to an asked decision (A1: the `.bak` copy). B2 also
-watched for the answer files with background shell loops, which adds wake-ups to its response
-count. No subagents, so the protocol's background lookup was not exercised; no question UI; the
-same model for all planners; local only.
+its own errors. Once it added a decision the plan lacked, against its rules: A1's first
+plan-approval answer asked for item 9 (name matching). The main session reminded it of its
+rules — the one message beyond a file name it relayed — and the answer was re-issued before the
+planner read it; had it stood, item 9 would have reached A1's plan through the owner, not the
+interview. Once it answered against its own brief (B1, above); at least once it named a detail
+next to an asked decision (A1: the `.bak` copy); once it mentioned "the brief" to the planner
+(A2, playback). B2 also watched for the answer files with background shell loops, which adds
+wake-ups to its response count. No subagents, so the protocol's background lookup was not
+exercised; no question UI; local only. The planners and the grader ran on `claude-opus-5-5`, the
+simulated owners on `claude-sonnet-5`.
