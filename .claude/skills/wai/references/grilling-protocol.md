@@ -45,6 +45,7 @@ Number the questions consecutively across rounds; each one reads:
 ```
 **Q<n> · <title>**
 <the decision and its choices: A / B / C, each with what it costs>
+
 → **Recommended:** <answer> — <why, in one line>
 
 ---
@@ -59,7 +60,7 @@ most 4 questions, 2–4 options each) is asked there instead, the recommended op
   questions across the standard dimensions, skipping what context already answers. Right for
   requirements that are mostly clear.
 - **Grilling** (this protocol): the human asks for it ("grill me", "push me on this", "poke holes
-  in it"), or the requirement is high-stakes/fuzzy enough that a wrong assumption is
+  in it"), or the requirement is fuzzy and high-stakes enough that a wrong assumption is
   expensive (contract domain, token economy, new architecture). Escalate from normal interview
   to grilling when answers keep revealing new unknowns.
 
@@ -67,8 +68,12 @@ most 4 questions, 2–4 options each) is asked there instead, the recommended op
 
 In a `wai-team` run nobody answers, so **no decision is self-answered**: each open one becomes a
 **marked assumption** with its recommended answer and joins the run's **decision list**. If the
-grill trigger fires — fuzzy **and** high-stakes — the issue is not built on guesses; it waits for
-an attended grill.
+grill trigger fires — fuzzy and high-stakes — the issue is not built on guesses; it waits for an
+attended grill.
+
+Under merge policy (a), a marked assumption on a decision that would not trigger a grill does not
+hold the merge — it rides the decision list for the human's veto after the fact. A decision that
+would trigger a grill (fuzzy and high-stakes) holds the issue: nothing merges on it.
 
 ## Recording the outcome
 

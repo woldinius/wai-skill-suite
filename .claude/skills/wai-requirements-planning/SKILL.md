@@ -83,8 +83,8 @@ human gave you in chat, and note the gap in the plan.
    nice-to-know details — but for a genuinely fuzzy requirement, prefer one more round of
    questions over guessing. The answers are the basis of the plan.
 
-   **Grill-me mode** — when the human asks for it ("grill me"), or the
-   requirement is high-stakes/fuzzy (contract domain, token economy, new architecture), switch
+   **Grill-me mode** — when the human asks for it ("grill me"), or the requirement is
+   fuzzy and high-stakes (contract domain, token economy, new architecture), switch
    to `references/grilling-protocol.md` (in the `wai` skill): questions in **rounds**, each with
    a **recommended answer**, facts looked up instead of asked, and a **hard gate** — no plan
    until the human confirms shared understanding.

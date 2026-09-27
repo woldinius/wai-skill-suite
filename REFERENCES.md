@@ -224,10 +224,12 @@ protocol (`install.sh` ships `.claude/skills/`, not this file):
 **Adopted as ideas, in our own words:** a recommended answer on every question (rule 2); "one at a
 time" as the human's opt-out (rule 1); numbered questions answerable by number, the recommendation
 on its own line (§*Question format*); facts looked up by a background subagent, so only the
-questions that depend on them wait (rule 3).
+questions that depend on them wait (rule 3); and, from `question-limits.md`, a redundant or trivial
+question as a quality bug, not a quantity bug, and the human steering with natural language
+instead of a cap (both rule 5).
 
 **Ours:** the question UI for a round that fits it; the *Assumptions I made* line; and §*Unattended
-runs* — a `wai-team` run self-answers no decision, and a fuzzy, high-stakes issue waits for an
+runs* — a `wai-team` run self-answers no decision, and a fuzzy and high-stakes issue waits for an
 attended grill (wired into `wai-team` step 3 and planning step 1). Upstream declines an async mode
 for the same reason: a grill nobody answers yields the agent's opinion.
 

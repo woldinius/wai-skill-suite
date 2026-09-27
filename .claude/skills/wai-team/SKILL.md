@@ -71,11 +71,12 @@ commission; what scales down for a small run is the ceremony, never the consent.
 the mandate, with three answers. **(a) The repo's own mode — the default.** In `solo`, each clean
 PR (gate GO, a fresh-context review with no Blocker and no Major) merges under the gate as its cycle
 ends: that is what solo means, and it keeps the tempo. In `team`, auto-merge is armed and a second
-human approves. With `autonomous` mandated, (a) is the only policy — its drain *is* the merge, so
-(b) and (c) cannot be mandated together with it. **(b) Decide at the end** — the run holds every
-clean PR and puts them to the human in one question in the report (step 7). **(c) Hand over** —
-nothing merges in this run. Under (b) and (c) `main` does not advance during the run, so the
-team-repo rule applies to every dependent issue (step 3). The autonomy allowlist
+human approves. Marked assumptions hold neither merge: the human may veto them after the fact; a
+grill trigger holds its issue. With `autonomous` mandated, (a) is the only policy — its drain *is*
+the merge, so (b) and (c) cannot be mandated together with it. **(b) Decide at the end** — the run
+holds every clean PR and puts them to the human in one question in the report (step 7).
+**(c) Hand over** — nothing merges in this run. Under (b) and (c) `main` does not advance during
+the run, so the team-repo rule applies to every dependent issue (step 3). The autonomy allowlist
 (`AUTONOMY_SAFE_PATHS`) is not part of this choice — it is the floor of the `autonomous` drain,
 below.
 
@@ -120,7 +121,7 @@ this skill adds orchestration, **not** new authority.
    well-specified small issue skips the plan doc, per the planning skill's own rules) →
    `wai-implementation` (includes the plan-delta check) → `wai-testing` → `wai-pr-review`.
    **Planning self-answers nothing:** open decisions become **marked assumptions** on the decision
-   list; fuzzy **and** high-stakes → the issue waits there for an attended grill
+   list; fuzzy and high-stakes → the issue waits there for an attended grill
    (`grilling-protocol.md` §*Unattended runs*).
    Under a **packaged mandate** the cycle runs once per **package**, on the package's one branch — the
    issues inside are still claimed one by one, counterproofed one by one, and each closes through

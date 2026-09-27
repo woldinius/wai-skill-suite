@@ -2053,10 +2053,22 @@ if grl_has "$GRP" '**Ask in rounds over the frontier.**' \
    && grl_has "$GRP" '**Opt-out:** when the human asks for "one at a time"'; then
   ok "grilling asks the whole frontier per round, and 'one at a time' is the human's opt-out"
 else bad "grilling asks the whole frontier per round, and 'one at a time' is the human's opt-out" "the rounds rule, the frontier or the opt-out is gone from grilling-protocol.md"; fi
+# Review of #98, m1: four rules could be deleted with every anchor green — the frontier recompute,
+# the background Explore lookup, the hard gate and planning's unattended line. Each has its own now.
+if grl_has "$GRP" "Recompute the frontier after each round's answers."; then
+  ok "grilling recomputes the frontier after each round's answers"
+else bad "grilling recomputes the frontier after each round's answers" "rule 1 no longer recomputes the frontier after each round"; fi
+if grl_has "$GRP" 'do it **in the background** through a subagent (the built-in `Explore`)' \
+   && grl_has "$GRP" 'so only the questions that depend on its result wait'; then
+  ok "grilling looks facts up through a background Explore subagent; only dependent questions wait"
+else bad "grilling looks facts up through a background Explore subagent; only dependent questions wait" "rule 3's background Explore lookup, or its only-dependents-wait clause, is gone"; fi
 if grl_has "$GRP" 'Stop when the frontier is empty and nothing is silently assumed' \
    && grl_has "$GRP" '**Assumptions I made:**'; then
   ok "grilling stops on an empty frontier, and the playback names its assumptions"
 else bad "grilling stops on an empty frontier, and the playback names its assumptions" "the stopping rule or the 'Assumptions I made' line is gone"; fi
+if grl_has "$GRP" '**Hard gate.** Do **not** start planning output or implementation until the human confirms shared understanding has been reached.'; then
+  ok "grilling keeps its hard gate: nothing starts until the human confirms shared understanding"
+else bad "grilling keeps its hard gate: nothing starts until the human confirms shared understanding" "rule 7's hard-gate sentence is gone from grilling-protocol.md"; fi
 if grep -q '^## Question format' "$GRP" && grl_has "$GRP" '**Q<n> · <title>**' \
    && grl_has "$GRP" '→ **Recommended:**' && grl_has "$GRP" 'answer by number' \
    && grl_has "$GRP" 'at most 4 questions, 2–4 options each'; then
@@ -2070,6 +2082,11 @@ if grl_has "$ROOT/.claude/skills/wai-team/SKILL.md" '**Planning self-answers not
    && grl_has "$ROOT/.claude/skills/wai-team/SKILL.md" 'waits there for an attended grill (`grilling-protocol.md` §*Unattended runs*)'; then
   ok "wai-team wires the unattended grilling rule into its per-issue cycle"
 else bad "wai-team wires the unattended grilling rule into its per-issue cycle" "step 3 no longer says planning self-answers nothing, or no longer points at §Unattended runs"; fi
+PLN="$ROOT/.claude/skills/wai-requirements-planning/SKILL.md"
+if grl_has "$PLN" '**Unattended** (a `wai-team` run): no decision is self-answered' \
+   && grl_has "$PLN" "the protocol's §*Unattended runs*"; then
+  ok "planning wires the unattended grilling rule into its grill-me step"
+else bad "planning wires the unattended grilling rule into its grill-me step" "step 1's unattended line, or its pointer at §Unattended runs, is gone"; fi
 GNOTE="$ROOT/.claude/skills/wai/references/third-party-notices.md"
 if grep -qF 'Copyright (c) 2026 Matt Pocock' "$ROOT/REFERENCES.md" \
    && grep -qF 'Copyright (c) 2026 Matt Pocock' "$GNOTE" 2>/dev/null \
