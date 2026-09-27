@@ -398,6 +398,34 @@ if grep -qE '^\| .* \| 1 \| MOOT \|' "$D/docs/architecture/gate-ledger.md" 2>/de
   ok "the MOOT short-circuit writes both books before its first output line, too"
 else bad "the MOOT short-circuit writes both books before its first output line, too" "a MOOT row is missing in the ledger or the run log"; fi
 
+# A GATE THAT RAN LEAVES A ROW — the no-gh UNKNOWN too (#89). The tool check exited 2 before either
+# writer ran, so a run without gh read exactly like a run that never happened. The PATH below holds
+# the toolbox and git and no gh at all (the stub dir carries a gh, so it stays off this PATH); its
+# sh is this harness's own, so the gate runs under the shell the suite runs under.
+NOGHBIN="$TMP/noghbin"; mkdir -p "$NOGHBIN"
+for t in sh git date awk sed grep tr head tail cat mkdir dirname; do
+  tp="$(command -v "$t" 2>/dev/null)" && ln -sf "$tp" "$NOGHBIN/$t"
+done
+gfix; printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n| 2026-09-01T00:00Z | 7 | GO | x | ok |\n' \
+  > "$D/docs/architecture/gate-ledger.md"
+out="$( cd "$D" && PATH="$NOGHBIN" "$NOGHBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "gh absent from PATH → UNKNOWN, exit 2, with its VERDICT line (#89)" 2 "$rc" "$out" 'VERDICT: UNKNOWN' 'VERDICT: (GO|NO-GO)'
+_lr="$(grep -c '^| 20' "$D/docs/architecture/gate-ledger.md" 2>/dev/null)"
+if [ "$_lr" = 2 ] && tail -1 "$D/docs/architecture/gate-ledger.md" | grep -qF '| 1 | UNKNOWN | ? gh is not installed'; then
+  ok "  · exactly one new ledger row: UNKNOWN, with the reason"
+else bad "  · exactly one new ledger row: UNKNOWN, with the reason" "rows: ${_lr:-0} (1 seeded), last: $(tail -1 "$D/docs/architecture/gate-ledger.md" 2>&1)"; fi
+_rr="$(grep -c '^| 20' "$D/docs/architecture/run-log.md" 2>/dev/null)"
+if [ "$_rr" = 1 ] && grep -qF '| wai-pr-review | PR #1 | UNKNOWN |' "$D/docs/architecture/run-log.md"; then
+  ok "  · and exactly one run-log row"
+else bad "  · and exactly one run-log row" "run-log rows: ${_rr:-0}"; fi
+# Books before output (#64): with stdout AND stderr closed, the first write of either kills the run.
+gfix; ( cd "$D" && PATH="$NOGHBIN" "$NOGHBIN/sh" "$GATE" 1 >&- 2>&- ) || true
+if grep -qF '| 1 | UNKNOWN |' "$D/docs/architecture/gate-ledger.md" 2>/dev/null && grep -qF '| wai-pr-review | PR #1 | UNKNOWN |' "$D/docs/architecture/run-log.md" 2>/dev/null; then
+  ok "  · both books before any output (stdout and stderr closed)"
+else bad "  · both books before any output (stdout and stderr closed)" "a row is missing in the ledger or the run log"; fi
+gfix; out="$( cd "$D" && PATH="$NOGHBIN" MERGE_GATE_LEDGER=/proc/nonexistent/x/gate.md RUN_LOG=/proc/nonexistent/x/run.md "$NOGHBIN/sh" "$GATE" 1 2>&1 )"; rc=$?
+assert "  · an unwritable ledger and run log never change the verdict (fail-open)" 2 "$rc" "$out" 'VERDICT: UNKNOWN'
+
 # A ROW IS A LINE (this repo, 2026-09-13). Tagging the last row's outcome with a tool that trimmed the
 # trailing newline left the file without one; the next verdict was appended ONTO that row — 13
 # fields on one line — and gate-stats.sh, which recognises rows by their leading `| YYYY-`, never
@@ -712,6 +740,38 @@ assert "AGENTS.md citing a baseline ID the catalog tailored away → the adopt-o
 lfix; rm -f "$D/CLAUDE.md" "$D/AGENTS.md"
 out="$(lint)"; rc=$?
 assert "no CLAUDE.md and no AGENTS.md → not an error, OK" 0 "$rc" "$out" 'VERDICT: OK' 'CLAUDE.md|AGENTS.md'
+
+# THE DOCUMENTED CALL (#88). wai-pr-review runs `sh ../wai-init/scripts/catalog-lint.sh` from its own
+# directory; read against the cwd, every default path missed and that call exited 2 on every run.
+# Inside a git repo the defaults now resolve against the worktree root, as in the seven scripts fixed
+# in 0.3.0. The copy sits under wai-init/, which no check reads, so the verdict stays the fixture's.
+# Outside a repo the cwd stays the base: every other fixture in this section is that case.
+lskill() {   # the documented call, from .claude/skills/wai-pr-review; "$@" = an explicit argument
+  mkdir -p "$D/.claude/skills/wai-init/scripts" && cp "$LINT" "$D/.claude/skills/wai-init/scripts/"
+  ( cd "$D/.claude/skills/wai-pr-review" && sh ../wai-init/scripts/catalog-lint.sh "$@" 2>&1 )
+}
+lfix; ( cd "$D" && git init -q . ) 2>/dev/null
+out="$(lskill)"; rc=$?
+root_out="$(lint)"
+assert "the documented call, from the skill dir of a git repo → exit 0 (#88)" 0 "$rc" "$out" 'VERDICT: OK'
+if [ "$out" = "$root_out" ]; then ok "  · and the same output, line for line, as from the repo root"
+else bad "  · and the same output, line for line, as from the repo root" "from the root: $(printf '%s' "$root_out" | tr '\n' '/')"; fi
+# A red lint stays red: resolving the catalog alone would read docs/ from the skill dir, find
+# nothing there, and pass — a false OK, the worse half of the same bug.
+lfix; ( cd "$D" && git init -q . ) 2>/dev/null
+printf 'The plan anchors this to `PAY-9`.\n' > "$D/docs/plan.md"
+out="$(lskill)"; rc=$?
+assert "  · a red lint stays red from there: docs/ is read at the repo root" 1 "$rc" "$out" \
+  'cited in docs/ but neither live nor retired nor in the baseline: PAY-9'
+# An explicit argument still wins, read against the cwd it was typed in; the consumers stay the
+# repo's. The root catalog is red here (a duplicate), so a lint that ignored the argument shows it.
+lfix; ( cd "$D" && git init -q . ) 2>/dev/null
+mkdir -p "$D/alt"; cp "$D/docs/architecture/quality-attributes.md" "$D/alt/qa.md"
+printf -- '- **SEC-1 · Auth again** — a. *Red Flag:* b.\n' >> "$D/docs/architecture/quality-attributes.md"
+printf 'Every review cites `GDPR-4`.\n' > "$D/CLAUDE.md"
+out="$(lskill ../../../alt/qa.md)"; rc=$?
+assert "  · an explicit argument still wins, read from the cwd; CLAUDE.md is read at the root" 1 "$rc" "$out" \
+  'cited in CLAUDE.md but neither live nor retired nor in the baseline: GDPR-4' 'duplicate IDs: SEC-1'
 
 # ── dep-cve-scan.sh ─────────────────────────────────────────────────────────────────────────────
 # The whole point: a scanner that did NOT run must read as `not_measured`, NEVER as 0 / clean. And a

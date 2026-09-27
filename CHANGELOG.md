@@ -17,6 +17,10 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ### Changed
 
+- **`test` is a commit type.** `agent-git-protocol.md` allows `test` for a commit that only adds or
+  changes tests, in its commit and branch type lists alike; runs had used `chore(tests)`.
+  ([#90](https://github.com/woldinius/wai-skill-suite/issues/90))
+
 - **Lean output.** `open-items.sh --brief` prints only classes with findings plus one summary
   line; the eight skills that paste the footer use it, shaped by the new `hand-back.md`. A review
   lives once, in the PR comment, quoting only the gate's `VERDICT:` and `✗`/`?` lines, one comment
@@ -75,6 +79,15 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ### Fixed
 
+- **`catalog-lint.sh` works from a skill's directory.** Its default paths resolved against the cwd,
+  so the documented call from `wai-pr-review`'s directory always exited 2 (no catalog). They now
+  resolve against the git worktree root, like the seven scripts fixed in 0.3.0; an explicit
+  argument still wins; outside a repo the cwd stays the base.
+  ([#88](https://github.com/woldinius/wai-skill-suite/issues/88))
+- **`merge-gate.sh` without `gh` leaves its rows.** The tool check exited 2 before either writer
+  ran, so a gate that ran read as one that never did. That UNKNOWN now writes one ledger row and one
+  run-log row before its first output line, then prints its `VERDICT:` line; logging stays
+  fail-open. ([#89](https://github.com/woldinius/wai-skill-suite/issues/89))
 - **`retro-compliance.sh` no longer calls two units a rate.** The line labelled `compliance:` set
   invocation-log rows against run-log rows per skill (a line such as `wai-implementation invoked 3
   · logged 15` — an illustration, not a measured number).

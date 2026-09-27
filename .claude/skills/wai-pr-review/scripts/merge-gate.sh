@@ -253,7 +253,20 @@ emit_runlog() {
 }
 
 # --- 0. Toolchain -------------------------------------------------------------------------------
-command -v gh  >/dev/null 2>&1 || { echo "merge-gate: gh is not installed — cannot verify anything." >&2; exit 2; }
+# WITHOUT gh THE VERDICT IS UNKNOWN, AND IT IS BOOKED: both rows before the first output line, like
+# every verdict below. Logging fails open here too, so an unwritable book never changes the exit 2.
+# Why: docs/rationale/merge-gate.md § A gate without gh still leaves a row
+if ! command -v gh >/dev/null 2>&1; then
+  [ -n "$PR" ] || PR='?'        # without gh no PR can be looked up; the row says so
+  unknown "gh is not installed — cannot verify anything"
+  emit_ledger UNKNOWN "$REASONS"
+  emit_runlog UNKNOWN
+  derive_ledger_note            # after BOTH books; without gh it makes no network call
+  echo "merge-gate: gh is not installed — cannot verify anything." >&2
+  echo "VERDICT: UNKNOWN — a precondition could not be verified. Leave the PR for the human."
+  [ -z "$LEDGER_NOTE" ] || printf '%s\n' "$LEDGER_NOTE"
+  exit 2
+fi
 command -v git >/dev/null 2>&1 || { echo "merge-gate: git is not installed." >&2; exit 2; }
 gh auth status >/dev/null 2>&1 || { echo "merge-gate: gh is not authenticated — cannot verify anything." >&2; exit 2; }
 
