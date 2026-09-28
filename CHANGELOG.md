@@ -5,7 +5,12 @@ Notable changes to the wAI skill suite. Format loosely follows
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
-## [Unreleased]
+## [0.5.2] — 2026-09-28
+
+The review runs in an agent: `wai-reviewer`, with `wai-pr-review` preloaded, reviews on fresh
+context and merges nothing — every `wai-team` review, attended ones on request. Measured in a
+lifecycle A/B: the reviews held, the run did not get cheaper. The installer's prune stays in its
+namespace.
 
 ### Added
 
