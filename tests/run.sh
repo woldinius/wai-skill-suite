@@ -1983,7 +1983,15 @@ echo "release-lint.sh"
 R1="$TMP/rl-undeclared"; rlrepo "$R1"
 out="$( sh "$RLS" "$R1" 2>&1 )"; rc=$?
 assert "release-lint: skills changed since the tag with nothing declared → STALE" 1 "$rc" "$out" \
-  'STALE 1 file\(s\) under \.claude/skills/ changed since v0\.1\.0'
+  'STALE 1 file\(s\) under \.claude/skills/ or \.claude/agents/ changed since v0\.1\.0'
+
+# 1b · The agents are executed too (#108): an agent-only change since the tag needs its declaration.
+R1B="$TMP/rl-agent"; rlrepo "$R1B"; mkdir -p "$R1B/.claude/agents"
+rlgit "$R1B" reset -q --hard v0.1.0; printf 'agent\n' > "$R1B/.claude/agents/wai-x.md"
+rlgit "$R1B" add -A; rlgit "$R1B" commit -q -m 'move an agent'
+out="$( sh "$RLS" "$R1B" 2>&1 )"; rc=$?
+assert "release-lint: an agent changed since the tag with nothing declared → STALE" 1 "$rc" "$out" \
+  'STALE 1 file\(s\) under \.claude/skills/ or \.claude/agents/ changed since v0\.1\.0'
 
 # 2 · The Keep-a-Changelog form.
 R2="$TMP/rl-unreleased"; rlrepo "$R2"
@@ -2027,8 +2035,89 @@ out="$( sh "$RLS" "$R7" 2>&1 )"; rc=$?
 assert "release-lint: no vX.Y.Z tag → visible SKIP, exit 0, no verdict invented" 0 "$rc" "$out" \
   'SKIP.*no vX\.Y\.Z tag' 'STALE'
 
-# 8 · And this repo, right now: the standing guard. It is the case that goes red the day work
-#     lands in .claude/skills/ with no changelog entry, or a tag is cut past the plugin manifests.
+# 8–12 · The install pins (#83). rlcut is a cut in the shape this repo makes them: the release
+#     commit (changelog + manifest at 0.2.0) tagged v0.2.0, so relations 1 and 2 agree and the pins
+#     are all that is left to disagree. rlpin writes the two install examples in their real shapes:
+#     README.md pins on lines 3 and 4 (the curl line carries its tag twice), install.sh on line 2.
+rlcut() {
+  rlrepo "$1"
+  printf '# Changelog\n\n## [0.2.0] — 2026-02-02\n\n- the fix\n\n## [0.1.0] — 2026-01-01\n' > "$1/CHANGELOG.md"
+  printf '{\n  "name": "x",\n  "version": "0.2.0"\n}\n' > "$1/.claude-plugin/plugin.json"
+  rlgit "$1" add -A; rlgit "$1" commit -q -m 'cut 0.2.0'; rlgit "$1" tag v0.2.0
+}
+rlpin() {  # rlpin DIR README-PIN INSTALL-PIN
+  printf '# x\n\n    git clone --depth 1 --branch %s https://example.invalid/x.git /tmp/x\n    curl -fsSL https://example.invalid/x/%s/install.sh | SKILLS_REF=%s sh\n' \
+    "$2" "$2" "$2" > "$1/README.md"
+  printf '#!/usr/bin/env sh\n#   curl -fsSL https://example.invalid/x/%s/install.sh | SKILLS_REF=%s sh\n' "$3" "$3" > "$1/install.sh"
+}
+
+# 8 · The release window: v0.2.0 is cut, the pin-bump PR has not landed. Every pin lags at once,
+#     so the lint says it ONCE — each lagging file:line (the double-pinned curl line once), the tag
+#     to re-pin to, and the PR that closes it. Three STALE lines for one missing PR read as three
+#     faults to whoever meets the red first.
+R8="$TMP/rl-pins"; rlcut "$R8"; rlpin "$R8" v0.1.0 v0.1.0
+out="$( sh "$RLS" "$R8" 2>&1 )"; rc=$?
+assert "release-lint: the release window (tag cut, pins not bumped) is STALE, naming every file:line" 1 "$rc" "$out" \
+  'STALE release window.*v0\.2\.0 is cut.*README\.md:3 \(v0\.1\.0\), README\.md:4 \(v0\.1\.0\), install\.sh:2 \(v0\.1\.0\)\..*pin-bump PR.*to v0\.2\.0'
+assert "release-lint: …as ONE finding, not one per pinned line" 1 "$(printf '%s\n' "$out" | grep -c 'STALE')" "$out"
+
+# 9 · A pin-bump that missed a line: that line is named, and the current ones are not.
+rlpin "$R8" v0.2.0 v0.1.0
+out="$( sh "$RLS" "$R8" 2>&1 )"; rc=$?
+assert "release-lint: a pin behind the newest tag is STALE, and only its file:line is named" 1 "$rc" "$out" \
+  'STALE .*older tag: install\.sh:2 \(v0\.1\.0\)\.' 'README\.md:'
+
+# 10 · The pin-bump PR merged: every pin names the newest tag.
+rlpin "$R8" v0.2.0 v0.2.0
+out="$( sh "$RLS" "$R8" 2>&1 )"; rc=$?
+assert "release-lint: pins equal to the newest tag agree" 0 "$rc" "$out" 'agrees with its newest tag' 'STALE'
+
+# 11 · AHEAD is a tag this checkout does not have — numbers-lint check 1's finding. Reported here
+#      as well, it would prescribe a re-pin backwards.
+rlpin "$R8" v0.3.0 v0.3.0
+out="$( sh "$RLS" "$R8" 2>&1 )"; rc=$?
+assert "release-lint: a pin AHEAD of the newest tag is numbers-lint's finding, not this one's" 0 "$rc" "$out" \
+  'agrees with its newest tag' 'STALE'
+
+# 12 · Nothing pinned, nothing to fall behind: both files exist and name no vX.Y.Z.
+printf '# x\n\nInstall from a checkout you have read: sh install.sh\n' > "$R8/README.md"
+printf '#!/usr/bin/env sh\necho install\n' > "$R8/install.sh"
+out="$( sh "$RLS" "$R8" 2>&1 )"; rc=$?
+assert "release-lint: no pin in either file agrees — nothing pinned, nothing behind" 0 "$rc" "$out" \
+  'agrees with its newest tag' 'STALE'
+
+# 12b–d · The pin SHAPE (#110's review): the re-pin touches README.md alone, so an agent may merge
+#     it — only the tag may change. The canonical repository comes from the plugin manifest.
+R12="$TMP/rl-shape"; rlcut "$R12"
+printf '{\n  "name": "x",\n  "version": "0.2.0",\n  "repository": "https://github.com/o/r"\n}\n' > "$R12/.claude-plugin/plugin.json"
+rlgit "$R12" add -A; rlgit "$R12" commit -q -m 'name the repository'
+rlshape() {  # rlshape DIR CLONE-LINE CURL-LINE
+  printf '# x\n\n    %s\n    %s\n' "$2" "$3" > "$1/README.md"; printf '#!/usr/bin/env sh\n' > "$1/install.sh"
+}
+rlshape "$R12" 'git clone --depth 1 --branch v0.2.0 https://github.com/o/r.git /tmp/wai' \
+               'curl -fsSL https://raw.githubusercontent.com/o/r/v0.2.0/install.sh | SKILLS_REF=v0.2.0 sh'
+out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
+assert "release-lint: pin lines in the canonical shape for the manifest's repository agree" 0 "$rc" "$out" \
+  'agrees with its newest tag' 'STALE'
+rlshape "$R12" 'git clone --depth 1 --branch v0.2.0 https://github.com/o/r.git /tmp/wai' \
+               'curl -fsSL https://raw.githubusercontent.com/evil/r/v0.2.0/install.sh | SKILLS_REF=v0.2.0 sh'
+out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
+assert "release-lint: a re-pin that also swapped the repository is STALE, naming the line" 1 "$rc" "$out" \
+  'STALE pin shape.*README\.md:4\.' 'README\.md:3'
+rlshape "$R12" 'git clone --depth 1 --branch v0.2.0 https://github.com/o/r.git /tmp/wai' \
+               'curl -fsSL https://raw.githubusercontent.com/o/r/v0.2.0/install.sh | SKILLS_REF=v0.1.0 sh'
+out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
+assert "release-lint: two different tags on one pin line are STALE (script and tree would differ)" 1 "$rc" "$out" \
+  'STALE pin shape.*README\.md:4\.'
+rlshape "$R12" 'git  clone --depth 1 --branch v0.2.0 https://github.com/evil/r.git /tmp/wai' \
+               'curl -fsSL https://raw.githubusercontent.com/o/r/v0.2.0/install.sh | SKILLS_REF=v0.2.0 sh'
+out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
+assert "release-lint: a clone line with a foreign repository — spelled 'git  clone' — is STALE" 1 "$rc" "$out" \
+  'STALE pin shape.*README\.md:3\.' 'README\.md:4'
+
+# 13 · And this repo, right now: the standing guard. It is the case that goes red the day work
+#     lands in .claude/skills/ with no changelog entry, or a tag is cut past the plugin manifests
+#     or past the install pins — the last on every cut, until the pin-bump PR lands (#83).
 #
 #     IT MUST ALSO PROVE IT MEASURED. The first version of this case asserted only `exit 0` and
 #     "no STALE" — and case 7 above shows exactly how that reads green having checked nothing: a

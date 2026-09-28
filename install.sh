@@ -10,8 +10,9 @@
 #
 # Usage (run in your project root) — from a checkout you have read:
 #   sh install.sh [target-project-dir]
-# or, pinned to a release (tests/numbers-lint.sh checks this tag exists):
-#   curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.5.2/install.sh | SKILLS_REF=v0.5.2 sh
+# or, pinned to a release — the tagged command lives in README.md § Installation, the one place a
+# release pin is written, so re-pinning after a cut touches no guarded file:
+#   curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/<tag>/install.sh | SKILLS_REF=<tag> sh
 # or, unpinned (latest main):
 #   curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/main/install.sh | sh
 #

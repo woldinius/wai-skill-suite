@@ -93,9 +93,9 @@ Not the gate alone — merge gates with exit codes exist elsewhere. What this su
   matching what a script can measure — including whether a referenced release tag actually exists.
   [`tests/release-lint.sh`](tests/release-lint.sh) fails it when the tree disagrees with that tag:
   work landing in the skills a user *executes* with nothing declared in the changelog, or a plugin
-  version string fallen behind the newest tag. It exists because a fix for a verdict-corrupting
-  bug once sat on `main`, unreleased, under install instructions that pinned the release without
-  it — and every check in this repo read green.
+  version string or an install pin fallen behind the newest tag. It exists because a fix for a
+  verdict-corrupting bug once sat on `main`, unreleased, under install instructions that pinned the
+  release without it — and every check in this repo read green.
 - **Every unmeasured claim was wrong — 9 of 9.** The
   [July retrospective](docs/retrospective-2026-07.md) counts the author's own error rate, by
   name, from the repo — not from memory.
@@ -197,7 +197,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took eleven repair commits in two days
 ([retrospective](docs/retrospective-2026-07.md)); the gate once failed *open* under zsh and later
-could never say GO at all. That is why [`tests/`](tests/) exists — 598 cases, **founded** on bugs
+could never say GO at all. That is why [`tests/`](tests/) exists — 609 cases, **founded** on bugs
 that shipped and grown into the regression guards around them, run on two shells in CI because
 shellcheck passed a construct that is a syntax error in the `/bin/sh` of macOS. (While the repo was
 private, the macOS job was dropped — its runners burned the Actions budget until no check could run
@@ -493,7 +493,7 @@ install.sh                                       # idempotent installer (inject/
 .claude-plugin/                                  # marketplace.json + plugin.json — the plugin install (skills + the reviewer agent)
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
 .github/                                         # CI (ci.yml: the suites on two shells), the field-report issue template, the logo
-tests/                                           # 598 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 609 cases for the deciding scripts — founded on bugs that shipped
 docs/                                            # history, empirics, field reports, ADRs, rationale, retrospectives, experiments, catalog, open questions, known criticism, publication rule, learnings
 ```
 

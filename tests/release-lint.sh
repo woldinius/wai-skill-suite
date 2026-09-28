@@ -16,19 +16,25 @@
 # produce identical output whether they happened or not. So this file measures the one relation
 # that was unmeasured: the tree, against the newest tag a reader can actually fetch.
 #
-# WHAT IT CHECKS — two relations, both mechanical, both fail-visible:
+# WHAT IT CHECKS — three relations, all mechanical, all fail-visible:
 #   1. Work shipped since the newest tag is DECLARED in CHANGELOG.md — an `## [Unreleased]`
 #      heading, or a `## [X.Y.Z]` heading newer than that tag (the release PR writes the version
 #      directly, minutes before the tag; both forms are honest, so both satisfy the check).
-#      TRIGGER SET: `.claude/skills/**` and nothing else. That is the tree a user EXECUTES — the
-#      set whose staleness produced the false verdict — and scoping it there is also what keeps
-#      the post-tag re-pin PR (README + install.sh) from demanding a declaration it has nothing
-#      to make. THE COST, NAMED: an installer-only change ships undeclared. Widen the set the day
-#      that costs something, not before.
+#      TRIGGER SET: `.claude/skills/**` and `.claude/agents/**` (#108), nothing else. That is
+#      the tree a user EXECUTES — the set whose staleness produced the false verdict — and
+#      scoping it there is also what keeps the post-tag re-pin PR (README + install.sh) from
+#      demanding a declaration it has nothing to make. THE COST, NAMED: an installer-only
+#      change ships undeclared. Widen the set the day that costs something, not before.
 #   2. The plugin's version string is never BEHIND the newest tag. The plugin channel installs
 #      from the DEFAULT BRANCH, so a `plugin.json` still reading `0.2.0` after `v0.3.0` is cut
 #      gives two people the same version string over two different gates. Deliberately ASYMMETRIC:
 #      AHEAD is the normal state of a release PR (version bumped, tag not yet pushed) and passes.
+#   3. No install pin is BEHIND the newest tag: every `vX.Y.Z` in README.md and install.sh — the
+#      set and pattern of numbers-lint check 1, which holds each pin to a tag that EXISTS (never
+#      ahead); this holds it to the NEWEST; together, equal. Red from every cut until the pin-bump
+#      PR lands, by design: the re-pin becomes a step no cut can forget (v0.3.3 stayed pinned
+#      through the v0.4.0 cut with every check green — #83). All lagging lines are ONE finding,
+#      each named file:line. THE COST, NAMED: a `vX.Y.Z` in either file is a pin, history included.
 #
 # Judgment stays out (ADR-0002): this file compares versions and asks whether a heading exists.
 # Whether the release NOTES are any good is a human's call and no script's.
@@ -80,7 +86,7 @@ fi
 if ! git -C "$ROOT" rev-parse -q --verify "$NEWEST^{commit}" >/dev/null 2>&1; then
   echo "  SKIP  $NEWEST is not a resolvable commit in this checkout — cannot diff the tree against it"
 else
-  SHIPPED="$(git -C "$ROOT" diff --name-only "$NEWEST..HEAD" -- .claude/skills 2>/dev/null || true)"
+  SHIPPED="$(git -C "$ROOT" diff --name-only "$NEWEST..HEAD" -- .claude/skills .claude/agents 2>/dev/null || true)"
   if [ -n "$SHIPPED" ]; then
     NFILES="$(printf '%s\n' "$SHIPPED" | grep -c .)"
     DECLARED=no
@@ -90,7 +96,7 @@ else
         if [ "$(ver_key "$v")" -gt "$NEWEST_KEY" ]; then DECLARED=yes; break; fi
       done
     fi
-    [ "$DECLARED" = yes ] || stale "$NFILES file(s) under .claude/skills/ changed since $NEWEST, and CHANGELOG.md declares nothing newer — an unreleased change to the tree a user EXECUTES needs an '## [Unreleased]' section (or the next version's)"
+    [ "$DECLARED" = yes ] || stale "$NFILES file(s) under .claude/skills/ or .claude/agents/ changed since $NEWEST, and CHANGELOG.md declares nothing newer — an unreleased change to the tree a user EXECUTES needs an '## [Unreleased]' section (or the next version's)"
   fi
 fi
 
@@ -107,6 +113,51 @@ for pf in "$ROOT/.claude-plugin/plugin.json" "$ROOT/.claude-plugin/marketplace.j
     fi
   done
 done
+
+# ── 3 · no install pin may be behind the newest tag ─────────────────────────────────────────────
+# BEHIND only, like relation 2: a pin AHEAD names a tag this checkout does not have — numbers-lint
+# check 1's finding, and naming it here would ask for a re-pin backwards. awk yields one
+# file:line=vX.Y.Z per line and version (the curl example carries its tag twice).
+BEHIND=""
+for pf in README.md install.sh; do
+  [ -f "$ROOT/$pf" ] || continue
+  for hit in $(awk -v f="$pf" '{ s = $0
+        while (match(s, /v[0-9]+\.[0-9]+\.[0-9]+/)) {
+          k = f ":" NR "=" substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH)
+          if (!(k in seen)) { seen[k] = 1; print k } } }' "$ROOT/$pf"); do
+    [ "$(ver_key "${hit#*=}")" -lt "$NEWEST_KEY" ] && BEHIND="$BEHIND, ${hit%=*} (${hit#*=})"
+  done
+done
+[ -z "$BEHIND" ] \
+  || stale "release window — $NEWEST is cut, the install pins still name an older tag:${BEHIND#,}. Close it with the pin-bump PR: re-pin those line(s) to $NEWEST (red until it merges, by design). Any other PR: update its branch after the pin-bump merges — a re-run alone re-tests the old merge"
+
+# ── 3b · a pin line has exactly its shape — only the tag varies ──────────────────────────────────
+# The re-pin touches README.md alone, so an agent may merge it; a pin line that also swapped the
+# host, the repository or the command (`curl … | sh`) must not ride along. The canonical repository
+# is the plugin manifest's "repository" field (a guardrail file since #108): EVERY README line that
+# carries a tag must equal one of two templates with that tag in every slot — keyed on the tag, not
+# on the command's spelling, so `git  clone`, `Git clone` or a split line cannot slip past. THE COST,
+# NAMED: an untagged line added inside a pinned block is not held here; README.md is not a guarded
+# file, so a human reading the re-pin diff is what catches that.
+MANIFEST_REPO="$(grep -oE '"repository"[[:space:]]*:[[:space:]]*"https://github\.com/[^"/]+/[^"/]+"' \
+                 "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | grep -oE 'https://github\.com/[^"]+' | head -1)"
+if [ -z "$MANIFEST_REPO" ]; then
+  echo "  SKIP  pin shape: no \"repository\" in .claude-plugin/plugin.json — nothing to hold the pin lines to"
+elif [ -f "$ROOT/README.md" ]; then
+  SLUG="${MANIFEST_REPO#https://github.com/}"
+  T_CLONE="git clone --depth 1 --branch <V> https://github.com/$SLUG.git /tmp/wai"
+  T_CURL="curl -fsSL https://raw.githubusercontent.com/$SLUG/<V>/install.sh | SKILLS_REF=<V> sh"
+  BADSHAPE="$(awk -v tc="$T_CLONE" -v tu="$T_CURL" '
+      /v[0-9]+\.[0-9]+\.[0-9]+/ {
+        line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
+        first = ""; n = line; bad = 0
+        while (match(n, /v[0-9]+\.[0-9]+\.[0-9]+/)) {
+          v = substr(n, RSTART, RLENGTH); if (first == "") first = v; else if (v != first) bad = 1
+          n = substr(n, 1, RSTART - 1) "<V>" substr(n, RSTART + RLENGTH) }
+        if (bad || (n != tc && n != tu)) printf ", README.md:%d", NR }' "$ROOT/README.md")"
+  [ -z "$BADSHAPE" ] \
+    || stale "pin shape — a README pin line is not the canonical clone/install command for $MANIFEST_REPO with one tag in every slot:${BADSHAPE#,}. Only the tag may change in a re-pin"
+fi
 
 if [ "$FAIL" -gt 0 ]; then
   echo "release-lint: $FAIL disagreement(s) between this tree and $NEWEST. A release nothing records is a claim, not a release."
