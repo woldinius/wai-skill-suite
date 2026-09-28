@@ -200,7 +200,8 @@ PR that added the diff-first rule (#50), whose review declared itself a self-rev
 it dispatches the `wai-reviewer` agent when the human asks for an independent review or the
 session's context has grown long
 ([ADR-0005](docs/adr/0005-the-review-runs-in-an-agent-and-only-the-review.md)). Adopted for
-unattended runs, on request for attended ones — and named as such.
+unattended runs; for attended ones on request or once the context has grown long — and named as
+such.
 
 ### mattpocock/skills
 <https://github.com/mattpocock/skills> (MIT) · Copyright (c) 2026 Matt Pocock
@@ -215,8 +216,8 @@ re-read brought the protocol up to that.
 
 **Adapted text** — close to upstream's wording, so the MIT notice travels with it, in
 [`third-party-notices.md`](.claude/skills/wai/references/third-party-notices.md) beside the
-protocol, inside `.claude/skills/`, which every install carries (this file does not travel with an
-install):
+protocol, inside `.claude/skills/`, which every install carries (this file travels with the plugin
+install, which carries the whole repository, but not with `install.sh`):
 
 - the opening — interview *relentlessly* to a *shared understanding*, the plan as a *design tree*;
 - rule 1's frontier (every open decision whose prerequisites are settled) and its later-round rule,

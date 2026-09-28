@@ -101,3 +101,11 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-28T22:07Z | wai-pr-review | PR #109 | NO-GO |
 | 2026-09-28T21:32Z | wai-implementation | #83 — release-lint holds the install pins to the newest tag (PR #110) | third relation: one finding names each lagging file:line and the pin-bump PR; behind only; suites 604 green |
 | 2026-09-28T21:32Z | wai-testing | #83 — release-lint pin fixtures (PR #110) | 6 cases (window, missed line, equal, ahead, no pin, one-finding count); 8 sabotages each seen red; sh + dash |
+| 2026-09-28T23:12Z | wai-pr-review | PR #126 | GO |
+| 2026-09-28T22:25Z | wai-pr-review | PR #110 | NO-GO |
+| 2026-09-28T22:32Z | wai-pr-review | PR #107 | NO-GO |
+| 2026-09-28T22:34Z | wai-pr-review | PR #109 | NO-GO |
+| 2026-09-28T22:48Z | wai-pr-review | PR #121 | NO-GO |
+| 2026-09-28T22:59Z | wai-pr-review | PR #125 | NO-GO |
+| 2026-09-28T22:59Z | wai-pr-review | PR #110 | NO-GO |
+| 2026-09-28T23:00Z | wai-pr-review | PR #126 | GO |
