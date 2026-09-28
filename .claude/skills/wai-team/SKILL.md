@@ -255,7 +255,9 @@ Two consequences, and they are the whole point of this section:
    mechanics, the model owns *"no Blocker, no Major"* — and in an unattended run that judgment half
    is produced by the same session that just built the thing, under maximum completion pressure,
    with no human between the verdict and the merge. So the review runs as a **fresh-context
-   reviewer**: hand it the diff, the issue/plan and the catalog — **never the session transcript** —
+   reviewer** — the suite's **`wai-reviewer` agent**, or where it is not installed a subagent
+   briefed the same way: hand it the diff, the issue/plan and the catalog — **never the session
+   transcript** —
    and its review comment names it (`Reviewed by: fresh-context reviewer`), so a later reader can
    tell a fresh review from a self-review. If the harness cannot dispatch one, **say so and merge
    nothing**: hand the PRs over instead. An in-session self-review is a legitimate review to

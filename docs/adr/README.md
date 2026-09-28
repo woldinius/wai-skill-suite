@@ -33,3 +33,4 @@ Each one carries, in this order:
 | [0002](0002-mechanics-in-scripts-judgment-in-prompts.md) | Mechanics go in scripts; judgment stays in prompts | accepted |
 | [0003](0003-the-baseline-owns-the-low-numbers.md) | The baseline owns the low numbers; a repo mints at ≥ 100 | accepted |
 | [0004](0004-one-master-three-generated-variants.md) | One master, three generated catalog variants | accepted |
+| [0005](0005-the-review-runs-in-an-agent-and-only-the-review.md) | The review runs in an agent — and only the review | accepted |

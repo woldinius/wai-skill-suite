@@ -60,6 +60,14 @@ repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explici
 | [`wai-security-audit`](.claude/skills/wai-security-audit/SKILL.md) | Periodic | periodic — every 5–10 PRs | Whole-codebase **adversarial** cyber-security sweep: attack-surface map + authZ/IDOR, secrets, injection (incl. prompt), SSRF, rate-limiting, session/token lifecycle, dependency CVEs, crypto/TLS, **token-economy fraud**, client attestation — posture as a trend. Report-only; redacted. | "security audit", "are we secure", "pentest", "check the attack surface", "dependency CVEs" |
 | [`wai-retro`](.claude/skills/wai-retro/SKILL.md) | Periodic | proving — runs here and in one field repo | **Artifact-derived retrospective** of the suite's own record, at a threshold (doctor's report-cadence advisory) — never from recall: the gate ledger's report extract, the run log and `git log` in; a dated, narrated report with raw counts beside every rate out; the judgment column stays human. Finishes by advancing the ledger's report marker so the cadence resets. Collaboration level gated until a question trace exists; publication to this repo only on explicit request, sanitized + pseudonymized (`fr-<12hex>`). | "run the retro", "retrospective", "what did the suite do this month", "cut a report" |
 
+**One agent ships with the skills.** [`wai-reviewer`](.claude/agents/wai-reviewer.md) is the suite's
+fresh-context reviewer: `wai-pr-review` preloaded, read-only tools plus `Bash` for `gh` and the
+gate, and instructed to merge nothing (an instruction, not a mechanism — ADR-0005). `wai-team`
+dispatches it for every review; attended, a session dispatches it when you ask for an independent
+review or its context has grown long, and keeps only the verdict lines it returns. Measured: [a
+lifecycle A/B](docs/experiments/2026-09-28-review-agent-ab.md). Why an agent, and why only this one:
+[ADR-0005](docs/adr/0005-the-review-runs-in-an-agent-and-only-the-review.md).
+
 ## Personal skills
 
 Not part of the wAI lifecycle — reusable helpers for the human, adopted per project like the others.
@@ -187,7 +195,7 @@ claim beyond software is a position, not a measurement: supervised, well-tooled 
 
 **The price, honestly:** the deterministic layer took eleven repair commits in two days
 ([retrospective](docs/retrospective-2026-07.md)); the gate once failed *open* under zsh and later
-could never say GO at all. That is why [`tests/`](tests/) exists — 583 cases, **founded** on bugs
+could never say GO at all. That is why [`tests/`](tests/) exists — 598 cases, **founded** on bugs
 that shipped and grown into the regression guards around them, run on two shells in CI because
 shellcheck passed a construct that is a syntax error in the `/bin/sh` of macOS. (While the repo was
 private, the macOS job was dropped — its runners burned the Actions budget until no check could run
@@ -239,7 +247,8 @@ summarized in *In the field* comes from a different game repo with its own CI.
 ## Installation
 
 **As a plugin (recommended).** This repo is its own [plugin marketplace](.claude-plugin/marketplace.json):
-one plugin, all thirteen skills, versioned and updatable through Claude Code's plugin system.
+one plugin, all thirteen skills and the reviewer agent, versioned and updatable through Claude
+Code's plugin system.
 
 ```
 /plugin marketplace add woldinius/wai-skill-suite
@@ -275,21 +284,22 @@ curl -fsSL https://raw.githubusercontent.com/woldinius/wai-skill-suite/v0.5.0/in
 
 What the script does — and deliberately does **not** do:
 
-- **Installs/updates** the suite's skills into `.claude/skills/` — and **nothing else**. It
+- **Installs/updates** the suite's skills into `.claude/skills/` and its agents into
+  `.claude/agents/` — and **nothing else**. It
   deliberately does **not** create `docs/architecture/`: the catalog and testing strategy must be
   scanned, scoped and sized to *your* repo, which is `wai-init`'s job. (Copying this repo's
   catalog over would hand you an 87-ID multi-surface document with the setup questions
   pre-answered — and `wai-init`, finding a catalog already there, would never ask them.)
 - **Idempotent** — safe to re-run any time to pull the latest skills.
 - **Tracks renames/removals** — it records the installed suite skills in
-  `.claude/.wai-suite-manifest`; on the next run any suite skill that was renamed or removed
-  upstream is pruned, so stale skills never pile up.
+  `.claude/.wai-suite-manifest` and its agents in `.claude/.wai-suite-agents-manifest`; on the
+  next run any that was renamed or removed upstream is pruned, so stale ones never pile up.
 - **Migrates the old namespace** — a repo that still carries the suite under its former
   `platform-*` names (tracked in `.platform-suite-manifest`) is converted in place: the old suite
   skills are pruned by manifest, never by name, and yours are untouched.
-- **Leaves your project alone** — it only touches the suite's own skills (reserved namespace
-  `wai`, `wai-*`); it never removes *your* skills and touches nothing else. (Don't name your own
-  skills in that reserved namespace.)
+- **Leaves your project alone** — it only touches the suite's own skills and agents (reserved
+  namespace `wai`, `wai-*`); it never removes *yours* and touches nothing else. (Don't name your
+  own skills or agents in that reserved namespace.)
 - **Env overrides:** `SKILLS_REF=<branch/tag>`, `SKILLS_REPO=<git url>` (e.g. a fork).
 
 After it runs, in Claude Code:
@@ -318,7 +328,7 @@ Everything below is the complete list of side effects; nothing else is written.
 | Actor | Writes | When |
 |---|---|---|
 | Plugin install | the plugin cache only — **nothing in your repo** | on `/plugin install` |
-| `install.sh` | `.claude/skills/` + its own manifest and version stamp | when you run it |
+| `install.sh` | `.claude/skills/` and the suite's `.claude/agents/wai-*.md`, plus their manifests and a version stamp | when you run it |
 | `wai-init` | `docs/architecture/` (catalog, testing strategy, gate config; optional coordination config); on approval, the suite's issue labels and — where the plan allows — the `main` ruleset, via `gh` | after asking its setup questions |
 | `wai-cicd` / `wai-mobile-release` | CI/deploy/release artifacts — **as visible proposals; the human commits** | when you invoke them |
 | Skill runs (all but `wai`, `wai-init`, `wai-learning-gap`) | one attendance row appended to `docs/architecture/run-log.md` via `run-log.sh` (`merge-gate.sh`, `backlog-scan.sh` and `dep-cve-scan.sh` write theirs themselves) | at hand-back (the three scripts: when they run) |
@@ -446,7 +456,7 @@ The claims above are checkable, and the failures are part of the record on purpo
   [grilling in rounds, A/B with a simulated product owner](docs/experiments/2026-09-27-grilling-rounds-ab.md)
   (2026-09-27) · [the review in an agent, a lifecycle A/B](docs/experiments/2026-09-28-review-agent-ab.md)
   (2026-09-28).
-- [`docs/adr/`](docs/adr/) — the four decisions that shaped the architecture, with the
+- [`docs/adr/`](docs/adr/) — the five decisions that shaped the architecture, with the
   cases where the scripts lost.
 - `docs/architecture/audits/` — the suite auditing itself with its own audit skill (first
   verdict: *significant drift*, since fixed). Not yet republished from the archive; the link
@@ -461,7 +471,8 @@ rule exists because of it.
 ## Repo structure
 
 ```
-install.sh                                       # idempotent installer (inject/update skills into a project)
+install.sh                                       # idempotent installer (inject/update skills + agents into a project)
+.claude/agents/wai-reviewer.md                   # the fresh-context reviewer: wai-pr-review preloaded, merges nothing
 .claude/skills/
   wai/                                           # router + shared protocols + doctor/contract/handoff lints
   wai-init/                                      # bootstrap; catalog baseline + catalog-lint, issue mining
@@ -477,12 +488,13 @@ install.sh                                       # idempotent installer (inject/
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh, session-cost.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
-tests/                                           # 583 cases for the deciding scripts — founded on bugs that shipped
+tests/                                           # 598 cases for the deciding scripts — founded on bugs that shipped
 docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, experiments, catalog, open questions, known criticism, publication rule, learnings
 ```
 
 > After running `install.sh` in a target project, `.claude/.wai-suite-manifest` records the
-> installed suite skills so the next run can prune ones that were renamed or removed here.
+> installed suite skills — and `.claude/.wai-suite-agents-manifest` its agents — so the next run
+> can prune ones that were renamed or removed here.
 
 ## Porting
 

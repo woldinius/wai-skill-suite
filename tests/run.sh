@@ -1046,12 +1046,105 @@ else bad "install.sh writes .wai-suite-version" "no version file at $IDIR/.claud
 # target from the SAME source → byte-identical suite skills → the line prints; touch one owned
 # skill → it must NOT print (a no-op claim over a real delta would be the worse bug).
 out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
-assert "a second install from the same source says so: no behavioral change, stamp-only" 0 "$rc" "$out" 'no behavioral change: the installed suite skills are byte-identical'
+assert "a second install from the same source says so: no behavioral change, stamp-only" 0 "$rc" "$out" 'no behavioral change: the installed suite skills and agents are byte-identical'
 printf 'locally modified\n' >> "$IDIR/.claude/skills/wai/SKILL.md"
 out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
 assert "  · a modified owned skill → the no-op line must NOT print (delta is restored + reported)" 0 "$rc" "$out" 'installed: wai' 'no behavioral change'
 # A first install (no manifest) never claims no-op — ownership, not name-guessing, scopes the check;
 # the first IDIR install above is that case and printed no such line (asserted by its own matcher).
+
+# install.sh × agents. The suite ships agents beside its skills (.claude/agents/), and the installer
+# owns them by the skills' rule: only its manifest confers ownership, only over names in the suite's
+# namespace — a hand-edited manifest must not delete someone else's agent or reach outside the dir —
+# and a changed agent breaks the no-op claim exactly like a changed skill.
+if [ -f "$IDIR/.claude/agents/wai-reviewer.md" ] \
+   && cmp -s "$ROOT/.claude/agents/wai-reviewer.md" "$IDIR/.claude/agents/wai-reviewer.md" \
+   && grep -qx 'wai-reviewer.md' "$IDIR/.claude/.wai-suite-agents-manifest" 2>/dev/null; then
+  ok "install.sh installs the suite's agents and records them in their own manifest"
+else bad "install.sh installs the suite's agents and records them in their own manifest" \
+  "wai-reviewer.md missing, different from the source, or not in .wai-suite-agents-manifest"; fi
+printf 'locally modified\n' >> "$IDIR/.claude/agents/wai-reviewer.md"
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "  · a modified owned agent → the no-op line must NOT print (the agent is reinstalled)" 0 "$rc" "$out" \
+  'installed agent: wai-reviewer.md' 'no behavioral change'
+if cmp -s "$ROOT/.claude/agents/wai-reviewer.md" "$IDIR/.claude/agents/wai-reviewer.md"; then
+  ok "  · the modified agent is restored byte-identical"
+else bad "  · the modified agent is restored byte-identical" "wai-reviewer.md still differs from the source"; fi
+printf 'old\n' > "$IDIR/.claude/agents/wai-retired.md"
+printf 'mine\n' > "$IDIR/.claude/agents/my-agent.md"
+# The path-shaped line must be able to RESOLVE, or the guard is untested: wai-x/ exists, and
+# agents/wai-x/../../../escape.md lands on $IDIR/escape.md — which must survive.
+mkdir -p "$IDIR/.claude/agents/wai-x"; printf 'kept\n' > "$IDIR/escape.md"
+printf 'wai-reviewer.md\nwai-retired.md\nmy-agent.md\nwai-x/../../../escape.md\n' > "$IDIR/.claude/.wai-suite-agents-manifest"
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "an owned agent dropped upstream is pruned (and breaks the no-op line); names outside the namespace are kept" \
+  0 "$rc" "$out" 'pruned agent \(renamed/removed upstream\): wai-retired.md' 'no behavioral change'
+if [ ! -f "$IDIR/.claude/agents/wai-retired.md" ] && [ "$(cat "$IDIR/.claude/agents/my-agent.md")" = "mine" ] \
+   && [ -f "$IDIR/escape.md" ] && ! grep -q 'my-agent' "$IDIR/.claude/.wai-suite-agents-manifest"; then
+  ok "  · a foreign agent listed in the manifest survives, a path-shaped name is never followed, the manifest re-scopes"
+else bad "  · a foreign agent listed in the manifest survives, a path-shaped name is never followed, the manifest re-scopes" \
+  "wai-retired.md left, my-agent.md touched, escape.md removed, or my-agent still owned"; fi
+rm -rf "$IDIR/.claude/agents/wai-x" "$IDIR/escape.md" "$IDIR/.claude/agents/my-agent.md"
+
+# A symlink in an agent's place is replaced, never written through: the link could point anywhere
+# — here into docs/, which this script must never write.
+mkdir -p "$IDIR/docs"; printf 'my notes\n' > "$IDIR/docs/notes.md"
+rm -f "$IDIR/.claude/agents/wai-reviewer.md"; ln -s ../../docs/notes.md "$IDIR/.claude/agents/wai-reviewer.md"
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+if [ "$rc" = 0 ] && [ "$(cat "$IDIR/docs/notes.md")" = "my notes" ] && [ ! -L "$IDIR/.claude/agents/wai-reviewer.md" ] \
+   && cmp -s "$ROOT/.claude/agents/wai-reviewer.md" "$IDIR/.claude/agents/wai-reviewer.md"; then
+  ok "a symlinked agent file is replaced, and the file it pointed to is untouched"
+else bad "a symlinked agent file is replaced, and the file it pointed to is untouched" \
+  "rc=$rc; docs/notes.md now: $(head -c 40 "$IDIR/docs/notes.md" | tr '\n' ' ')"; fi
+rm -rf "$IDIR/docs"
+
+# The skills prune honours the same namespace: a path-shaped line in a hand-edited manifest once
+# reached $DEST/docs (probed in review: `../../docs` removed the ledger). It must be kept, loudly.
+mkdir -p "$IDIR/docs/architecture"; printf '| row |\n' > "$IDIR/docs/architecture/gate-ledger.md"
+printf '%s\n' "$(cat "$IDIR/.claude/.wai-suite-manifest")" '../../docs' > "$TMP/skills-manifest"
+cp "$TMP/skills-manifest" "$IDIR/.claude/.wai-suite-manifest"
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "a path-shaped line in the skills manifest is kept, not followed" 0 "$rc" "$out" \
+  'kept \(not a name this suite installs\): \.\./\.\./docs'
+if [ -f "$IDIR/docs/architecture/gate-ledger.md" ]; then ok "  · docs/ (and the ledger in it) survives the hostile manifest line"
+else bad "  · docs/ (and the ledger in it) survives the hostile manifest line" "docs/architecture/gate-ledger.md is gone"; fi
+rm -rf "$IDIR/docs"
+
+# A source without agents (a ref from before they shipped): the owned agent is pruned and the
+# agents manifest removed — an empty one would silence the collision warning next time, and a
+# user's own file of that name would be overwritten unannounced.
+NOAG="$TMP/src-no-agents"; mkdir -p "$NOAG"; (cd "$ROOT" && tar --exclude .claude/agents --exclude .claude/worktrees -cf - .claude install.sh) | (cd "$NOAG" && tar xf -)
+out="$( cd "$IDIR" && PATH="$STUB:$PATH" GIT_STUB_SRC="$NOAG" sh -c 'cat "$1"/install.sh | sh' _ "$NOAG" 2>&1 )"; rc=$?
+if [ "$rc" = 0 ] && [ ! -f "$IDIR/.claude/agents/wai-reviewer.md" ] && [ ! -f "$IDIR/.claude/.wai-suite-agents-manifest" ]; then
+  ok "an install from a source without agents prunes the owned agent and drops the agents manifest"
+else bad "an install from a source without agents prunes the owned agent and drops the agents manifest" \
+  "rc=$rc; agent or manifest still present"; fi
+printf 'my own reviewer\n' > "$IDIR/.claude/agents/wai-reviewer.md"
+out="$(sh "$ROOT/install.sh" "$IDIR" 2>&1)"; rc=$?
+assert "  · then a user's own file of an agent's name draws the collision warning" 0 "$rc" "$out" \
+  'wai-reviewer.md already exists and will be overwritten by the suite.s agent'
+
+# Every shipped agent is well-formed and wired: its frontmatter names it by its file name and
+# describes it, every skill it preloads exists, and plugin.json lists exactly these files — the
+# plugin loader takes a list of files, not a directory, so an agent missing there ships to nobody.
+for f in "$ROOT"/.claude/agents/*.md; do
+  n="$(basename "$f" .md)"
+  fm="$(awk 'NR==1 && /^---$/ {i=1; next} i && /^---$/ {exit} i' "$f")"
+  if printf '%s\n' "$fm" | grep -qx "name: $n" && printf '%s\n' "$fm" | grep -q '^description: .'; then
+    ok "agent $n: the frontmatter names it by its file name and describes it"
+  else bad "agent $n: the frontmatter names it by its file name and describes it" "name is not '$n', or no description"; fi
+  for sk in $(printf '%s\n' "$fm" | awk '/^skills:/ {i=1; next} i && /^  - / {print $2; next} {i=0}'); do
+    if [ -f "$ROOT/.claude/skills/$sk/SKILL.md" ]; then ok "agent $n: the preloaded skill '$sk' exists"
+    else bad "agent $n: the preloaded skill '$sk' exists" "no .claude/skills/$sk/SKILL.md"; fi
+  done
+done
+if awk 'NR==1 && /^---$/ {i=1; next} i && /^---$/ {exit} i' "$ROOT/.claude/agents/wai-reviewer.md" | grep -qx '  - wai-pr-review'; then
+  ok "wai-reviewer preloads wai-pr-review (its procedure)"
+else bad "wai-reviewer preloads wai-pr-review (its procedure)" "no '  - wai-pr-review' under skills:"; fi
+want="$(cd "$ROOT" && for f in .claude/agents/*.md; do printf './%s\n' "$f"; done | sort)"
+got="$(grep -o '"\./\.claude/agents/[^"]*"' "$ROOT/.claude-plugin/plugin.json" | tr -d '"' | sort)"
+if [ -n "$want" ] && [ "$want" = "$got" ]; then ok "plugin.json lists exactly the shipped agent files"
+else bad "plugin.json lists exactly the shipped agent files" "want: $(echo $want) · got: $(echo $got)"; fi
 
 # install.sh × the platform→wai rename.
 #
@@ -1108,6 +1201,8 @@ assert "a PIPED update clones instead of taking the destination for the source" 
 if [ -s "$PDIR/.claude/skills/wai-init/SKILL.md" ] && [ -d "$PDIR/.claude/skills/wai-pr-review" ]; then
   ok "a piped update leaves a full, non-empty suite behind"
 else bad "a piped update leaves a full, non-empty suite behind" "wai-init/SKILL.md empty or wai-pr-review missing"; fi
+if [ -f "$PDIR/.claude/agents/wai-reviewer.md" ]; then ok "  · the piped update installs the agents too"
+else bad "  · the piped update installs the agents too" "no .claude/agents/wai-reviewer.md after the piped update"; fi
 
 # The rip cord: whatever the mode, source == destination must never reach the replace loop.
 RDIR="$TMP/install-self"; mkdir -p "$RDIR"

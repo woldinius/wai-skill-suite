@@ -7,12 +7,26 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ## [Unreleased]
 
+### Added
+
+- **The review runs in an agent.** `wai-reviewer` (`.claude/agents/`) is the fresh-context
+  reviewer: `wai-pr-review` preloaded, it merges nothing. `wai-team` dispatches it for every
+  review; attended, on request or once the context is long. `install.sh` and the plugin ship it.
+  A gate-runner agent was rejected:
+  [ADR-0005](docs/adr/0005-the-review-runs-in-an-agent-and-only-the-review.md).
+
+### Fixed
+
+- **The installer's prune stays in its namespace.** A path-shaped line in a hand-edited
+  `.wai-suite-manifest` (`../../docs`) could delete the target's `docs/`, gate ledger included;
+  the prune now touches only `wai` and `wai-*` names and says what it kept. Found in #103's review.
+
 ### Evidence
 
-- **The review in an agent, measured.** A lifecycle A/B (two runs per arm): the fresh reviewer
-  took 30–43 responses of its own; run tokens +6 % (inside the spread), output +39 %; the reviews
-  held under blind grading. The agent's case is fresh context, not tokens — #103 narrowed its attended default.
-  [Experiment](docs/experiments/2026-09-28-review-agent-ab.md).
+- **The review in an agent, measured.** A lifecycle A/B (two runs per arm): the fresh reviewer took
+  30–43 responses of its own; run tokens +6 % (inside the spread), output +39 %; the reviews held
+  under blind grading. The agent's case is fresh context, not tokens — #103 narrowed its attended
+  default. [Experiment](docs/experiments/2026-09-28-review-agent-ab.md).
 
 ## [0.5.1] — 2026-09-27
 

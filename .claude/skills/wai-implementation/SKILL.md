@@ -118,7 +118,8 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    verification + idempotent credit/debit (`PAY-2`/`PAY-3`/`PAY-4`), digital-goods rule (`PAY-8`).
    Close with one line naming **the strongest reason a reviewer would reject this** — if you
    cannot name one, you reviewed your intent, not your diff. This is only the short form; the
-   full review is `wai-pr-review`'s — on fresh context whenever `wai-team` runs it — and it is
+   full review is `wai-pr-review`'s — on fresh context, in the `wai-reviewer` agent, whenever
+   `wai-team` runs it — and it is
    **not** made optional by this one having run.
 
 6. **Prove it — no "done" without fresh output.** Name the one command that proves this change
@@ -313,8 +314,9 @@ This skill is the **implementation** stage in the lifecycle plan → implement �
   (max one delta cycle, then the human decides).
 - **wai-testing** — normally right after this skill; mid-implementation only for **foundational
   seams** (see *Tests*).
-- **wai-pr-review** — the full review stage; the self-review here (step 5) is only the short
-  form for your own diff before handover.
+- **wai-pr-review** — the full review stage (in the `wai-reviewer` agent when `wai-team` runs it,
+  or when asked); the self-review here (step 5) is only the short form for your own diff before
+  handover.
 - **wai-learning-gap** — the **last action of the turn** (step 9), and **only** if *this* human
   has a personal ledger. `CLAUDE.md` never activates learning mode. No ledger → skip silently
   and create nothing.
