@@ -444,7 +444,8 @@ The claims above are checkable, and the failures are part of the record on purpo
 - [`docs/experiments/`](docs/experiments/) — controlled measurements of the suite itself:
   [lean output, A/B in sandboxes](docs/experiments/2026-09-26-lean-output-ab.md) (2026-09-26) ·
   [grilling in rounds, A/B with a simulated product owner](docs/experiments/2026-09-27-grilling-rounds-ab.md)
-  (2026-09-27).
+  (2026-09-27) · [the review in an agent, a lifecycle A/B](docs/experiments/2026-09-28-review-agent-ab.md)
+  (2026-09-28).
 - [`docs/adr/`](docs/adr/) — the four decisions that shaped the architecture, with the
   cases where the scripts lost.
 - `docs/architecture/audits/` — the suite auditing itself with its own audit skill (first
