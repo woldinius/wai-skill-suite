@@ -66,7 +66,7 @@ necessary aspects as findings.
      OpenAPI, contract tests (`API-*`/`CLIENT-3`).
    - *Token/billing change* → server-side verification, idempotent credit/debit, refund
      clawback, reconciliation, digital-goods rule (`PAY-*`) — **always a contract domain**.
-   - *AI/prompt/model change* → output validation (`AI-3`), prompt/model versioning (`AI-6`),
+   - *AI/prompt/model change* → output validation (`AI-3`), prompt/model versioning (`AI-2`),
      cost impact (`AI-9`), PII redaction (`AI-8`), fallback (`AI-5`).
    - *Persistence/data model change* → GDPR (`GDPR-2`/`GDPR-3`), migration, retention,
      idempotency (`RES-3`).

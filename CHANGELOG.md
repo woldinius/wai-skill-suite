@@ -5,6 +5,14 @@ Notable changes to the wAI skill suite. Format loosely follows
 checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
+## [Unreleased]
+
+### Fixed
+
+- **`wai-pr-review` cites the right AI ID.** Prompt and model versioning is `AI-2` in the catalog;
+  the review's step list said `AI-6` (Eval). Every other ID and label pair in that list matches.
+  ([#99](https://github.com/woldinius/wai-skill-suite/issues/99))
+
 ## [0.5.2] — 2026-09-28
 
 The review runs in an agent: `wai-reviewer`, with `wai-pr-review` preloaded, reviews on fresh
