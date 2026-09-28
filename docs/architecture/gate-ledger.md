@@ -17,6 +17,9 @@ once you have acted on the PR:
   A NO-GO that blocked for a reason outside the code (CI still running) is `nil`, not `fn`.
 - `nil` — the verdict says **nothing about the code** (e.g. a NO-GO caused only by CI still
   running). Excluded from the fp/fn math; counted on its own line by `gate-stats.sh`.
+- `lost` — a **reconstructed** row: the original row was lost, and the verdict is known from the
+  PR comment — the outcome was never judged. Counted on its own line by `gate-stats.sh`, outside
+  every rate.
 
 Tags are matched on their **first two characters** — free text after a comma is welcome and
 preserved. `ok, besser GO` is the calibration signal: the block was correct by the rules, but a GO
@@ -28,6 +31,12 @@ A `MOOT` row is a review that ran AFTER the PR was merged — the gate could pre
 not a decision; leave its outcome blank and do not count it in fp/fn. Its value is the opposite of
 a missing row: it records that the gate *ran and was too late*, rather than reading as never-checked.
 
+**A row rides the PR that produced it (`LEDGER_HOME=branch`, the default — #66).** The gate writes its
+row wherever it runs; the branch's PR carries it to the default branch, and a squash keeps it. A row
+on a branch with no open PR is loose — the gate says so when it lands one. The older practice
+(decided 2026-08-18: collect loose rows into a small chore PR) is `LEDGER_HOME=main` in
+`merge-gate.conf`.
+
 **Weekly:** read the GO rows you merged. Any you would now block → tag `fn`. Do not skip this; the
 `fn` count is the whole reason the ledger exists.
 
@@ -35,7 +44,9 @@ A verdict claimed in a review with **no matching row here** means the reviewer c
 instead of running the gate (empirical-test-plan §0). That is itself a finding.
 
 (Rows up to 2026-08-10 carry `T00:00Z`: they were migrated under a since-retired date-only rule.
-They are records and stay as written; newer rows carry the normal UTC timestamp.)
+They are records and stay as written; newer rows carry the normal UTC timestamp. Rows dated before
+2026-08-10 come from the repository this one was republished from: their PR numbers are that
+repository's, not this one's.)
 
 | when (UTC) | PR | verdict | why | outcome |
 |---|---|---|---|---|

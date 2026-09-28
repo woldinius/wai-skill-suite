@@ -68,6 +68,7 @@ belongs on this list**: it passed a `case … esac` inside `$( )` — valid POSI
 
 1. **The OKF 89-file catalog split.** I recommended it. **The user approved it.** Then the arithmetic
    killed it and I reversed my own recommendation. *The worst one, because he had already said yes.*
+   *(Note, 2026-09-28: ADR-0001 and REFERENCES.md count 91 files for the same proposal.)*
 2. A cross-catalog retired-ID collision check — **built, run, and it failed a repo that was right.**
 3. A title-comparison heuristic for the same problem — **built, run, 3 false positives in 10** on the
    data it was designed for.
@@ -116,12 +117,12 @@ Not me — the process, with both of us inside it.
 | The token measurement behind a rejected architecture | Gone. Nearly re-cited from memory |
 | The LLM-wiki URL | Gone |
 | **A translation commit** | Lost in a merge race. Caught only by a post-merge health check |
-| **The enforcement-surface **security fix** | Lost in a merge race. Same |
+| The enforcement-surface **security fix** | Lost in a merge race. Same |
 | **Three commits landed on `main` by accident** | The third carried the merge-gate fix and **sat unpushed while every signal said green** |
 | A follow-up was written for a PR that had already merged | `gh pr edit` **succeeds on a merged PR** and returns a URL. I took the URL as proof |
 | Drafts written to `~/git/ai-skills-drafts` | A pattern violation you had never had to state |
 | The repo linted **red for a day** | Nothing ran the lint |
-| `wai-learning-gap` never fired across ~40 PRs | The trigger was never wired *(pre-dates this record)* |
+| `wai-learning-gap` never fired across ~40 PRs *(note, 2026-09-28: an unmeasured claim — §4b counts it among the nine that were wrong)* | The trigger was never wired *(pre-dates this record)* |
 
 ---
 
@@ -131,7 +132,7 @@ Of the ~22 defects with a traceable discovery:
 
 | Found by | Count | Which ones |
 |---|---|---|
-| **Running it against a real repo** | **6** | zsh fail-open · the `*.md`-only scan · the doctrine that instructed the trap · MAINT-3's missing Red Flag |
+| **Running it against a real repo** | **6** | zsh fail-open · the `*.md`-only scan · the doctrine that instructed the trap · MAINT-3's missing Red Flag *(note, 2026-09-28: four of the six are named here)* |
 | **The field** — your product repos | **6** | **the SKIPPED bug** · the construction failure · the 50 % false positives · the enforcer layer · the miscount · **check 7's lying comment** |
 | **A tool I built** | **4** | the 55 Red Flags · the dead `MAINT-6` citation · `unknown()` vs `info()` · the red-for-a-day catalog. *Plus **three** times the lint caught me breaking my own citation convention.* |
 | **You, personally** | **3** | *"for a year"* · the missing references · **the commit that never got pushed** |

@@ -126,3 +126,10 @@ them.
   then-private repo's Actions budget forced CI down to one Ubuntu job (PR #25, dated in `ci.yml`) and
   bash 3.2 ran only on a developer's machine. True again from 2026-09-13: a second job, `ci-macos`,
   runs the suites on macOS — reported on every PR, not yet a required check.
+
+## Correction 2026-09-28 — the Anthropic quote condenses two sentences
+
+The quote in *Context* joins two sentences of the article into one and rewords them; the record
+above stays as written. The article reads: *"At one extreme, we see engineers hardcoding complex,
+brittle logic in their prompts to elicit exact agentic behavior. This approach creates fragility
+and increases maintenance complexity over time."*

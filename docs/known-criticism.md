@@ -26,7 +26,7 @@ audit's judgment, not a defense.
 
 | Objection | Justified? | The answer |
 |---|---|---|
-| "Prompt engineering with extra steps — tens of thousands of words of prose" | No | The deciding layer is not prose: the cases the README counts — re-measured by `numbers-lint` on every CI run — on two shells, for the scripts that own the verdict |
+| "Prompt engineering with extra steps — tens of thousands of words of prose" | No | The deciding layer is not prose: it is the scripts that own the verdict, held by the test cases the README counts (re-measured by `numbers-lint` on every CI run), run on two shells |
 | "One author, a young repo, bus factor 1" | Partly | Correct, and stated in *Limits*. Q7 exists because of it; the field-report path costs one paste |
 | "The self-criticism is marketing" | No — but unfalsifiable by more self-criticism | Only foreign data answers it. That is Q7, and the reason the evidence channel optimizes for a single paste |
 | "Determinism is nothing new" | Conceptually yes | The README names the prior art and claims only the level: a deterministic *verdict* in the agent's own loop — not the category |
