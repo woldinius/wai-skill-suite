@@ -103,3 +103,11 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-28T22:13Z | wai-testing | issue #95 | 19 cases on a plugin-cache fixture, each fix counterproofed |
 | 2026-09-28T23:05Z | wai-implementation | PR #121 fix round | 3 Minors fixed: run-log needs a repo, check 4b reads local IDs, contract-lint holds the call form |
 | 2026-09-28T23:05Z | wai-testing | PR #121 fix round | 8 cases, each counterproofed by reverting its fix |
+| 2026-09-28T23:12Z | wai-pr-review | PR #126 | GO |
+| 2026-09-28T22:25Z | wai-pr-review | PR #110 | NO-GO |
+| 2026-09-28T22:32Z | wai-pr-review | PR #107 | NO-GO |
+| 2026-09-28T22:34Z | wai-pr-review | PR #109 | NO-GO |
+| 2026-09-28T22:48Z | wai-pr-review | PR #121 | NO-GO |
+| 2026-09-28T22:59Z | wai-pr-review | PR #125 | NO-GO |
+| 2026-09-28T22:59Z | wai-pr-review | PR #110 | NO-GO |
+| 2026-09-28T23:00Z | wai-pr-review | PR #126 | GO |
