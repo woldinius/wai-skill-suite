@@ -32,6 +32,16 @@ joined by a **versioned API contract**. Three consequences every review must kee
 
 ## Process
 
+**Where the review runs.** In a `wai-team` run — no human between the verdict and the merge — it
+runs in the suite's **`wai-reviewer` agent** (installed with the skills: `.claude/agents/`, or
+`wai-suite:wai-reviewer` from the plugin): fresh context, this skill preloaded, instructed to
+merge nothing. Attended, run the steps here; dispatch the agent when the human asks for an
+independent review, or when this session's context has grown long — a fresh reviewer re-reads the
+change, so it costs more than it saves until then. Hand it the PR (or the diff) and the issue or
+plan — never your transcript — and act on the lines it returns; the merge decision of step 6 stays
+with you. Without the agent, brief a subagent the same way; without subagents, run the steps here
+and say so in the review. (Running inside `wai-reviewer`, you are that agent: run the steps.)
+
 Work through these steps in order. Evaluate what the diff actually touches, and name missing but
 necessary aspects as findings.
 

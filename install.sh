@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
-# Inject the wAI skill suite into a project's .claude/skills/.
+# Inject the wAI skill suite into a project's .claude/skills/ — and its agents into .claude/agents/.
 # Idempotent: safe to re-run to update.
 #
-# It only ever touches the suite's own skills: it installs/updates them and prunes
-# suite skills that were renamed or removed upstream (tracked via a manifest) — it
-# never removes your own skills. It does NOT create docs/architecture/ — the catalog
+# It only ever touches the suite's own skills and agents: it installs/updates them and prunes
+# suite skills and agents that were renamed or removed upstream (tracked via manifests) — it
+# never removes your own. It does NOT create docs/architecture/ — the catalog
 # and testing strategy are wai-init's job, because they must be scanned, scoped
 # and sized to *your* repo (see step 7). The rest of your project is left untouched.
 #
@@ -32,6 +32,8 @@ DEST="${1:-$PWD}"
 
 SKILLS_DIR="$DEST/.claude/skills"
 MANIFEST="$DEST/.claude/.wai-suite-manifest"
+AGENTS_DIR="$DEST/.claude/agents"
+AGENTS_MANIFEST="$DEST/.claude/.wai-suite-agents-manifest"
 
 # 1. Where do the skills come from?
 #
@@ -81,8 +83,19 @@ if [ -n "$DEST_CANON" ] && [ "$SRC_CANON" = "$DEST_CANON/.claude/skills" ]; then
   exit 1
 fi
 
-# 2. The current suite = every skill dir in the master repo.
+# 2. The current suite = every skill dir in the master repo — plus its agents, which live beside
+#    the skills in .claude/agents/ (a ref from before the agents shipped has none). Only a name in
+#    the suite's namespace counts, so a stray file in the source can never become something we own.
 NEW_SET="$(cd "$SRC" && ls -1)"
+SRC_AGENTS="$(dirname -- "$SRC")/agents"
+NEW_AGENTS=""
+for f in "$SRC_AGENTS"/wai-*.md; do
+  [ -f "$f" ] || continue                     # no agents dir: the glob stays literal
+  a="$(basename -- "$f")"
+  printf '%s\n' "$a" | grep -qE '^wai-[a-z0-9-]+\.md$' || continue
+  NEW_AGENTS="${NEW_AGENTS:+$NEW_AGENTS
+}$a"
+done
 mkdir -p "$SKILLS_DIR" "$DEST/.claude"
 
 # 2b. Migration: the suite lived in the `platform` namespace before it became `wai`.
@@ -118,6 +131,17 @@ fi
 # a directory is not ours just because its name starts with `wai-`. Guessing ownership
 # from the name would delete a `wai-onboarding` that someone else wrote — the one
 # mistake this script must never make, because it is not undoable.
+if [ -f "$AGENTS_MANIFEST" ]; then
+  OWNED_AGENTS="$(cat "$AGENTS_MANIFEST")"
+else
+  OWNED_AGENTS=""
+  for a in $NEW_AGENTS; do
+    if [ -f "$AGENTS_DIR/$a" ]; then
+      echo "warning: $AGENTS_DIR/$a already exists and will be overwritten by the suite's agent." >&2
+      echo "         If that agent is yours, press Ctrl-C and rename it first." >&2
+    fi
+  done
+fi
 if [ -f "$MANIFEST" ]; then
   OWNED="$(cat "$MANIFEST")"
 else
@@ -133,14 +157,15 @@ else
   done
 fi
 
-# THE LEDGER GUARANTEE — stated here because this is where the deletions live (steps 4 and 5).
+# THE LEDGER GUARANTEE — stated here because this is where the deletions live (steps 4 to 5b).
 #
 # Everything under $DEST/docs is USER DATA, above all docs/architecture/gate-ledger.md and
 # docs/architecture/run-log.md: append-only experience that cannot be reconstructed. A field repo
 # lost its entire pre-2026-07-22 ledger to a suite update (issue #10) — weeks of verdicts, gone,
-# and the report window shrank with them. So the rule, permanent: every `rm -rf` in this script
-# stays inside "$SKILLS_DIR", and this script NEVER writes to or removes anything under
-# "$DEST/docs" — a suite update is a migration path for the ledger, not a file operation on it.
+# and the report window shrank with them. So the rule, permanent: every removal in this script
+# stays inside "$SKILLS_DIR" or "$AGENTS_DIR" (besides its own manifest files in .claude/), and
+# this script NEVER writes to or removes anything under "$DEST/docs" — a suite update is a
+# migration path for the ledger, not a file operation on it.
 # tests/run.sh holds this as a test: an update into a repo with a populated ledger and run log
 # must leave both byte-identical. Whoever teaches this script to "clean up" docs/ goes red there.
 
@@ -169,16 +194,45 @@ if [ -n "$OWNED" ]; then
 ' "$NEW_SET" | grep -qx "$old" || { NOOP=no; break; }
     done
   fi
+  # the agents, by the same rule: a new one, a changed one or a dropped one is a change
   if [ "$NOOP" = yes ]; then
-    echo "no behavioral change: the installed suite skills are byte-identical to this source — only the version stamp advances."
+    for a in $NEW_AGENTS; do
+      printf '%s\n' "$OWNED_AGENTS" | grep -qx "$a" || { NOOP=no; break; }
+      cmp -s "$SRC_AGENTS/$a" "$AGENTS_DIR/$a" || { NOOP=no; break; }
+    done
+  fi
+  if [ "$NOOP" = yes ]; then
+    for old in $OWNED_AGENTS; do
+      printf '%s\n' "$NEW_AGENTS" | grep -qx "$old" || { NOOP=no; break; }
+    done
+  fi
+  if [ "$NOOP" = yes ]; then
+    echo "no behavioral change: the installed suite skills and agents are byte-identical to this source — only the version stamp advances."
   fi
 fi
 
-# 4. Prune skills WE installed that no longer exist upstream (renamed or removed).
+# 4. Prune skills WE installed that no longer exist upstream (renamed or removed) — and only a name
+#    in the suite's reserved namespace (wai, wai-*): a path-shaped line in a hand-edited manifest
+#    (`../../docs`) would otherwise reach the user's data this script must never touch.
 for old in $OWNED; do
+  if ! printf '%s\n' "$old" | grep -qE '^wai(-[a-z0-9-]+)?$'; then
+    echo "  kept (not a name this suite installs): $old"; continue
+  fi
   if ! printf '%s\n' "$NEW_SET" | grep -qx "$old"; then
     rm -rf "${SKILLS_DIR:?}/$old"
     echo "pruned (renamed/removed upstream): $old"
+  fi
+done
+
+# 4b. The same for agents — and only for a name in the suite's namespace, so a hand-edited
+#     manifest cannot talk this script into deleting someone else's agent, or a path outside it.
+for old in $OWNED_AGENTS; do
+  if ! printf '%s\n' "$old" | grep -qE '^wai-[a-z0-9-]+\.md$'; then
+    echo "  kept (not a name this suite installs): $old"; continue
+  fi
+  if ! printf '%s\n' "$NEW_AGENTS" | grep -qx "$old"; then
+    rm -f "${AGENTS_DIR:?}/$old"
+    echo "pruned agent (renamed/removed upstream): $old"
   fi
 done
 
@@ -189,8 +243,19 @@ for s in $NEW_SET; do
   echo "installed: $s"
 done
 
+# 5b. Install/update each suite agent (one file each) — through a temp file and `mv`, so a symlink
+#     in the agent's place is replaced, never written through to wherever it points.
+[ -z "$NEW_AGENTS" ] || mkdir -p "$AGENTS_DIR"
+for a in $NEW_AGENTS; do
+  cp "$SRC_AGENTS/$a" "$AGENTS_DIR/.$a.tmp" && mv -f "$AGENTS_DIR/.$a.tmp" "$AGENTS_DIR/$a"
+  echo "installed agent: $a"
+done
+
 # 6. Record what we own now — this is what the next run prunes against.
 printf '%s\n' "$NEW_SET" > "$MANIFEST"
+# No agents in this source (a ref from before they shipped): we own none now, so no manifest — an
+# empty one would suppress the collision warning when a later install brings them back.
+if [ -n "$NEW_AGENTS" ]; then printf '%s\n' "$NEW_AGENTS" > "$AGENTS_MANIFEST"; else rm -f "$AGENTS_MANIFEST"; fi
 
 # 6b. Stamp the suite version (the commit just installed). doctor.sh reads this at update time;
 #     A later phase will compare a generated artifact's own stamp against it to detect a stale
@@ -208,6 +273,8 @@ printf '%s  (ref %s)\n' "$SRC_SHA" "$REF" > "$DEST/.claude/.wai-suite-version"
 
 echo ""
 echo "✔ wAI skill suite installed into $SKILLS_DIR  (version $SRC_SHA)"
+AGENT_NAMES="$(printf '%s\n' "$NEW_AGENTS" | sed 's/\.md$//' | paste -sd ' ' -)"
+[ -z "$NEW_AGENTS" ] || echo "  and its agents into $AGENTS_DIR: $AGENT_NAMES"
 echo "  Next: in Claude Code run 'refresh skills' (or restart), then run wai-init if this repo"
 echo "  is not set up yet — it scans the repo and writes docs/architecture/ (catalog + strategy)."
 echo ""
