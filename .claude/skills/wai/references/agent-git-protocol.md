@@ -444,6 +444,25 @@ everyone else**:
   cleanups are applied on approval). If a marker blocks your work, hand it back to the human, or
   ask `wai-learning-gap` to resolve it (flow C) — explicitly, with an explanation. Never in passing.
 
+## Running a suite script
+
+Every script call in the suite follows one convention, so the same sentence is true in a repo
+install (the skills in your repo's `.claude/skills/`) and in a plugin install (the skills in the
+plugin cache, outside your repo):
+
+- **The cwd is the repo root.** A script reads the repo it runs in: its `docs/`, its git history.
+  Never `cd` into a skill's directory to run one. In a plugin install that directory is the plugin
+  cache, and a script that finds its repo through the cwd reads the wrong tree.
+- **The script is reached by path.** In a skill's calls, `<skill-dir>` is that skill's base
+  directory, the absolute path Claude Code names when the skill loads (*Base directory for this
+  skill: …*). `sh <skill-dir>/scripts/doctor.sh` runs a script of the skill itself;
+  `sh <skill-dir>/../wai/scripts/run-log.sh …` runs a sibling skill's, because the skills sit side
+  by side in both installs.
+
+Some scripts stop when no git work tree encloses the cwd and no path was given; others read
+whatever directory they stand in. The protection is the convention, not the scripts. To point a
+script at a tree that is not a git work tree, pass its root explicitly.
+
 ## Graceful fallback
 
 - **Not a git repo, or `gh` is missing/unauthenticated:** do not fail the task. Produce the

@@ -27,7 +27,7 @@ unless it is anchored to an artifact.
 
 Two ways in, and the hand-back says which one fired:
 
-- **Threshold.** `sh ../wai/scripts/doctor.sh` (from this skill's directory) prints the
+- **Threshold.** `sh <skill-dir>/../wai/scripts/doctor.sh` (from the repo root) prints the
   report-cadence advisory — "N verdict(s) since the last report marker", threshold 25 (override
   `REPORT_THRESHOLD` env). At or over the threshold, a retro is due; doctor stays advisory
   (`exit 0` with the note; `exit 1` is repo **DRIFT**, `exit 2` is doctor's own **UNKNOWN** —
@@ -61,17 +61,17 @@ nothing from the file would move that count.) This skill stays a non-reader.
 
 ## Process
 
-1. **Confirm the trigger and the period.** Run `sh ../wai/scripts/doctor.sh` (from this skill's
-   directory) if the trigger was not already its advisory. The period is everything since the
+1. **Confirm the trigger and the period.** Run `sh <skill-dir>/../wai/scripts/doctor.sh` (from the repo
+   root) if the trigger was not already its advisory. The period is everything since the
    ledger's last report marker (the default anchor `scripts/retro-compliance.sh` derives), or the
    range the human names.
 
 2. **Collect — scripts only, fail closed.**
-   - `sh ../wai-pr-review/scripts/gate-stats.sh --report` (from this skill's directory; **without**
+   - `sh <skill-dir>/../wai-pr-review/scripts/gate-stats.sh --report` (from the repo root; **without**
      `--mark` — the marker is planted at the end, step 6). `exit 0` = the dated report section was
      emitted · `exit 2` = no ledger to read — then level 1 has no gate half: say `not measured`,
      never reconstruct verdicts from memory or from PR pages.
-   - `sh scripts/retro-compliance.sh` (from this skill's directory) — the compliance metric: it
+   - `sh <skill-dir>/scripts/retro-compliance.sh` (from the repo root) — the compliance metric: it
      crosses run-log rows, gate-ledger rows and `git log --merges` and reports per-skill run
      counts, the period's verdict count, the merged-PR count and the **traced share** (which
      merged PRs carry a gate verdict), raw numbers beside the rate. `exit 0` = emitted, including
@@ -83,12 +83,12 @@ nothing from the file would move that count.) This skill stays a non-reader.
      **subjects handled** (one per verdict, and a review can run the gate twice). Two units,
      **not a rate**: narrate them side by side, never divide one by the other.
    - *Optional* — **context cost**, when the session transcripts are on this machine:
-     `sh scripts/session-cost.sh [--session <id-prefix>]` (from this skill's directory) prints raw
+     `sh <skill-dir>/scripts/session-cost.sh [--session <id-prefix>]` (from the repo root) prints raw
      token counters per session, the main thread and subagents apart, no prices. `exit 0` =
      printed · `exit 2` = nothing was counted (no transcript dir, no readable transcript, or
      misuse) — then say `not measured`.
-   - **The closing picture** comes from `sh ../wai/scripts/open-items.sh --brief` (from this
-     skill's directory) at hand-back — `exit 0` = emitted · `exit 2` = nothing derivable, say
+   - **The closing picture** comes from `sh <skill-dir>/../wai/scripts/open-items.sh --brief` (from the
+     repo root) at hand-back — `exit 0` = emitted · `exit 2` = nothing derivable, say
      `not checked`.
 
 3. **Level 1 — suite performance (narrate the pasted numbers).** What the gate, the skills and
@@ -114,8 +114,8 @@ nothing from the file would move that count.) This skill stays a non-reader.
    findings about the suite (a gate that lied, a metric that dropped rows) are the human's
    decision point — present with a recommendation and wait.
 
-6. **Advance the marker:** `sh ../wai-pr-review/scripts/gate-stats.sh --report --mark` (from this
-   skill's directory). The `--mark` **appends** one marker line to the ledger — an append, never
+6. **Advance the marker:** `sh <skill-dir>/../wai-pr-review/scripts/gate-stats.sh --report --mark` (from the
+   repo root). The `--mark` **appends** one marker line to the ledger — an append, never
    an edit — and it is what doctor counts from: **an unmarked retro does not reset the cadence**,
    so skipping this step re-arms the advisory against a report that already exists. `exit 2` here
    means the marker did not land (the report above stands) — say so in the hand-back.
@@ -136,8 +136,8 @@ nothing from the file would move that count.) This skill stays a non-reader.
      no cross-repo issue numbers; numbers instead of names, classes instead of domain specifics;
      no timestamps beyond dates unless the source repo wants dates dropped too.
 
-8. **Log the run and hand back.** `sh ../wai/scripts/run-log.sh wai-retro "<period>"
-   "<half-sentence result>"` (from this skill's directory) — fail-open: `exit 0` even when the
+8. **Log the run and hand back.** `sh <skill-dir>/../wai/scripts/run-log.sh wai-retro "<period>"
+   "<half-sentence result>"` (from the repo root) — fail-open: `exit 0` even when the
    write fails, `exit 2` only on misuse (missing arguments). Then hand back per
    `../wai/references/hand-back.md`, ending with the `--brief` footer (step 2) verbatim.
 

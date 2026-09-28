@@ -33,7 +33,10 @@ set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX pattern semantics required
 
 VARIANT="${1:-}"
-BASE="${2:-.claude/skills/wai-init/references/quality-attributes.baseline.md}"
+# The default master is the one that ships BESIDE this script (../references/), never a cwd-relative
+# repo path: a plugin install vendors nothing into the repo, and the documented call from the skill's
+# directory missed the repo path too — both exited 2, generating nothing (#95).
+BASE="${2:-$(dirname "$0")/../references/quality-attributes.baseline.md}"
 [ -f "$BASE" ] || { echo "catalog-variant: no baseline at $BASE" >&2; exit 2; }
 
 # ── the frozen judgment: what each variant keeps ────────────────────────────────────────────────

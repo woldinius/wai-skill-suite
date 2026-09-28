@@ -106,7 +106,7 @@ necessary aspects as findings.
      (`AI-9`/`AI-4`)?
 
    **If the diff touches the quality catalog, lint it**:
-   `sh ../wai-init/scripts/catalog-lint.sh` (from this skill's directory — the skills install
+   `sh <skill-dir>/../wai-init/scripts/catalog-lint.sh` (from the repo root — the skills install
    side by side, in a repo and in the plugin cache alike). A new dimension without a Red Flag is
    not reviewable, and a reused retired ID silently rewrites the meaning of every past finding
    that cited it. A red lint is a **Blocker**, not a nit.
@@ -139,7 +139,7 @@ necessary aspects as findings.
    **The script's — mechanics.** Run it and **obey the exit code**:
 
    ```
-   sh scripts/merge-gate.sh <PR>      # from this skill's directory
+   sh <skill-dir>/scripts/merge-gate.sh <PR>      # from the repo root
    ```
 
    It checks, deterministically: the quality catalog exists · the repo mode · required checks
@@ -156,7 +156,7 @@ necessary aspects as findings.
    The script **appends every verdict** to `docs/architecture/gate-ledger.md` — never log, backfill
    or edit a row yourself; a verdict with no row was never run (outside a repo, none is written by
    design). The human tags each row's outcome (`ok`/`fp`/`fn`, plus `nil` and `lost` for a
-   reconstructed row) later; the file explains how. Read the numbers with `scripts/gate-stats.sh`.
+   reconstructed row) later; the file explains how. Read the numbers with `sh <skill-dir>/scripts/gate-stats.sh`.
    The gate's output also names the families whose citations decide in this repo (*citations
    decide here: …*) — a cited family outside that list is advisory only.
 
@@ -204,7 +204,7 @@ necessary aspects as findings.
    is the human's, however wrong it looks.
 
    **After any merge this skill performed, "merged" in the report means ARRIVED — verify it.** Run
-   `sh ../wai/scripts/verify-arrival.sh <mergeCommit>` (from this skill's directory — a sibling
+   `sh <skill-dir>/../wai/scripts/verify-arrival.sh <mergeCommit>` (from the repo root — a sibling
    path, like the classifier's) and obey the exit code. **Exit 0 — ARRIVED:** the merge commit is
    reachable from the freshly fetched `origin/<default>`; only now may the report say "merged".
    **Exit 1 — LOST:** the forge says MERGED but the default branch never received the commit — a
@@ -241,7 +241,7 @@ necessary aspects as findings.
    evidence. If it is not there, post it again before you report the run as done.
    (The run-log row for this skill is written by `merge-gate.sh` itself — do not log it again.)
    **Then hand back** per `../wai/references/hand-back.md`, ending with
-   `sh ../wai/scripts/open-items.sh --brief` (from this skill's directory) pasted verbatim —
+   `sh <skill-dir>/../wai/scripts/open-items.sh --brief` (from the repo root) pasted verbatim —
    `exit 2`: say `not checked`.
 
 ## Review lens

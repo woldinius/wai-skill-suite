@@ -176,12 +176,12 @@ last audit — don't re-derive a full report when nothing meaningful changed.
    instead of re-filing. The dated report stays the **narrative** source of truth; issues are
    the trackable handles into it. Without `gh`, list the would-be issues with their
    `gh issue create` commands.
-   **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-architecture-audit"
-   "<subject>" "<half-sentence outcome>"` (from this skill's directory; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — an audit that finds
+   **Log the run before handing back:** `sh <skill-dir>/../wai/scripts/run-log.sh "wai-architecture-audit"
+   "<subject>" "<half-sentence outcome>"` (from the repo root; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — an audit that finds
    nothing still writes its row, because that is the run that vanishes today; fail-open: exit 0
    even when the write fails, exit 2 only on misuse (missing arguments).
    **Then hand back** per `../wai/references/hand-back.md`, ending with
-   `sh ../wai/scripts/open-items.sh --brief` (same directory) pasted verbatim — `exit 2`: say
+   `sh <skill-dir>/../wai/scripts/open-items.sh --brief` (from the repo root too) pasted verbatim — `exit 2`: say
    `not checked`.
 
 ## Severity & trend

@@ -66,7 +66,7 @@ every gap it leaves becomes a round-trip: a client hits it mid-implementation, s
 the backend to answer. Most of those round-trips are avoidable, and this checklist is how the
 initiator removes them **before** hand-off. Run it against the spec change while it is still on the
 drawing board. The deterministic structural floor is
-`sh .claude/skills/wai-pr-review/scripts/contract-completeness.sh` (schema present on every
+`sh <skill-dir>/../wai-pr-review/scripts/contract-completeness.sh` (from the repo root; schema present on every
 response, one error schema referenced, a security scheme defined and referenced, a version present).
 Obey its exit code: `exit 0` = the floor is met — name-heuristic **WARN** advisories may still
 print, and they never move the exit · `exit 1` = a floor check failed and the hole is named — close

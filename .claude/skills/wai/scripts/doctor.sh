@@ -38,7 +38,7 @@
 # could not check" would re-commit the very misreport being removed here; the unverified items keep
 # their own `?` lines in the body regardless, so no signal is lost — only the headline is chosen.
 #
-# Usage: sh doctor.sh [repo-root]        (default: .)
+# Usage: sh doctor.sh [repo-root]        (default: the git work tree around the cwd)
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
@@ -46,9 +46,15 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 # The default root is the enclosing git worktree, not the cwd: run "from this skill's
 # directory" (as documented), a cwd default audited the SKILL FOLDER as if it were the repo and
 # printed "no drift" over a missing catalog — a false clean, with no cadence advisory at all.
-# An explicit argument still wins; outside a git repo the cwd stays the base.
+# An explicit argument still wins. With none, and no work tree around the cwd — the plugin cache is
+# not a git repo — the old `.` fallback committed that same false clean again (#95), so that is now
+# UNKNOWN: doctor cannot tell which repo it was meant to check.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-ROOT="${1:-${REPO_ROOT:-.}}"
+if [ -z "${1:-}" ] && [ -z "$REPO_ROOT" ]; then
+  echo "doctor: no repo root given and the cwd is not inside a git work tree — nothing was checked (UNKNOWN). Run it from the repo root, or pass the root." >&2
+  exit 2
+fi
+ROOT="${1:-$REPO_ROOT}"
 # Cannot enter the repo ⇒ nothing below was checked. That is state 2, and it is the ONE case where
 # saying "no drift" would be a lie of omission rather than a finding.
 cd "$ROOT" 2>/dev/null || { echo "doctor: cannot cd to '$ROOT'" >&2; exit 2; }

@@ -99,3 +99,5 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-28T21:48Z | wai-pr-review | PR #109 | NO-GO |
 | 2026-09-28T21:55Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-28T22:07Z | wai-pr-review | PR #109 | NO-GO |
+| 2026-09-28T22:13Z | wai-implementation | issue #95 | script calls run from the repo root, four false cleans removed; PR opened |
+| 2026-09-28T22:13Z | wai-testing | issue #95 | 19 cases on a plugin-cache fixture, each fix counterproofed |

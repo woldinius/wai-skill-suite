@@ -125,7 +125,7 @@ IDs) and the tailoring rules.
      — name that cost. Only a clear yes resets.
    - Only on **new or reset** does step 4 ask scope and tier.
 
-   **On every reconcile, run `scripts/catalog-lint.sh` first and act on it.** Red Flags it calls
+   **On every reconcile, run `sh <skill-dir>/scripts/catalog-lint.sh` (from the repo root) first and act on it.** Red Flags it calls
    *recoverable* → copy from the baseline (no authoring). Local dimensions inside the baseline's
    number space → declare under `## Local IDs`; renumbering breaks existing citations.
 
@@ -197,7 +197,7 @@ IDs) and the tailoring rules.
    guarantees**. IDs are never invented to fill a tier nor dropped to hit one.
 
 5a. **Mine issues & PRs for catalog candidates** (setup *and* re-run). For each signal from
-   `scripts/mine-issues.sh` that is a **real recurring concern**, make the call no script can — one
+   `<skill-dir>/scripts/mine-issues.sh` that is a **real recurring concern**, make the call no script can — one
    of four: **extend** an existing dimension (sharpen its **Red Flag**; never renumber) · **mint a
    new local dimension at ID ≥ 100** under `## Local IDs` · **propose upstream** if cross-surface
    (mint locally at ≥ 100 as a stopgap, say so) · **drop**. **The ID boundary is the trap** (*ID
@@ -214,7 +214,7 @@ IDs) and the tailoring rules.
    `solo`). Read the tier off the file itself; if it matches none cleanly, omit the field rather
    than force one.
 
-   **Then lint what you wrote:** `sh scripts/catalog-lint.sh` (from this skill's directory —
+   **Then lint what you wrote:** `sh <skill-dir>/scripts/catalog-lint.sh` (from the repo root —
    wherever the suite is installed, repo or plugin cache) — every dimension has a **Red Flag**
    (without one it isn't decidable), no **retired ID** reused, no skill cites a missing ID. Obey
    the exit code: `exit 0` = internally consistent · `exit 1` = a check failed and the reasons are
@@ -227,7 +227,7 @@ IDs) and the tailoring rules.
    the repo has them). If it exists, step 3 applies. Get it approved.
 
 8. **Merge-gate config** — write `docs/architecture/merge-gate.conf` from the template in
-   `wai-pr-review/scripts/merge-gate.conf.template` (read it — format + fail-closed contract). It
+   `<skill-dir>/../wai-pr-review/scripts/merge-gate.conf.template` (read it — format + fail-closed contract). It
    holds the **only** repo-specific gate input: which paths are a **contract domain**, and where
    **migrations** live.
 
@@ -244,7 +244,7 @@ IDs) and the tailoring rules.
    so a later change is a **contract-domain PR the human merges deliberately**.
 
 8a. **Coordination & autonomy config** — **only when Round 2 was asked** (team / multi-repo /
-   real-gate). Write `docs/architecture/coordination.conf` from `scripts/coordination.conf.template`
+   real-gate). Write `docs/architecture/coordination.conf` from `<skill-dir>/scripts/coordination.conf.template`
    (read it — **parsed, never sourced**, fail-closed). Like `merge-gate.conf` it is a **proposal
    the human commits**, **contract-domain**, and self-protecting.
 
@@ -259,7 +259,7 @@ IDs) and the tailoring rules.
    `AUTONOMY_ENABLED=yes`, then `CONTRACT_PATHS`, `ERASURE_PATHS` **and** `AUTONOMY_SAFE_PATHS`
    must be **non-empty** *and* `AUTONOMY_AFFIRMED` present — else **autonomy stays off**. An
    empty exclusion surface means "we don't yet know what's safe". Run
-   `scripts/coordination-lint.sh` and obey it: `exit 0` = consistent — or the file is simply
+   `sh <skill-dir>/scripts/coordination-lint.sh` (from the repo root) and obey it: `exit 0` = consistent — or the file is simply
    **absent**, which is the safe default (autonomy off, comms none) · `exit 1` = a check failed,
    printed without ever echoing a secret value — a **stop**, autonomy stays off until it is
    green · `exit 2` = **UNKNOWN**: the conf/catalog is unreadable or the policy-domain floor
@@ -370,7 +370,7 @@ Capture at least:
   Cloud/Gradle, signing, tracks.
 - **GitHub connection (read-only)** — git `origin` on GitHub, `gh` installed/authenticated, Issues
   reachable? (verified in step 9).
-- **Issue & PR history (read-only signal)** — run `scripts/mine-issues.sh` for recurring themes:
+- **Issue & PR history (read-only signal)** — run `sh <skill-dir>/scripts/mine-issues.sh` (from the repo root) for recurring themes:
   label frequency, terms by **document-frequency** (so one noisy thread can't dominate), closed-PR
   themes. **Numbers only** — counts and a few example issue *numbers*, never bodies (`--bodies`
   opts in, email-redacted). Obey the exit code: `exit 0` = signals emitted — an **empty** backlog

@@ -92,7 +92,7 @@ parts you hadn't charted yet.
    Tools find the mechanical layer; the dimension walk finds the logic layer.
 
    **For dependency CVEs, run the script — do not eyeball a scanner.** `sh
-   scripts/dep-cve-scan.sh` walks each ecosystem present, runs its scanner *if installed*, and
+   <skill-dir>/scripts/dep-cve-scan.sh` (from the repo root) walks each ecosystem present, runs its scanner *if installed*, and
    emits a per-ecosystem `ran=true`/`not_measured` line with counts; **exit 2 means at least one
    scan did not run.** `npm audit 2>/dev/null` returning empty looks identical whether it found
    **zero CVEs** or **never ran** — **a scan that did not run is `not measured`, NEVER
@@ -209,7 +209,7 @@ parts you hadn't charted yet.
    commands.
    (The run-log row for this skill is written by `dep-cve-scan.sh` itself — do not log it again.)
    **Then hand back** per `../wai/references/hand-back.md`, ending with
-   `sh ../wai/scripts/open-items.sh --brief` (from this skill's directory) pasted verbatim —
+   `sh <skill-dir>/../wai/scripts/open-items.sh --brief` (from the repo root) pasted verbatim —
    `exit 2`: say `not checked`.
 
 ## Severity & trend (security-framed)

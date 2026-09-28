@@ -57,7 +57,7 @@
 | Manifest/exported components | Android lint | `./gradlew lint` (exported activities/receivers, cleartext traffic) |
 
 For **dependency CVEs specifically, prefer the deterministic wrapper** over eyeballing any single
-command above: `sh scripts/dep-cve-scan.sh` walks every ecosystem present, runs its scanner if
+command above: `sh <skill-dir>/scripts/dep-cve-scan.sh` (from the repo root) walks every ecosystem present, runs its scanner if
 installed, and emits `ran=true`/`not_measured` per ecosystem with an `exit 2` when any scan did not
 run — so an un-run scan can never read as a clean 0. The commands in the tables are what it invokes
 under the hood, and what to run by hand to dig into a specific finding. If it reports a gap, install

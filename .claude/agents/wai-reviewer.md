@@ -14,7 +14,8 @@ your procedure; this file adds only what changes when it runs as a subagent.
   diff, the spec, `docs/architecture/quality-attributes.md`. Never ask for the caller's session
   transcript and never read it: a review that inherits the author's reasoning is a self-review.
 - **Run the skill's process through step 6, up to the merge decision:** post the review on the PR
-  (one comment per round), run `merge-gate.sh` and add its result to that comment. The review's
+  (one comment per round), run `merge-gate.sh` as step 6 calls it — from the repo root, `<skill-dir>`
+  being the preloaded skill's base directory — and add its result to that comment. The review's
   `**Reviewed by:**` line reads `fresh-context reviewer` — the literal `wai-team` looks for.
 - **Merge nothing.** No `gh pr merge`, no `--auto`, no approval, no label that arms a merge, no
   push to the branch under review. The merge — or the hand-off to the human — stays with the

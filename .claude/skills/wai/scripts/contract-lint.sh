@@ -23,12 +23,19 @@
 #   exit 1  a check failed — the reasons are printed
 #   exit 2  the tree could not be read (fail-closed: "I could not look" is not "it is fine")
 #
-# Usage: sh contract-lint.sh [repo-root]         (default: .)
+# Usage: sh contract-lint.sh [repo-root]         (default: the suite tree this script ships in)
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX pattern semantics required
 
-ROOT="${1:-.}"
+# THE DEFAULT ROOT IS THE TREE THIS SCRIPT SHIPS IN, NOT THE CWD (#95). What this lint reads is the
+# suite — `.claude/skills/` — and in a plugin install that lives in the plugin cache, not in the
+# repo the session works in. A `.` default found no `.claude/skills` from the skill's directory, nor
+# from the repo root of a plugin user, and exited 2 with nothing checked. The script sits at
+# <root>/.claude/skills/wai/scripts/, so <root> is four levels up: the repo in a repo install, the
+# cache in a plugin install. An explicit root still wins.
+ROOT="${1:-$(cd "$(dirname "$0")/../../../.." 2>/dev/null && pwd)}"
+[ -n "$ROOT" ] || { echo "contract-lint: cannot resolve the tree this script ships in — pass the root." >&2; exit 2; }
 cd "$ROOT" 2>/dev/null || { echo "contract-lint: cannot cd to '$ROOT'" >&2; exit 2; }
 [ -d ".claude/skills" ] || { echo "contract-lint: no .claude/skills under '$ROOT' — nothing to check." >&2; exit 2; }
 

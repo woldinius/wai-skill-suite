@@ -126,7 +126,7 @@ PERIODIC (after a few features/refactors, or on security triggers)
   `wai-mobile-release`.
 - **The quality catalog is missing or the stack changed fundamentally** → `wai-init`.
 - **Did a suite update leave this repo out of step — is the gate actually configured, did anything
-  silently switch off?** → run `sh scripts/doctor.sh` (from this skill's directory). `install.sh` runs it
+  silently switch off?** → run `sh <skill-dir>/scripts/doctor.sh` (from the repo root). `install.sh` runs it
   automatically after every update; run it anytime to check for **drift** (a missing
   `merge-gate.conf` → the gate returns UNKNOWN on every PR; a legacy learning ledger). Obey the
   exit code: `exit 0` = no drift that disables a feature (soft advisories may still print) ·
@@ -136,7 +136,7 @@ PERIODIC (after a few features/refactors, or on security triggers)
   presence now; staleness of an already-generated artifact (an old `ci.yml`) still needs a
   `wai-cicd` re-run.
 - **Want the start log — how often skills actually START, not just hand back?**
-  → opt in, per developer, to the invocation hook: `sh scripts/invocation-log.sh --snippet` prints
+  → opt in, per developer, to the invocation hook: `sh <skill-dir>/scripts/invocation-log.sh --snippet` prints
   the `PostToolUse` block for your **`.claude/settings.local.json`** (never `settings.json` — a
   committed hook would switch it on repo-wide; personal state never becomes repo state). The hook
   appends one mechanical row per wai-skill invocation to `docs/architecture/invocation-log.md` —
@@ -147,7 +147,7 @@ PERIODIC (after a few features/refactors, or on security triggers)
   misuse only (an unknown argument), so a typo in the hook config is visible.
 - **Did a script and the prompt that invokes it drift apart** — after changing a script's exit
   codes, renaming a skill, or before a release? → run
-  `sh scripts/contract-lint.sh` (from this skill's directory). It reads both sides of the joint and fails
+  `sh <skill-dir>/scripts/contract-lint.sh` (from the repo root). It reads both sides of the joint and fails
   on three mechanical facts: a script no prompt names, a documented path that does not resolve from
   the repo root, and an exit code a script returns that no prompt naming it documents. `exit 0` =
   the two sides still describe each other · `exit 1` = a check failed; every finding names its file

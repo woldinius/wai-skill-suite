@@ -134,11 +134,11 @@ sandbox/fakes.
    and `**Skill:**` source per `issues-protocol.md` in the `wai` skill. That is the landing rule
    (§*Where a finding lands*): a gap you neither closed nor deliberately accepted is **filed**,
    not mentioned in passing. Close with **▶ Recommended next**.
-   **Log the run before handing back:** `sh ../wai/scripts/run-log.sh "wai-testing" "<subject>"
-   "<half-sentence outcome>"` (from this skill's directory; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — a run without a row is invisible
+   **Log the run before handing back:** `sh <skill-dir>/../wai/scripts/run-log.sh "wai-testing" "<subject>"
+   "<half-sentence outcome>"` (from the repo root; **one row per subject handled, not one per turn** — a turn that hands back three subjects logs three rows) — a run without a row is invisible
    work; fail-open: exit 0 even when the write fails, exit 2 only on misuse (missing arguments).
    **Then hand back** per `../wai/references/hand-back.md`, ending with
-   `sh ../wai/scripts/open-items.sh --brief` (same directory) pasted verbatim — `exit 2`: say
+   `sh <skill-dir>/../wai/scripts/open-items.sh --brief` (from the repo root too) pasted verbatim — `exit 2`: say
    `not checked`.
 
 ## Mandatory test targets (never skipped)
