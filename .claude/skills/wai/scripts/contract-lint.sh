@@ -15,7 +15,9 @@
 #   1. Every script has a caller.        A script no prompt names is dead weight — or worse, a
 #                                        mechanism someone believes is running.
 #   2. Every documented path resolves.   "Run scripts/foo.sh" is a lie if it does not exist from
-#                                        where the prompt says to run it.
+#                                        where the prompt says to run it — and an `sh` call is
+#                                        written `<skill-dir>/…`, the one form that resolves in a
+#                                        repo install and a plugin install alike (#95).
 #   3. Every exit code is documented.    An undocumented code is a coin flip: the model invents a
 #                                        meaning for it, and fail-closed becomes fail-open.
 #
@@ -127,6 +129,32 @@ else
   printf '%s\n' "$UNRESOLVED" | grep . | while IFS= read -r line; do hint "$line"; done
   hint "→ an agent reading this runs the path as written, from the repo root. Write it so it resolves."
 fi
+# …and every `sh` call to a suite script is written the one way that resolves in both installs. The
+# convention (agent-git-protocol.md § Running a suite script, #95): the cwd is the repo root and the
+# script is reached by path, `sh <skill-dir>/…`. `sh scripts/x.sh` "from this skill's directory"
+# resolves above — from the skill — and hands the script a cwd that is not the repo; `sh .claude/…`
+# does not exist in a plugin install. Only an `sh <path>` whose basename is OURS is read, flattened
+# so a call wrapped after `sh` is still one call; a mention without `sh` is not a call.
+CALL_RE='(^|[^A-Za-z0-9_./-])sh[[:space:]]+[^[:space:]`"()]+[.]sh'
+OFFCALL=""; N_CALL=0
+for f in $RUNNABLE; do
+  for call in $(tr '\n' ' ' < "$f" | grep -oE "$CALL_RE" | sed -E 's/^.*sh[[:space:]]+//' | sort -u); do
+    case " $BNS " in *" ${call##*/} "*) ;; *) continue ;; esac
+    N_CALL=$((N_CALL + 1))
+    case "$call" in
+      '<skill-dir>/'*) ;;
+      *) OFFCALL="$OFFCALL
+$f: sh $call" ;;
+    esac
+  done
+done
+if [ -z "$OFFCALL" ]; then
+  ok "every documented sh call to a suite script is written from the skill's base directory ($N_CALL/$N_CALL)"
+else
+  bad "documented sh call(s) to a suite script not written as <skill-dir>/…:"
+  printf '%s\n' "$OFFCALL" | grep . | while IFS= read -r line; do hint "$line"; done
+  hint "→ write it \`sh <skill-dir>/…\`, run from the repo root (agent-git-protocol.md § Running a suite script)."
+fi
 if [ -n "$ADVISORY" ]; then
   warn "$N_OTHER path(s) named do not belong to this suite; these do not exist here — ADVISORY, not failed:"
   printf '%s\n' "$ADVISORY" | grep . | while IFS= read -r line; do hint "$line"; done
@@ -232,7 +260,8 @@ echo "    does on that path. Only the presence of the number is checked, never i
 echo "  · ATTRIBUTION. Exit-code evidence is scoped to the markdown block. Where a block names two"
 echo "    scripts, a number written about one of them counts for both (see the ⚠ count, if any)."
 echo "  · Whether a mention is an INVOCATION. Check 1 accepts any mention of a basename, so a"
-echo "    script named only in a sentence about history counts as called."
+echo "    script named only in a sentence about history counts as called. And the call form in"
+echo "    check 2 is read only after \`sh\`: \"run \`scripts/foo.sh\`\" is not held to <skill-dir>/…"
 echo "  · Codes behind a variable (\`exit \"\$RC\"\`) unless the script's own header declares them."
 echo "  · Non-.md callers — a workflow, a hook or another script that invokes one of these."
 

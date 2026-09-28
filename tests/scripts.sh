@@ -635,8 +635,8 @@ echo "backlog-scan.sh"
 
 # `~` is the placeholder for the 0x1C field separator the real --jq emits, translated at write time —
 # a control byte in a fixture literal is unreadable and travels badly through an editor.
-bkfix() {
-  N=$((N+1)); D="$TMP/bk$N"; mkdir -p "$D"
+bkfix() {   # a git repo: backlog-scan self-logs, and run-log writes a row only inside a repo (#95)
+  N=$((N+1)); D="$TMP/bk$N"; gitrepo "$D"
   printf '%s\n' \
     '12~fix the export timeout~~bug~Repro steps here. - [ ] add a regression test' \
     '13~refactor the billing charge path~alice~size:M~Cleanup. depends on #12 first.' \
@@ -1139,11 +1139,13 @@ assert_xfail "KNOWN DEFECT: …and the length check silently never ran (no lengt
 echo
 echo "run-log.sh"
 # The suite's attendance record (issue #11: the record measures side effects, not work). 0 = row
-# emitted OR emission failed and was swallowed — FAIL-OPEN, a logging failure never breaks a run —
-# and 2 = misuse (missing arguments). There is no exit 1: this script renders no verdict.
+# emitted OR emission failed and was swallowed, or no repo to write it to — FAIL-OPEN, a logging
+# failure never breaks a run — and 2 = misuse (missing arguments). There is no exit 1: this script
+# renders no verdict.
 # =================================================================================================
 RUNLOG="$ROOT/.claude/skills/wai/scripts/run-log.sh"
-rlfix() { N=$((N+1)); D="$TMP/rl$N"; mkdir -p "$D"; RL="$D/docs/architecture/run-log.md"; }
+# A git repo: outside one the log writes nothing (#95, pinned below), so every row case needs one.
+rlfix() { N=$((N+1)); D="$TMP/rl$N"; gitrepo "$D"; RL="$D/docs/architecture/run-log.md"; }
 rl() { ( cd "$D" && sh "$RUNLOG" "$@" 2>&1 ); }
 
 # THE PASS PATH. An emitter nobody has watched emit is not an emitter.
@@ -1174,8 +1176,10 @@ assert "missing arguments → misuse, exit 2 (the one defined negative — there
 if [ ! -e "$RL" ]; then ok "and misuse writes nothing"
 else bad "and misuse writes nothing" "$RL exists"; fi
 
-rlfix; out="$( cd "$D" && RUN_LOG="custom/attendance.md" sh "$RUNLOG" wai-cicd setup 'gate wired' 2>&1 )"; rc=$?
-assert "RUN_LOG overrides the path (the MERGE_GATE_LEDGER pattern)" 0 "$rc" "$out" 'custom/attendance.md'
+# A plain directory, on purpose: an explicit RUN_LOG is written even where no repo encloses the cwd.
+N=$((N+1)); D="$TMP/rlovr$N"; mkdir -p "$D"
+out="$( cd "$D" && RUN_LOG="custom/attendance.md" sh "$RUNLOG" wai-cicd setup 'gate wired' 2>&1 )"; rc=$?
+assert "RUN_LOG overrides the path (the MERGE_GATE_LEDGER pattern), even outside a repo" 0 "$rc" "$out" 'custom/attendance.md'
 if grep -q '| wai-cicd | setup | gate wired |' "$D/custom/attendance.md" 2>/dev/null; then
   ok "  · and the row landed at the override path"
 else
@@ -1185,8 +1189,7 @@ fi
 # CWD IS NOT THE REPO (issue #29 sub-fix 2). Nine SKILL.md files instruct running this script
 # "from this skill's directory"; with a cwd-relative default every one of those runs planted the
 # row in <skill-dir>/docs/architecture/ — scattered, uncommitted, and (for the suite's own repo)
-# inside the install payload. The default now resolves against the enclosing worktree. The plain
-# non-repo fixtures in every other case of this section pin the cwd fallback.
+# inside the install payload. The default now resolves against the enclosing worktree.
 N=$((N+1)); D="$TMP/rlgit$N"; gitrepo "$D"
 printf 'x\n' > "$D/f.txt"; gitcommit "$D" 'chore: base'
 mkdir -p "$D/.claude/skills/wai-testing"
@@ -1198,6 +1201,16 @@ else bad "  · the row is in <repo-root>/docs/architecture/run-log.md" "$(ls -R 
 if [ ! -e "$D/.claude/skills/wai-testing/docs" ]; then
   ok "  · and no stray docs/ tree was planted inside .claude/skills/"
 else bad "  · and no stray docs/ tree was planted inside .claude/skills/" "stray: $D/.claude/skills/wai-testing/docs"; fi
+
+# NO REPO, NO ROW (#95). Outside a git work tree the default appended to the CWD — from a skill's
+# directory in a plugin install, into the plugin cache — and still printed "row appended". It now
+# writes nothing and says so on stderr, and stays fail-open: exit 0, a lost row never fails a run.
+N=$((N+1)); D="$TMP/rlnogit$N"; mkdir -p "$D"
+out="$( cd "$D" && sh "$RUNLOG" wai-testing 'PR #7' 'green' 2>&1 )"; rc=$?
+assert "no git work tree and no RUN_LOG → exit 0 (fail-open), and it says no repo was found" 0 "$rc" "$out" \
+  'no repo found' 'row appended'
+if [ ! -e "$D/docs" ]; then ok "  · and nothing was written into the cwd"
+else bad "  · and nothing was written into the cwd" "$(find "$D/docs" -type f 2>&1)"; fi
 
 # A PIPE IN THE SUBJECT STAYS ONE CELL (issue #29 sub-fix 3 — pinned, because it was field-reported
 # and the escaping already shipped at f6425f8: a report against an older tree becomes a regression
@@ -1978,6 +1991,15 @@ printf -- '- **MAINT-50 · Local** — a. *Red Flag:* b.\n' >> "$PREPO/docs/arch
 out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/catalog-lint.sh" 2>&1 )"; rc=$?
 assert "  · a local ID inside the baseline's number space FAILS there too (check 7 used to skip unseen)" 1 "$rc" "$out" \
   'undeclared: MAINT-50'
+# The repo's .claude/skills holds only its OWN skills here, and the baseline from the cache must not
+# turn their citations of the repo's own dimensions into findings.
+printf -- '- **SEC-1 · Auth** — a. *Red Flag:* b.\n- **SEC-101 · Local** — a. *Red Flag:* b.\n' \
+  > "$PREPO/docs/architecture/quality-attributes.md"
+mkdir -p "$PREPO/.claude/skills/team-notes"; printf 'Anchor to `SEC-101`.\n' > "$PREPO/.claude/skills/team-notes/SKILL.md"
+out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/catalog-lint.sh" 2>&1 )"; rc=$?
+assert "  · a repo's own skill citing the catalog's local SEC-101 resolves — no false red" 0 "$rc" "$out" \
+  'VERDICT: OK' 'a SKILL cites'
+rm -rf "$PREPO/.claude/skills/team-notes"
 printf -- '- **SEC-1 · Auth** — a. *Red Flag:* b.\n' > "$PREPO/docs/architecture/quality-attributes.md"
 
 out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/catalog-variant.sh" minimum 2>&1 )"; rc=$?
@@ -2042,6 +2064,23 @@ assert "contract-lint from its own skill dir → still the whole suite tree, exi
 out="$( cd "$PSK/wai-init" && "$SH" scripts/catalog-variant.sh minimum 2>&1 )"; rc=$?
 assert "catalog-variant from its own skill dir → generated, exit 0 (was 'no baseline', exit 2)" 0 "$rc" "$out" \
   '^# Quality Catalog — minimum variant'
+
+# ── the convention, held: contract-lint reads how a prompt calls a script ─────────────────────────
+# A prompt that still writes the old call — a path from the skill's directory — fails check 2; the
+# `<skill-dir>/…` form passes, and a script named without `sh` is a mention, not a call.
+clfix() {   # $1 = the prompt's text; a one-script suite tree
+  N=$((N+1)); CL="$TMP/cl$N"; mkdir -p "$CL/.claude/skills/wai/scripts"
+  printf '#!/bin/sh\nexit 0\n' > "$CL/.claude/skills/wai/scripts/doctor.sh"
+  printf '%s\n' "$1" > "$CL/.claude/skills/wai/SKILL.md"
+}
+clfix "Run \`sh scripts/doctor.sh\` (from this skill's directory)."
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "contract-lint: an old-form call 'sh scripts/doctor.sh' → FAILED, the call named" 1 "$rc" "$out" \
+  'SKILL.md: sh scripts/doctor.sh'
+clfix "Run \`sh <skill-dir>/scripts/doctor.sh\` (from the repo root); \`doctor.sh\` reports drift."
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · the <skill-dir>/… form passes, and a mention without sh is not held to it" 0 "$rc" "$out" \
+  'written from the skill.s base directory \(1/1\)' 'not written as'
 
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once

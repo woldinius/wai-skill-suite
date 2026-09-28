@@ -247,12 +247,19 @@ else
   UNKNOWN=""; DEAD=""
   for c in $(cited_in "$SKILLS"); do
     printf '%s\n' "$BASE_IDS" | grep -qx "$c" && continue
-    if printf '%s\n' "$BASE_RET" | grep -qx "$c"; then DEAD="$DEAD $c"; else UNKNOWN="$UNKNOWN $c"; fi
+    if printf '%s\n' "$BASE_RET" | grep -qx "$c"; then DEAD="$DEAD $c"; continue; fi
+    # The repo's OWN skills sit under .claude/skills too — in a plugin install they are the only ones
+    # there — and they may cite the repo's own dimensions: an ID live in THIS catalog (a local one at
+    # >= 100, or a declared one) resolves (#95). Checked AFTER the retired list, so a number the
+    # baseline retired stays DEAD even where a catalog re-mints it. A suite skill citing a local ID
+    # still fails in the suite's own repo, whose catalog defines none.
+    printf '%s\n' "$LIVE" | grep -qx "$c" && continue
+    UNKNOWN="$UNKNOWN $c"
   done
   if [ -z "$UNKNOWN$DEAD" ]; then
-    pass "every ID a skill cites is a LIVE baseline dimension"
+    pass "every ID a skill cites is a LIVE baseline dimension, or a live dimension of this catalog"
   else
-    [ -z "$UNKNOWN" ] || note "a SKILL cites an ID the baseline does not define:$UNKNOWN"
+    [ -z "$UNKNOWN" ] || note "a SKILL cites an ID neither the baseline nor this catalog defines:$UNKNOWN"
     if [ -n "$DEAD" ]; then
       note "a SKILL cites a RETIRED baseline ID:$DEAD — every finding anchored to it points at a dimension that has moved"
       for d in $DEAD; do hint "$d — the baseline moved this number to: $(retire_target "$d")"; done
