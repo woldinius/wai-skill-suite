@@ -1,6 +1,6 @@
 ---
 name: Field report
-about: Ran the suite in your repo? Four fields and a paste. The reports where the suite was WRONG are the most valuable ones.
+about: Ran the suite in your repo? Three fields and a paste. The reports where the suite was WRONG are the most valuable ones.
 labels: field-report
 ---
 
@@ -14,7 +14,9 @@ docs/open-questions.md Q3 is waiting for. -->
 
 **gate-stats output:**
 
-<!-- paste of:  sh .claude/skills/wai-pr-review/scripts/gate-stats.sh -->
+<!-- paste of:  sh .claude/skills/wai-pr-review/scripts/gate-stats.sh
+     (the path after an install.sh install; with the plugin, run the same path under the
+     plugin's directory in the plugin cache, from inside your repo) -->
 
 ```text
 (paste here)

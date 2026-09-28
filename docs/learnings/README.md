@@ -51,7 +51,9 @@ Two rules follow, and both are load-bearing:
 2. **Never edit a field report to make a checker happy.** They are evidence. **If a report is wrong,
    that is itself the evidence** — one of them was, and the fact that a confident, well-written report
    can be entirely stale is one of the more valuable things in this directory. Annotate the correction
-   in `docs/empirics.md`; leave the report alone.
+   in `docs/empirics.md`; leave the report alone. The one exception is wording that judges a
+   person: it is made factual, the finding itself is never changed, and the edit is listed in
+   `docs/empirics.md`.
 
 ## Append-only
 

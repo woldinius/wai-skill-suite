@@ -8,7 +8,7 @@ Every code review my agent has ever performed was told to do the same thing:
 
 > *"Cite the affected catalog ID in every finding. Read the reference when you need the Red Flag for that dimension."*
 
-The Red Flag is the operative part — the one-line description of what failure actually looks like. `SEC-8`'s is *"an ID from the request is fetched without an ownership predicate."* That's what makes a finding decidable instead of a matter of taste.
+The Red Flag is the operative part — the one-line description of what failure actually looks like. `SEC-8`'s is *"an ID from the request is trusted and fetched without an ownership/tenant predicate — reachable cross-tenant data."* That's what makes a finding decidable instead of a matter of taste.
 
 Last week I counted. **Of 89 dimensions in the catalog, 55 had no Red Flag at all.**
 
@@ -126,7 +126,7 @@ While I was there I ran `shellcheck` — a foreign tool, deliberately, because t
 
 It is not a case for scripting everything. The gate's whole design rests on the opposite: the script decides mechanics, the model decides judgment, and neither is allowed to do the other's job. I also spent a day designing a large restructuring of the catalog — and then killed it, because the arithmetic said it would have made my most expensive runs materially more expensive. (The exact percentages from that estimate are not preserved — publishing a number I cannot show would be the same failure this post is about.) The fix turned out to be one word in a config header.
 
-Anthropic's guidance ends with a line I keep coming back to: *"do the simplest thing that works."*
+Anthropic's guidance has a line I keep coming back to: *"do the simplest thing that works."*
 
 The lesson I'd take is narrower, and I think it generalizes:
 

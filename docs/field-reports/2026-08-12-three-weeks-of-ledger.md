@@ -88,9 +88,9 @@ something other than what it claims.**
 55 of 56 NO-GOs failed on **environment**, not domain: no required checks declared, no
 enforced approval, a check still running. Not wrong — but it shifts what the gate does. The
 remedy is printed in every affected row (*"declare required checks on main"*) — **55 times,
-unread**. Together with the eleven `besser GO` rows the picture is unambiguous: this repo
-has a **checks problem, not a domain problem**, and the gate has been saying so for three
-weeks.
+while `main` still declared none**. Together with the eleven `besser GO` rows the picture is
+unambiguous: this repo has a **checks problem, not a domain problem**, and the gate has been
+saying so for three weeks.
 **Proposal:** break NO-GOs down by cause (setup / checks / domain) in the stats. It turns
 "56 NO-GOs" into something a human can act on. *(Build input for #8.)*
 
