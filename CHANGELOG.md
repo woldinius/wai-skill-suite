@@ -10,8 +10,8 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 ### Evidence
 
 - **The review in an agent, measured.** A lifecycle A/B (two runs per arm): the fresh reviewer
-  took 30–43 responses of its own; run tokens +6 %, output +39 %; the reviews held under blind
-  grading. The agent's case is fresh context, not tokens — #103 narrowed its attended default.
+  took 30–43 responses of its own; run tokens +6 % (inside the spread), output +39 %; the reviews
+  held under blind grading. The agent's case is fresh context, not tokens — #103 narrowed its attended default.
   [Experiment](docs/experiments/2026-09-28-review-agent-ab.md).
 
 ## [0.5.1] — 2026-09-27

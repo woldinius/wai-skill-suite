@@ -1,9 +1,9 @@
 # The review in an agent, measured — a lifecycle A/B (2026-09-28)
 
 **Question.** [#103](https://github.com/woldinius/wai-skill-suite/pull/103) moves the review into
-`wai-reviewer`, an agent with `wai-pr-review` preloaded, dispatched whenever the session asking
-wrote the change. Does that lower what a lifecycle run costs — on the main thread and in total —
-and does the review stay as good?
+`wai-reviewer`, an agent with `wai-pr-review` preloaded; as measured here (`fad0db7`), a session
+dispatched it whenever it wrote the change. Does that lower what a lifecycle run costs — on the
+main thread and in total — and does the review stay as good?
 
 ## Method
 
@@ -19,13 +19,14 @@ and does the review stay as good?
   session: the session wrote its brief to `dispatch-<agent>.md` and ended its turn with a
   `DISPATCH` line; the main session started a fresh subagent that read the agent file and its
   preloaded skill from the sandbox, did what the brief asked, and returned its final message,
-  which went back to the session verbatim. For the session that is one turn, as a real agent call
-  is; the preload was read, not injected.
-- **Grading, blind.** A third agent received the four reviews and branches renamed `P1`–`P4` at
-  random, with the `Reviewed by` line and every dispatch trace removed. It checked each Blocker,
-  Major and Minor finding against the code (*valid*, *overstated* — true, but not a defect of this
-  change or rated too high — or *invalid*) and spent about 15 minutes per repo looking for missed
-  defects of Minor or higher, counting only what it reproduced.
+  which went back to the session verbatim. For the session that is about one turn, as a real
+  agent call is (see *Limits*); the preload was read, not injected.
+- **Grading, blind to the runs, not to the arms.** A third agent received the four reviews and
+  branches renamed `P1`–`P4` at random, with the `Reviewed by` line and the dispatch lines removed
+  from the reviews. The repos kept their history, and the grader noted it could pair them by arm.
+  It checked each Blocker, Major and Minor finding against the code (*valid*, *overstated* — true,
+  but not a defect of this change or rated too high — or *invalid*) and was asked to spend about
+  15 minutes per repo on missed defects of Minor or higher, counting only what it reproduced.
 - **Two runs per arm (n = 2).** The sandboxes were deleted after this report was reviewed.
 
 **Metrics.** `session-cost.sh`, with the session's transcript as the main thread and the
@@ -73,13 +74,12 @@ asks, and end with the final message your agent file prescribes.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Main thread: responses | 64 | 52 | 47 | 45 | 58 | 46 | −21 % |
 | Main thread: all tokens | 16.1 M | 11.6 M | 10.7 M | 10.0 M | 13.9 M | 10.4 M | −25 % |
-| Main thread: review step (responses) | 11 | — | 8 | 11 | | | |
+| Main thread: review step, responses · tokens | 11 · 4.0 M | — | 8 · 2.5 M | 9 · 2.7 M | | | |
 | Reviewer agent: responses | | | 30 | 43 | | 36.5 | |
 | Reviewer agent: all tokens | | | 3.3 M | 5.5 M | | 4.4 M | |
 | Run: responses | 64 | 52 | 77 | 88 | 58 | 82.5 | +42 % |
 | Run: output tokens | 182,745 | 145,087 | 225,391 | 230,393 | 163,916 | 227,892 | **+39 %** |
 | Run: all tokens | 16.1 M | 11.6 M | 14.0 M | 15.5 M | 13.9 M | 14.8 M | **+6 %** |
-| Review (words) | 1,142 | 643 | 669 | 1,271 | 893 | 970 | +9 % |
 | Minor findings: valid · overstated | 1 · 1 | 2 · 2 | 2 · 0 | 2 · 1 | | | |
 | Missed, Minor or higher (blind grader) | 1 | 0 | 0 | 0 | | | |
 | Tests green | 31 | 40 | 53 | 28 | | | |
@@ -93,15 +93,16 @@ missed Major.
   change, the plan, the catalog, the skill — and took 30 and 43 responses of its own. Output rose
   39 %, responses 42 %; all tokens rose 6 %, inside the spread of the A runs (11.6 against
   16.1 M).
-- **The main thread got lighter, but not from the review step.** Both B main threads used fewer
-  tokens than both A runs (−25 %). The step markers place the gap in planning and implementation,
-  which the arms share; the review step itself still cost the B sessions 8 and 11 responses —
-  reading the review skill, writing the brief, acting on the result — against 11 in the one A run
-  whose markers reached the review step. At n = 2 that gap is spread, not the agent.
-- **The review held, and may be better.** Both agent reviews had every Minor valid or, once,
-  overstated, and missed nothing the grader reproduced. One in-session review (A1) missed a Minor
-  the three others each found in their own code: `add` and `remove` print after the save, so an
-  output failure exits non-zero after the change was written, and a retry applies it twice.
+- **The main thread got lighter; how much of that is the agent, this sample cannot say.** Both B
+  main threads used fewer tokens than both A runs (−25 %). The review step was lighter in B — 8 and
+  9 responses, 2.5 and 2.7 M tokens, against 11 responses and 4.0 M in A1, the one A run whose
+  markers reached that step — which covers about a quarter of A1's gap to the B mean (1.4 of 5.8 M).
+  The rest sits in planning and implementation, which the arms share. One comparable A run cannot
+  separate the agent from the spread.
+- **The review held.** Both agent reviews had every Minor valid or, once, overstated, and missed
+  nothing the grader reproduced. One in-session review (A1) missed a Minor the three others each
+  found in their own code: `add` and `remove` print after the save, so an output failure exits
+  non-zero after the change was written, and a retry applies it twice.
 
 **What follows.** The agent's case is fresh context, not tokens. #103 narrowed its attended
 default before the merge: every `wai-team` review runs in the agent — no human stands between the
@@ -109,8 +110,10 @@ verdict and the merge there — and an attended session reviews in place, dispat
 when the human asks for an independent review or its own context has grown long.
 
 **Limits.** n = 2 per arm, one small task; each run wrote its own code, so the reviews read
-different changes. The dispatch was emulated: the preload was read rather than injected, and each
-result was relayed by a third session. The step markers reached visible text in three of four
-review steps. Both B sessions ran into a usage limit near the end: B1's hand-back was complete;
-B2 was resumed with one message after the reviewer's result had reached it. The same model
-(`claude-opus-5-5`) ran every session, reviewer and the grader; local only.
+different changes. The dispatch was emulated: the preload was read rather than injected, each result
+was relayed by a third session, and handing over took each B session one reply a real agent call
+does not (the `DISPATCH` line after the brief). The step markers reached visible text in three of
+four review steps. Both B sessions ran into a usage limit near the end: B1's hand-back was complete
+but its closing reply was cut; B2 was resumed with one message after the reviewer's result had
+reached it. The same model (`claude-opus-5-5`) ran every session, reviewer and the grader; local
+only.
