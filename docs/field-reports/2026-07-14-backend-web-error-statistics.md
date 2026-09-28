@@ -95,8 +95,8 @@ Selected, in descending order of how badly they undermined the thing they existe
    noticed, because "no" is what a working gate looks like.
 2. **A repair hint emitted through `unknown()`** silently **upgraded** a definite NO-GO into "I could
    not tell". The gate misreported which of its own three states it was in.
-3. **`"2 of 1 CI checks are not green"`** — `grep -c` counting lines of single-line JSON. The count
-   was impossible, and it reached a human reader without any check flagging it.
+3. **`"2 of 1 CI checks are not green"`** — `grep -c` counting lines of single-line JSON. A human read
+   that nonsense number and did not flag it.
 4. **The floor did not protect itself.** An agent could merge a change to the standard it was judged
    against.
 5. **The floor protected the rules but not the enforcers.** `ci.yml` protects the *declaration*

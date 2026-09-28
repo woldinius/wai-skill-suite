@@ -6,13 +6,15 @@
 **Corpus:** 85 gate verdicts, **82 human-tagged**, alongside 115 merged PRs
 *(Filed as suite issue #10; landed here as the dated record.)*
 
-> **Outcome note (added on intake — the findings below keep their original voice, and are true
-> as of the window):** findings 1–4 were implemented in PR #17 (tag matching on the first two
-> characters + unmatched count, the `besser GO` calibration metric, reasons-first ledger cells,
-> `NO-GO/fn` reported separately). The run-log proposal — Part B's most important — is in build
-> as issues #11 and #14. Proposal 7, protecting the ledger across suite updates, is the reason
-> the installer now carries an explicit ledger guarantee and a test that fails the day an update
-> can touch `docs/` — added alongside this report.
+> **Outcome note (added on intake — the findings below keep their original voice, except one
+> passage in finding 5, made factual on 2026-09-29 and listed in
+> [`docs/empirics.md`](../empirics.md), and are true as of the window):** findings 1–4 were
+> implemented in PR #17 (tag matching on the first two characters + unmatched count, the
+> `besser GO` calibration metric, reasons-first ledger cells, `NO-GO/fn` reported separately).
+> The run-log proposal — Part B's most important — is in build as issues #11 and #14.
+> Proposal 7, protecting the ledger across suite updates, is the reason the installer now
+> carries an explicit ledger guarantee and a test that fails the day an update can touch
+> `docs/` — added alongside this report.
 
 ---
 
