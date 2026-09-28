@@ -7,6 +7,15 @@ since the newest tag and no section here is newer; released entries are dated re
 re-measures their numbers.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
+## [Unreleased]
+
+### Fixed
+
+- **Claude Code's configuration is a guardrail.** Diffs to agents, settings, hooks or commands under
+  `.claude/` (any depth), to `.claude-plugin/*` or `.mcp.json` classified CLEAR; they are EX-GUARD
+  now, in target repos too. This repo, a plugin root, also guards the twelve default plugin
+  locations. ([#108](https://github.com/woldinius/wai-skill-suite/issues/108))
+
 ## [0.5.2] — 2026-09-28
 
 The review runs in an agent: `wai-reviewer`, with `wai-pr-review` preloaded, reviews on fresh

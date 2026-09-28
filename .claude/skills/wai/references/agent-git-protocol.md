@@ -150,12 +150,12 @@ EXCLUDED DOMAINS = contract domain   (EX-PAY ∪ EX-AUTH ∪ EX-API ∪ EX-SEC �
 
 | Tag | Catalog family | Authoritative detection (paths + diff) | Advisory-widening only |
 |---|---|---|---|
-| `EX-GUARD` | quality catalog, testing strategy, gate config, `.claude/skills/**`, CI, build/lint enforcement | hardcoded `GUARDRAIL_PATHS` | — |
+| `EX-GUARD` | quality catalog, testing strategy, gate config, Claude Code's project configuration (`.claude/**` at any depth — skills, agents, settings, hooks, commands), the plugin manifest (`.claude-plugin/*`), `.mcp.json`, CI, build/lint enforcement | hardcoded `GUARDRAIL_PATHS` | — |
 | `EX-PAY` | payment / token / billing | `CONTRACT_PATHS` (billing/token globs) | labels; `PAY-` family prefix |
 | `EX-AUTH` | auth / login, user management | `CONTRACT_PATHS` (auth/user globs) | labels; `AUTH` family prefix |
-| `EX-API` | API contract | `CONTRACT_PATHS` (contract/DTO globs) | labels; `API-` family prefix |
-| `EX-SEC` | security | `CONTRACT_PATHS` (security globs) | labels; `SEC-` family prefix |
-| `EX-MIG` | destructive migration | `MIGRATION_PATHS` + a destructive-statement grep | labels |
+| `EX-API` | API contract | `CONTRACT_PATHS` (contract/DTO globs) | `API-` family prefix |
+| `EX-SEC` | security | `CONTRACT_PATHS` (security globs) | `SEC-` family prefix |
+| `EX-MIG` | destructive migration | `MIGRATION_PATHS` + a destructive-statement grep | — |
 | `EX-GDPR` | erasure / data-deletion | `ERASURE_PATHS` + an erasure grep **over every added code line of the diff** | labels; `GDPR-` family prefix |
 
 `EX-GDPR` closes an everyday self-merge hole. An ad-hoc `DELETE FROM users`, an `ON DELETE CASCADE`,
@@ -174,7 +174,9 @@ made the gate trip on its own mandatory citation: a label is a declaration, a de
 
 Why the guardrails (`EX-GUARD`) are in the set at all is worth stating, because it is the one domain
 with no config knob. The floor covers both what *defines* the standard (the quality catalog, the
-testing strategy, `merge-gate.conf`, `.claude/skills/**`) and what *enforces* it (the CI workflows,
+testing strategy, `merge-gate.conf`, `.claude/skills/**`, `.claude/agents/**`, the plugin
+manifest) and what *enforces*
+it (the CI workflows,
 `CODEOWNERS`, and the gate's own enforcement logic — the `package.json` scripts, the build files, the
 lint and type configs). Protecting the workflow protects the *declaration* `run: pnpm lint`; it does
 **not** protect what `pnpm lint` actually does. A skill that could merge a change to the standard it

