@@ -1,5 +1,11 @@
 # Empirical test plan — 5 repos, several weeks
 
+*Status (2026-09-28):* the opening lines predate the first field run (empirics Run 1,
+2026-07-13). Measured since: §0 in three field runs (empirics Runs 1, 7 and 8 — the bypass rate
+is still open, Q2), and §1.1–1.2 in this repo's ledger and the field reports of 2026-08-06,
+2026-08-12 and 2026-09-06 (Q3). The boxes below were never ticked; the live agenda is
+[`docs/open-questions.md`](../open-questions.md).
+
 Everything built in this session is **specification-verified, not behaviour-verified.** Four
 adversarial agents read the documents; **not one skill has ever run against a foreign repo.** This
 list closes exactly that gap.

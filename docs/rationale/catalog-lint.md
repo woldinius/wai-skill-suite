@@ -17,7 +17,6 @@ An earlier version used `.` as a wildcard where the backtick belongs, and matche
 On its first field run it produced a 50% false-positive rate and BLOCKED a PR: it read "API-5"
 out of an alert named `API-5xx-Rate`, and "AI-503" out of the prose "there is no AI-503 to
 retry". Neither is a citation. The closing backtick is the boundary that makes them not match.
-shellcheck disable=SC2086  # the file list must word-split
 
 ## No retired ID is reused
 
@@ -79,7 +78,7 @@ the lint gate. In the suite's ID space it means nothing at all.
 
 ## A copied file must never cite a catalog ID
 
-The vendored skills are safe: check 5 resolves their citations against the baseline, and install.sh
+The vendored skills are safe: check 4b resolves their citations against the baseline, and install.sh
 owns them, so they are never edited in place. TEMPLATES ARE NOT VENDORED — they are COPIED into the
 repo, and the instant they are, every ID in them rebinds to the REPO's ID space.
 

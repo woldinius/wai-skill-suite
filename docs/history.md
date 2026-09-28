@@ -124,8 +124,9 @@ kept judgment calls out of the script column.
 
 ## 2026-08-02/03 — The field batch
 
-Nine [field reports](field-reports/) from production repos and a prototype land in one wave, and
-force fixes in both directions:
+Nine field reports from production repos and a prototype land in one wave (six of them were
+republished in [field-reports/](field-reports/) when this repository was created), and force fixes
+in both directions:
 
 - a **tool failure is not a verdict** — the gate reported NO-GO where it should have said
   UNKNOWN (a dead remote), and the distinction is what keeps NO-GO believable;

@@ -2,15 +2,17 @@
 
 Notable changes to the wAI skill suite. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags, and every claim here is
-checkable against the tagged tree — `tests/numbers-lint.sh` keeps the measurable ones honest.
+checkable against the tagged tree. `tests/release-lint.sh` fails CI when the shipped skills changed
+since the newest tag and no section here is newer; released entries are dated records, and no lint
+re-measures their numbers.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ## [0.5.2] — 2026-09-28
 
 The review runs in an agent: `wai-reviewer`, with `wai-pr-review` preloaded, reviews on fresh
-context and merges nothing — every `wai-team` review, attended ones on request. Measured in a
-lifecycle A/B: the reviews held, the run did not get cheaper. The installer's prune stays in its
-namespace.
+context and merges nothing — every `wai-team` review, attended ones on request or once the
+session's context is long. Measured in a lifecycle A/B: the reviews held, the run did not get
+cheaper. The installer's prune stays in its namespace.
 
 ### Added
 
@@ -250,12 +252,12 @@ statements in added code lines decide as before (#67).
   The largest dataset yet from the field repo behind the 2026-08-06 and 2026-08-12 reports:
   precision 90.5 %, recall 100 %, **zero false negatives** of 81 judged GO rows, 14 false alarms
   of which 12 share one root (mentions read as acts — #67, PR #71), eleven blocks tagged *correct
-  but unwanted*, six that measured the caller's patience, three `fn` tags on NO-GO rows as an
-  instrument finding, a denominator hook that counted about a fifth of invocations — chiefly
-  because it lived only in the main checkout — and per-skill invocation counts, the first Q9 has
-  seen; and the owner's decision of 2026-09-06 to switch the gate role off until publication. Q3,
-  Q9, K3 and the "Too opinionated" row carry the numbers; the learnings index has the row.
-  Translated on intake, numbers unchanged.
+  but unwanted*, six that measured the moment of the call rather than the PR (a required check
+  still running), three `fn` tags on NO-GO rows as an instrument finding, a denominator hook that
+  counted about a fifth of invocations — chiefly because it lived only in the main checkout — and
+  per-skill invocation counts, the first Q9 has seen; and the owner's decision of 2026-09-06 to
+  switch the gate role off until publication. Q3, Q9, K3 and the "Too opinionated" row carry the
+  numbers; the learnings index has the row. Translated on intake, numbers unchanged.
 
 - **Rows that exist only in a worktree are visible** (#68). The three append-only writers keep
   `--show-toplevel` — a row belongs to the worktree that produced it, and reaches the default

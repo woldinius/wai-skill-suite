@@ -26,8 +26,9 @@ fallback.
 
 ## Skills
 
-A **router** points you to the right skill; three one-time **setup** skills prepare the repos;
-four skills form the per-requirement **lifecycle** (plan → implement → test → review); one
+A **router** points you to the right skill; three **setup** skills prepare the repos (`wai-cicd`
+and `wai-mobile-release` once, `wai-init` re-runnable); four skills form the per-requirement
+**lifecycle** (plan → implement → test → review); one
 **lifecycle orchestrator** works one issue or many under your mandate; three run **periodically**
 — a structural architecture audit, an adversarial security audit, and an artifact-derived
 retrospective of the suite's own record. All are triggered
@@ -43,12 +44,13 @@ back to them.
 **daily** = in daily use across the author's repos since consolidation · **periodic** =
 deliberately not daily — run every 5–10 PRs, or after a stretch of major changes · **less
 often** = fewer occasions, well-tested · **once per repo** = by nature runs once-to-rarely per
-repo — proving status, [field reports](docs/field-reports/TEMPLATE.md) explicitly wanted.
+repo · **proving** = too few runs yet to call it well-tested —
+[field reports](docs/field-reports/TEMPLATE.md) explicitly wanted.
 
 | Skill | Stage | Exposure | What for | Trigger (examples) |
 |-------|-------|----------|----------|--------------------|
 | [`wai`](.claude/skills/wai/SKILL.md) | Router | less often · well-tested | Front door: recommends which skill to run next and how the suite hands off. Routes by **surface** (backend/web/iOS/Android) and lifecycle position. | "which skill do I use", "where do I start", "what's next" |
-| [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 87 IDs / ~510 lines). Every other skill reads the catalog at runtime, so its size is expected to be the suite's biggest cost lever (unmeasured — Q5). Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
+| [`wai-init`](.claude/skills/wai-init/SKILL.md) | Setup (per repo) | daily | **Bootstrap + re-runnable update:** deep-scan the repo, detect its **surface** and whether it's greenfield or grown, create a surface-scoped `docs/architecture/quality-attributes.md` + testing strategy **sized to the project** via a **variant seed** (platform / web / minimum — [ADR-0004](docs/adr/0004-one-master-three-generated-variants.md)) plus two dials — scope (which IDs survive within the variant) and tier (how much prose each carries; the full baseline is 87 IDs / ~510 lines). Nine skills read the catalog at runtime, so its size is expected to be the suite's biggest cost lever (unmeasured — Q5). Also checks **AI-readiness**, and asks the setup questions (**solo or team?** protect `main`? docs language? tier? learning mode **for you personally**?). Existing docs are **kept** unless you ask for a reset. On a re-run with history: an optional **tuning pass** (proposed diffs; guardrails excluded). | "set up the skills", "initialize the project", "onboard this repo", "update the catalog", "tune the skills" |
 | [`wai-cicd`](.claude/skills/wai-cicd/SKILL.md) | Setup (backend+web) | once per repo · proving | **One-time:** GitHub-native CI/CD (Actions, GHCR) + deploy to your own server via Compose/SSH — Dockerfile, Compose, Caddy, the **merge gate** + branch protection. Other delivery systems are out of scope by design. | "set up CI/CD", "deploy to my server", "wire required checks" |
 | [`wai-mobile-release`](.claude/skills/wai-mobile-release/SKILL.md) | Setup (iOS/Android) | once per repo · proving | **One-time:** build, code signing (match / Play App Signing), the **mobile merge gate**, and store delivery (TestFlight / Play tracks). | "set up the iOS build", "Fastlane", "TestFlight", "Play Console" |
 | [`wai-requirements-planning`](.claude/skills/wai-requirements-planning/SKILL.md) | Plan | daily | Prepare a requirement; interview — or **grill-me mode** (questions in rounds, recommended answers, alternatives for imprecise asks); decompose **per surface + contract-first**; diagrams over text; small items become issues, not planning docs. | "plan this requirement", "how do we build X", "grill me" |
@@ -336,7 +338,7 @@ Everything below is the complete list of side effects; nothing else is written.
 | `wai-architecture-audit` / `wai-security-audit` | a dated report in `docs/architecture/audits/` or `docs/architecture/security-audits/` (the architecture audit also persists its baseline under `docs/architecture/`; in a public repo the security report is class-level only), on an `agent/**` branch + PR (with any approved cleanups); unfixed findings filed as issues | when you invoke them |
 | `wai-retro` | `docs/architecture/retrospectives/<date>.md` on an `agent/**` branch + PR, plus one report-marker line appended to the gate ledger; on explicit request only, a sanitized extract for the suite repo, keyed by a gitignored HMAC key | when you invoke it (doctor advises it at the report threshold) |
 | Invocation hook (opt-in) | appends to `docs/architecture/invocation-log.md` | only after you add the hook to your settings |
-| `wai-learning-gap` | `~/.claude/learning/` — personal, opt-in, never repo state; plus a personal pre-commit hook in the configured hooks dir (never a committed one; an existing hook is kept as `pre-commit.pre-wai-learning-gap` and chained) and the planted gap in the working tree (never committed) | only for a human with a ledger |
+| `wai-learning-gap` | `~/.claude/learning/` — personal, opt-in, never repo state; plus a personal pre-commit hook in the configured hooks dir (never a committed one; an existing hook is kept as `pre-commit.pre-wai-learning-gap` and chained) and the planted gap in the working tree (never committed); where `~/.claude/` is not writable (CI, a container), the ledger goes to `temp/learning/ledger.md` in the working tree instead, with `temp/learning/` added to `.git/info/exclude` — never committed | only for a human with a ledger |
 
 Nothing writes to `main` directly, nothing stores secrets, and no skill approves a PR.
 
@@ -435,8 +437,9 @@ The claims above are checkable, and the failures are part of the record on purpo
 
 - [`docs/open-questions.md`](docs/open-questions.md) — **the numbers the suite does not have
   yet**, as a live eval agenda: each open question with its measured today-state and the
-  experiment that would answer it. The ledger-derived numbers in it are re-measured by CI on
-  every run.
+  experiment that would answer it. Its headline ledger counts (verdicts on record, GO rows,
+  untagged rows, this repo's judged NO-GOs) are re-measured by CI on every run; its other ledger
+  figures are updated by hand.
 - [`docs/known-criticism.md`](docs/known-criticism.md) — **the criticism, named before a reader
   has to**: the provable findings of the external audit with their status, and the expected
   objections with what the record answers.
@@ -487,9 +490,11 @@ install.sh                                       # idempotent installer (inject/
   wai-security-audit/                            # + security playbook + CVE/attack-path scripts
   wai-retro/                                     # artifact-derived retrospectives + retro-compliance.sh, session-cost.sh
   wai-learning-gap/                              # personal, opt-in; own scripts + tests
+.claude-plugin/                                  # marketplace.json + plugin.json — the plugin install (skills + the reviewer agent)
 .githooks/                                       # pre-commit (no default-branch commits), pre-push (no dead-branch pushes)
+.github/                                         # CI (ci.yml: the suites on two shells), the field-report issue template, the logo
 tests/                                           # 598 cases for the deciding scripts — founded on bugs that shipped
-docs/                                        # history, empirics, field reports, ADRs, rationale, retrospectives, experiments, catalog, open questions, known criticism, publication rule, learnings
+docs/                                            # history, empirics, field reports, ADRs, rationale, retrospectives, experiments, catalog, open questions, known criticism, publication rule, learnings
 ```
 
 > After running `install.sh` in a target project, `.claude/.wai-suite-manifest` records the

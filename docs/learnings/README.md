@@ -12,6 +12,8 @@ fix. Every one of those was cheap to write down and impossible to reconstruct.
 | **Evidence** | what happened, measured | `docs/learnings/` |
 | **A foreign report** | evidence written **by another repo** | `docs/field-reports/` |
 | **The running record** | the lesson distilled from each field run | `docs/empirics.md` |
+| **An experiment** | a controlled A/B, measured and dated | `docs/experiments/` |
+| **A suite retrospective** | the suite's own record, counted from artifacts at a threshold (`wai-retro`) | `docs/architecture/retrospectives/` |
 | **A decision** | expensive to reverse; would look arbitrary later | `docs/adr/` |
 | **A source** | something we were designed *against* | [`REFERENCES.md`](../../REFERENCES.md) |
 | **A draft** | what we intend to *say*, outward | `docs/publication/` |
@@ -67,7 +69,7 @@ a finding is.** This repo has done the first twice, in `empirics.md`, and it mus
 in whatever language they arrived in, and the rule governs the *skills*. Translating a report is
 editing it.
 
-**And publication forced a decision on exactly that.** Eight of the reports below arrived in German.
+**And publication forced a decision on exactly that.** Most of the reports below arrived in German.
 A published report nobody in the audience can read is not evidence either — so the copies here are
 **translations, each marked as one at the top**, and the verbatim originals stay in the private
 archive, unedited. The rule above is not dropped; it is what makes the marking mandatory. A
@@ -117,7 +119,14 @@ document is still the one that counts.
 | *(field-batch analysis & publication governance, 2026-08-03)* | what the 2026-08-02 batch is worth, what to build differently — and how to take external feedback once this is public. **Not published**: an internal planning document, in German; it remains in the private archive |
 | [`../field-reports/2026-08-05-first-checkout-review.md`](../field-reports/2026-08-05-first-checkout-review.md) | the first cold checkout of the published repo: **three blockers on day one**, all of them a rule nothing checked — including an installer that destroyed the skills it was updating |
 | [`../field-reports/2026-08-05-second-review-corrections.md`](../field-reports/2026-08-05-second-review-corrections.md) | the fix batch **misreported itself**: two findings marked Fixed that were not, and three new unbacked numbers — corrected here, append-only |
+| [`../field-reports/2026-08-06-thirty-runs-zero-false-negatives.md`](../field-reports/2026-08-06-thirty-runs-zero-false-negatives.md) | 30 gate runs, zero false negatives — and the one find only the gate could make: a "docs-only" PR carrying 22 files, the contract among them |
+| [`../field-reports/2026-08-06-merged-but-not-on-main.md`](../field-reports/2026-08-06-merged-but-not-on-main.md) | a stacked PR merged into a dead base: GitHub said **MERGED**, `main` never saw it |
 | [`../field-reports/2026-08-12-three-weeks-of-ledger.md`](../field-reports/2026-08-12-three-weeks-of-ledger.md) | three weeks, 85 verdicts, 82 human-tagged: **the reported 0 % false-positive rate was a parser artifact — the real rate is 15 %**, and a suite update had already eaten the earlier ledger |
 | [`../field-reports/2026-09-06-two-months-of-gate-259-verdicts.md`](../field-reports/2026-09-06-two-months-of-gate-259-verdicts.md) | 259 verdicts, precision 90.5 %, **zero false negatives — and the owner switched the gate off anyway**: 12 of 14 false alarms had one root (mentions read as acts), the denominator hook counted a fifth, and eleven correct blocks nobody needed |
 | [`../retrospective-2026-07.md`](../retrospective-2026-07.md) | the same week, counted from this repo: **reading the code found 3 of 22** |
+| [`../architecture/retrospectives/2026-08-16.md`](../architecture/retrospectives/2026-08-16.md) | the first `wai-retro` report: 0 fp and 0 fn over a fully tagged ledger (26 of 26 rows) — and **no model-written row** in the run log (0 of 7) |
+| [`../architecture/retrospectives/2026-08-18.md`](../architecture/retrospectives/2026-08-18.md) | a squash merge deleted a row from the append-only ledger, **and the row count went up** |
+| [`../experiments/2026-09-26-lean-output-ab.md`](../experiments/2026-09-26-lean-output-ab.md) | lean output, a controlled A/B in sandboxes: **review −64 %, hand-back −68 %** |
+| [`../experiments/2026-09-27-grilling-rounds-ab.md`](../experiments/2026-09-27-grilling-rounds-ab.md) | grilling in rounds, against a simulated product owner: **interruptions −68 %, planner tokens −37 %**, plan quality within the noise |
+| [`../experiments/2026-09-28-review-agent-ab.md`](../experiments/2026-09-28-review-agent-ab.md) | the review in an agent, a lifecycle A/B: the reviews held; **the run did not get cheaper** (tokens +6 %, inside the spread) |
 | [`../empirics.md`](../empirics.md) | the running record — eight field runs |

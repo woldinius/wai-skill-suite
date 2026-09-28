@@ -525,7 +525,7 @@ reconcile. See [ADR-0002](adr/0002-mechanics-in-scripts-judgment-in-prompts.md).
 
 The first GO in any repo, ever. And it fell to the PR that documented that the gate had never given
 one. Verbatim report:
-[`learnings/field-reports/2026-07-15-backend-web-the-gate-said-go.md`](field-reports/2026-07-15-backend-web-the-gate-said-go.md).
+[`field-reports/2026-07-15-backend-web-the-gate-said-go.md`](field-reports/2026-07-15-backend-web-the-gate-said-go.md).
 
 Run 6 set the standard and the gate has now met it:
 

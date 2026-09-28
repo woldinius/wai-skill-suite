@@ -61,11 +61,11 @@ reading.
 
 ## Why a script and not a paragraph
 
-Anthropic, *Effective context engineering for AI agents*: *hardcoding complex, brittle logic in
-prompts to elicit exact agentic behavior creates fragility.* This gate used to be six conditions a
-model had to remember on every run — and "the model checked" is not something anyone can audit. You
-cannot grep it, you cannot diff it, and six months on you cannot answer whether it happened: the
-failure case and the success case produce identical output.
+Anthropic, *Effective context engineering for AI agents*: *"…engineers hardcoding complex, brittle
+logic in their prompts to elicit exact agentic behavior. This approach creates fragility…"* This
+gate used to be six conditions a model had to remember on every run — and "the model checked" is
+not something anyone can audit. You cannot grep it, you cannot diff it, and six months on you
+cannot answer whether it happened: the failure case and the success case produce identical output.
 
 → [ADR-0002](../adr/0002-mechanics-in-scripts-judgment-in-prompts.md) · [REFERENCES.md](../../REFERENCES.md)
 
@@ -207,7 +207,7 @@ silent failure class the ledger exists to catch.
 ## Where a row lives
 
 The ledger-home question has two halves: *which file*, and *which branch*. The first was decided
-on 2026-08-18 (#35): in-repo, not `~/.claude` like the learning ledger, because `numbers-lint`
+on 2026-08-18 (PR #36): in-repo, not `~/.claude` like the learning ledger, because `numbers-lint`
 re-measures the repo's published ledger claims in CI and a file outside the repo would break that
 loop. The second was decided the same day from two incidents: PR #19's row and then PR #28's were
 deleted by squash merges that carried a stale copy of the ledger from a branch cut before the row

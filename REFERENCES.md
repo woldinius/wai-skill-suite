@@ -16,20 +16,21 @@ deletes.**
 <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents>
 **2026-07-13 · adopted**
 
-> *"Hardcoding complex, brittle logic in prompts to elicit exact agentic behavior creates fragility."*
+> *"…engineers hardcoding complex, brittle logic in their prompts to elicit exact agentic behavior.
+> This approach creates fragility and increases maintenance complexity over time."*
 
-That sentence is the **entire reason `merge-gate.sh` and `catalog-lint.sh` are scripts** rather than
+That passage is the **entire reason `merge-gate.sh` and `catalog-lint.sh` are scripts** rather than
 paragraphs in a `SKILL.md`. → [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)
 
 Also adopted:
 
 - **Just-in-time retrieval** — `references/` load on demand; progressive disclosure in three levels.
-- **Tool clarity** — *"if a human engineer can't definitively say which tool should be used, an AI
-  agent can't be expected to do better."* This is why every skill description carries a
-  `Not for X — use Y` clause.
+- **Tool clarity** — *"if a human engineer can't definitively say which tool should be used in a
+  given situation, an AI agent can't be expected to do better."* This is why every skill
+  description carries a `Not for X — use Y` clause.
 
 **Named, not yet acted on:** its anti-pattern — *"teams will often stuff a laundry list of edge cases
-into a prompt… **we do not recommend this**."* **0 of 12 skills has an Examples section.** Tracked and
+into a prompt… **we do not recommend this**."* **0 of 13 skills has an Examples section.** Tracked and
 deferred on purpose until the field data says *which* rules never fire.
 
 ### The LLM-wiki pattern — **ingest → query → lint**
@@ -50,8 +51,8 @@ what). → [ADR-0002](docs/adr/0002-mechanics-in-scripts-judgment-in-prompts.md)
 <https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf>
 **2026-07-13 · adopted, and since 2026-07-14 enforced**
 
-Five hard limits. They used to be things I remembered; they are now **assertions in `tests/run.sh`,
-run in CI**:
+Five hard limits. They used to be things I remembered; four of them are now **assertions in
+`tests/run.sh`, run in CI** — kebab-case folder names are not asserted yet:
 
 | Limit | Why it is not a style rule |
 |---|---|
@@ -140,8 +141,8 @@ could hand back finished-looking work with nothing behind it.
   displaced into `references/`). Correct on the merits, and already on this repo's own record as
   criticism **K8** and open question **Q5** (context cost per run, unmeasured). Deferred on
   purpose: it is a *cross-skill* convention — seven of the thirteen skills carry a Platform-context
-  section and two an Affected-surfaces section, and `wai-init` generates its catalog variants
-  against them. One
+  section and one an Affected-surfaces section (the planning template carries the same field), each
+  written against the catalog `wai-init` scopes to the repo. One
   skill cut in isolation buys the inconsistency **without** the measurement, so it belongs in its
   own ADR with Q5's numbers attached. Recorded here rather than in a backlog because the negative
   result is the expensive half.
@@ -158,8 +159,8 @@ replace it, and nothing will be copied.
   wrong. That matters more here than upstream, because in this suite the reviewer is frequently an
   *agent* and the recipient a human who did not write the finding.
 - **`using-git-worktrees` — the lifecycle of a worktree.** `wai-team` parallelises *through*
-  worktrees and four scripts (`open-gap-check`, `doctor`, `open-items`, `verify-arrival`) *sweep*
-  them, but no skill here creates or cleans one. The cost is measured, not hypothetical: on
+  worktrees and two scripts (`open-gap-check`, `open-items`) *sweep* them, but no skill here
+  creates or cleans one. The cost is measured, not hypothetical: on
   2026-08-20 two deleted scratchpad worktrees left stale registrations behind and `open-gap-check`
   fail-closed at **exit 2**. superpowers has the four rules: detect existing isolation before
   creating any, prefer the harness's native worktree tool over raw `git worktree` ("never fight the
@@ -194,9 +195,12 @@ actual thesis is that a reviewer should get **crafted context and no session his
 is now adopted where it matters most: an **unattended** `wai-team` run hands its review to a
 fresh-context reviewer — the diff, the issue or plan and the catalog, never the session transcript
 — and merges nothing if the harness cannot dispatch one. An **attended** `wai-pr-review`, invoked
-by a human, still runs in the same session as the work it reviews; that was demonstrated on the
-very PR that added the diff-first rule (#50), whose review declared itself a self-review. Adopted
-for unattended runs, open for attended ones — and named as such.
+by a human, runs by default in the same session as the work it reviews — demonstrated on the very
+PR that added the diff-first rule (#50), whose review declared itself a self-review. Since 0.5.2
+it dispatches the `wai-reviewer` agent when the human asks for an independent review or the
+session's context has grown long
+([ADR-0005](docs/adr/0005-the-review-runs-in-an-agent-and-only-the-review.md)). Adopted for
+unattended runs, on request for attended ones — and named as such.
 
 ### mattpocock/skills
 <https://github.com/mattpocock/skills> (MIT) · Copyright (c) 2026 Matt Pocock
@@ -211,7 +215,8 @@ re-read brought the protocol up to that.
 
 **Adapted text** — close to upstream's wording, so the MIT notice travels with it, in
 [`third-party-notices.md`](.claude/skills/wai/references/third-party-notices.md) beside the
-protocol (`install.sh` ships `.claude/skills/`, not this file):
+protocol, inside `.claude/skills/`, which every install carries (this file does not travel with an
+install):
 
 - the opening — interview *relentlessly* to a *shared understanding*, the plan as a *design tree*;
 - rule 1's frontier (every open decision whose prerequisites are settled) and its later-round rule,
