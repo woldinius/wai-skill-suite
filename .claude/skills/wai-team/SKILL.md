@@ -81,7 +81,9 @@ the run, so the team-repo rule applies to every dependent issue (step 3). The au
 below.
 
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
-(`date -u +%FT%TZ`). It bounds the cross-issue digest (step 6) and the autonomous-merge report.
+(`date -u +%FT%TZ`) and the **start commit** (`git rev-parse origin/<default>`). The timestamp
+bounds the cross-issue digest (step 6); both bound the autonomous-merge report
+(`<start-commit>..HEAD`).
 Keep its full time: it is compared against GitHub's own `updatedAt`/`createdAt`, and rounding
 would widen the window.
 
@@ -314,7 +316,8 @@ still gates **every** merge.
 
 Report the autonomous lane with `autonomous-merge-report.sh`, reconstructed from the
 append-only gate ledger and the git log — never narrated from memory. It takes three arguments:
-the gate ledger, the run's git range (`<run-start-commit>..HEAD`) and the START timestamp. Exit 0
+the gate ledger, the run's git range (`<start-commit>..HEAD`, recorded at kickoff) and the START
+timestamp. Exit 0
 is a report, including "nothing merged autonomously"; exit 2 means the ledger is unreadable or an
 argument is missing — state the gap in the report.
 

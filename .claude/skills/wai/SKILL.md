@@ -23,20 +23,20 @@ review itself.
   its run with a **▶ Recommended next** block — a situational hand-off based on what it
   found (which skill, on what, why, and any decision you must make first). This router gives
   you the same recommendation as a *starting* point.
-- **Skills own the branch; `main` is gated.** Planning opens the `agent/<handle>/…` branch
-  (local + remote — the handle segment keeps two developers off each other's branch),
-  implementation commits and opens the PR. `wai-pr-review` then **auto-merges** a clean PR with
-  green checks that touches no **excluded domain** to `main` (and deletes the branch); a change in
-  one — the contract domain (API, Auth/Login, Token, Billing, Security), a destructive migration,
-  GDPR erasure / data deletion, or the suite's own guardrails; canonical set in
+- **Skills own the branch; `main` is gated.** Planning opens the `agent/<handle>/…` branch (local +
+  remote — the handle segment keeps two developers off each other's branch), implementation commits
+  and opens the PR. `wai-pr-review` then **auto-merges** a clean PR with green checks that touches
+  no **excluded domain** to `main` (and deletes the branch); a change in one — the contract domain
+  (API, Auth/Login, User Management, Token, Billing, Security), a destructive migration, GDPR
+  erasure / data deletion, or the suite's own guardrails; canonical set in
   `references/agent-git-protocol.md` §*Excluded domains* — is **left for your merge**. In a
   **`team`** repo (the `**Repo mode:**` line in the quality catalog) the agent never merges by
   itself: it arms GitHub auto-merge, and the PR waits for **another human's approval**.
   **Blocker/Major findings are your decision point** — presented with a recommendation, handled
-  differently only on your explicit mandate ("collect as issues", "fix directly"). Merging ships
-  a release. Full rules: `references/agent-git-protocol.md` — the
-  only authority; a repo copy under `docs/architecture/` is read-only and never overrides it.
-  Issue handling: `references/issues-protocol.md`.
+  differently only on your explicit mandate ("collect as issues", "fix directly"). Merging ships a
+  release. Full rules: `references/agent-git-protocol.md` — the only authority; a repo copy under
+  `docs/architecture/` is read-only and never overrides it. Issue handling:
+  `references/issues-protocol.md`.
 - **The contract is the spine.** The backend and the three clients live in separate repos but
   share one **versioned API contract**; a cross-surface feature changes it **first and
   backward-compatibly**, then the clients adopt. Full rules: `references/contract-protocol.md`.
