@@ -22,5 +22,7 @@
 
 ## Merge gate
 - [ ] Required checks green (lint · typecheck · build · unit · integration/e2e · security)
-- [ ] Not a contract-domain change **or** a Code Owner (human) has approved
-<!-- Contract-domain or destructive-migration changes are merged by the human, never auto. -->
+- [ ] Touches no excluded domain **or** is left for the human to merge
+<!-- Excluded domains (canonical set: the wAI git protocol, § Excluded domains): the contract
+     domain, destructive migrations, erasure / data deletion, and the suite's guardrails. An
+     approval does not make such a change agent-mergeable — the human merges it, always. -->

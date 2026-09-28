@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | tech-stack | yes | basics |
 | architecture | no |  |
-| domain-implementation | yes | new |
+| domain-implementation | yes | focus |
 
 ## Topic boxes
 

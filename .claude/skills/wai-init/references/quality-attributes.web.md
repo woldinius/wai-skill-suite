@@ -29,8 +29,7 @@
 >   stable in every language — the skills cite them. -->
 >
 > Single Source of Truth (once copied by `wai-init` to `docs/architecture/`).
-> The skills `wai-pr-review`, `wai-requirements-planning` and
-> `wai-implementation` reference the live file. Each dimension carries a
+> The skills that read the catalog reference the live file. Each dimension carries a
 > **stable ID** (e.g. `AI-3`); reviews and plans cite this ID to justify a finding
 > unambiguously. IDs are stable — when revising, change the content but
 > do not reassign IDs that have already been issued. Tech-stack-specific additions get new IDs

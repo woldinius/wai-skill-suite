@@ -9,8 +9,10 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ### Fixed
 
-- **`wai-pr-review` cites the right AI ID.** Prompt and model versioning is `AI-2` in the catalog;
-  the review's step list said `AI-6` (Eval). Every other ID and label pair in that list matches.
+- **Catalog citations corrected across the skills.** `wai-pr-review` cited `AI-6` (Eval) for
+  prompt and model versioning, which is `AI-2`. An audit of every skill found more wrong pairs —
+  injection, known-CVE dependencies, attestation, the security playbook's worked example — now
+  corrected, with stale and contradictory prose fixed alongside.
   ([#99](https://github.com/woldinius/wai-skill-suite/issues/99))
 
 ## [0.5.2] — 2026-09-28

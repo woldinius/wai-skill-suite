@@ -14,7 +14,8 @@
    for rollback) + `latest`/branch.
 3. **CI gates** — lint, type-check, tests run **before** build/push. Red = no deploy.
 4. **Health endpoints** — `/health` (liveness) and `/ready` (readiness, including DB check).
-   Basis for healthcheck/zero-downtime (`RES-5`).
+   Basis for healthcheck/zero-downtime (`RES-5`). The shipped `docker-compose.prod.yml`
+   healthcheck probes `/health` today; a readiness probe on `/ready` is not wired yet.
 5. **Secrets** — never in the image/repo (`SEC-3`). Build args only for non-secret things.
    Runtime secrets via server `.env` (root-only) or GitHub Actions secrets.
 6. **Migrations** — separate step before/at deploy; forward- and backward-compatible,
@@ -27,7 +28,8 @@
 
 - A Linux VM at your provider (Ubuntu LTS), SSH public key deployed at creation.
 - The provider's **cloud firewall**: only 22 (better on a custom port + source IP restriction),
-  80, 443 open.
+  80, 443 open. The `ufw` line below opens port 22 only: on a custom SSH port, change it (and the
+  `SSH_PORT` secret) in the same step, or SSH is locked out.
 - On the server:
   ```bash
   # as root
@@ -58,7 +60,8 @@ usermod -aG docker deploy
 
 - GitHub Actions builds + pushes the image (`ci.yml`), then a deploy job SSHes to the
   server and calls `deploy.sh <tag>` (`deploy-ssh.yml`).
-- `deploy.sh`: `docker compose pull` → `docker compose up -d` → migration → `docker image prune`.
+- `deploy.sh`: `docker compose pull` → migration (a one-off `run --rm` of the new image) →
+  `docker compose up -d` → `docker image prune`.
 - The image tag is passed to Compose via `IMAGE_TAG` env.
 
 **Required GitHub Actions secrets:** `SSH_HOST`, `SSH_USER` (deploy), `SSH_KEY`
@@ -67,7 +70,8 @@ usermod -aG docker deploy
 ## 5. Operation
 
 - **Logs:** `docker compose logs -f`. Optionally Uptime-Kuma/Grafana-Loki as an add-on stack.
-- **Backups:** cron on the server, `pg_dump | gzip` → Storage Box (rclone/scp).
+- **Backups:** cron on the server, `pg_dump | gzip` → off-host object storage (S3-compatible, via
+  rclone).
 - **Updates:** `unattended-upgrades` for the OS; app updates via the pipeline.
 - **Rollback:** rerun the deploy with a previous `sha-` tag
   (`IMAGE_TAG=sha-<old> docker compose up -d`).

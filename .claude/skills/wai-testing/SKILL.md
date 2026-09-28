@@ -47,8 +47,9 @@ sandbox/fakes.
   fail before it is trusted (process step 5). This generalizes implementation's house rule *"for
   a bug, build the red first"* from bugs to every assertion: no red ever seen, no trust.
 - **Proportional, mandatory where it counts.** Build functions end-to-end testable; **no
-  speculative unit tests**. But **security, billing, GDPR and idempotency paths are mandatory
-  targets** (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`) — never skipped **where the repo has them**:
+  speculative unit tests**. But **security, billing, GDPR, idempotency and AI-output-handling
+  paths are mandatory targets** (`SEC-*`, `PAY-*`, `GDPR-*`, `RES-3`, `AI-3`/`AI-5` — see
+  *Mandatory test targets*) — never skipped **where the repo has them**:
   mandatory binds to every such path that exists, it does not invent one for a repo whose
   catalog carries no billing or GDPR surface.
 - **Git on the branch, never `main`.** Tests for a change land on its `agent/**` branch and
@@ -181,7 +182,7 @@ Use this structure:
 ## Tests: [short description of the change/area]
 
 **Levels:** [unit · integration · e2e/contract — what was added/strengthened]
-**Mandatory targets covered:** [SEC-… / RES-3 / GDPR-… / AI-3 — each with the case]
+**Mandatory targets covered:** [SEC-… / PAY-… / GDPR-… / RES-3 / AI-3 — each with the case]
 **Determinism:** [how model calls / time / randomness were made deterministic]
 **Local result:** [green — N tests; or what remains]
 

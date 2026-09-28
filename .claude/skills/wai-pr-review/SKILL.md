@@ -38,9 +38,10 @@ runs in the suite's **`wai-reviewer` agent** (installed with the skills: `.claud
 merge nothing. Attended, run the steps here; dispatch the agent when the human asks for an
 independent review, or when this session's context has grown long — a fresh reviewer re-reads the
 change, so it costs more than it saves until then. Hand it the PR (or the diff) and the issue or
-plan — never your transcript — and act on the lines it returns; the merge decision of step 6 stays
-with you. Without the agent, brief a subagent the same way; without subagents, run the steps here
-and say so in the review. (Running inside `wai-reviewer`, you are that agent: run the steps.)
+plan — never your transcript — and act on the lines it returns; the merge decision of step 6 and
+its landing rule stay with you (the Nits are in the posted comment). Without the agent, brief a
+subagent the same way; without subagents, run the steps here and say so in the review. (Running
+inside `wai-reviewer`, you are that agent: run the steps.)
 
 Work through these steps in order. Evaluate what the diff actually touches, and name missing but
 necessary aspects as findings.
@@ -71,7 +72,7 @@ necessary aspects as findings.
    - *Persistence/data model change* → GDPR (`GDPR-2`/`GDPR-3`), migration, retention,
      idempotency (`RES-3`).
    - *Auth/security change* → AuthN/AuthZ (`SEC-1`), secrets (`SEC-3`), attestation
-     (`CLIENT-2`), injection (`SEC-4`).
+     (`SEC-2`; `CLIENT-2` on a client), injection (`SEC-7`; prompt injection `SEC-4`).
    - *Client change (web/iOS/Android)* → no secrets in binary/bundle (`CLIENT-1`), attestation
      (`CLIENT-2`), state coverage, accessibility, safe output rendering, and **store-policy
      conformance** (`IOS-3`/`AND-3`) — could it get rejected?
@@ -155,15 +156,18 @@ necessary aspects as findings.
 
    The script **appends every verdict** to `docs/architecture/gate-ledger.md` — never log, backfill
    or edit a row yourself; a verdict with no row was never run (outside a repo, none is written by
-   design). The human tags each row's outcome (`ok`/`fp`/`fn`, plus `nil` and `lost` for a
-   reconstructed row) later; the file explains how. Read the numbers with `scripts/gate-stats.sh`.
+   design). The human tags each row's outcome (`ok`/`fp`/`fn`, plus `nil` for a verdict that says
+   nothing about the code and `lost` for a reconstructed row) later; the file explains how. Read
+   the numbers with `scripts/gate-stats.sh`.
    The gate's output also names the families whose citations decide in this repo (*citations
    decide here: …*) — a cited family outside that list is advisory only.
 
    - `exit 0` **GO** → and your review is clean → merge (see *How* below).
    - `exit 1` **NO-GO** → a precondition failed. **The human merges.**
-   - `exit 2` **UNKNOWN** → something could not be verified (no `gh`, no catalog, no config, an
-     unresolvable repo or PR). **The human merges.** There is no path from "I could not check" to
+   - `exit 2` **UNKNOWN or MOOT** → read the `VERDICT:` line. **MOOT**: the PR was merged before
+     the gate ran — a post-merge review (step 1), so findings become follow-ups. **UNKNOWN**:
+     something could not be verified (no `gh`, no catalog, no config, an unresolvable repo or PR).
+     **The human merges**, or owns the follow-up. There is no path from "I could not check" to
      "go" — and note that UNKNOWN is a bug report about the *gate*, not a finding about the code:
      say which of the two it is when you report it.
 
@@ -264,7 +268,7 @@ derive it from the step-2 classification, first match wins:
 | Classification | Lens |
 |---|---|
 | The API contract or a client-facing schema changed | `breadth` **+** `adversarial` |
-| Contract domain (see the canonical list in step 6), security, or AI/prompt change | `adversarial` |
+| Contract domain (step 6 cites its canonical set), security, or AI/prompt change | `adversarial` |
 | Bug fix — the PR claims to repair a defect | `null-hypothesis` |
 | Anything else — feature, client change, refactor, migration, infra/deploy | `breadth` |
 
@@ -277,7 +281,7 @@ per PR, so they take the derived default; a queue entry keeps the lens of its fi
 `wai-team` run both are reviewed on fresh context, the delta re-review included.
 
 **The lens is additive.** It never narrows the dimension walk and **never changes the merge
-gate** — the contract-domain gate, the Blocker/Major decision point, the green-checks condition
+gate** — the excluded-domain gate, the Blocker/Major decision point, the green-checks condition
 and the absolute rule that skills never approve a PR hold under every lens. A lens can make a
 review sharper, never laxer. **Declare it** in the output (`**Lens:**`), with the rule that
 selected it: a review whose stance cannot be reconstructed afterwards is not reproducible.
@@ -299,7 +303,7 @@ together. Per PR:
    with the just-merged siblings (same modules, same contract, same migrations); not a full
    re-review when nothing overlaps.
 4. **Apply the normal merge policy** (above — including the Blocker/Major decision point and
-   the contract-domain gate). This mode adds **no new merge authority**; it is the same gate
+   the excluded-domain gate). This mode adds **no new merge authority**; it is the same gate
    applied serially.
 
 Never merge two queue entries without re-running checks in between, and never parallelize
@@ -424,5 +428,5 @@ This skill is the **review** stage in the lifecycle plan → implement → revie
   `references/agent-git-protocol.md` — identity & repo mode, the gated merge, the canonical
   §*Excluded domains* set that `merge-gate.sh` delegates to via `excluded-domains.sh`, and the
   absolute rule that **skills never approve a PR**. Contract rules:
-  `references/contract-protocol.md`, issue rules: `references/issues-protocol.md` (both in the
-  `wai` skill).
+  `references/contract-protocol.md`, issue rules: `references/issues-protocol.md` (all three in
+  the `wai` skill).
