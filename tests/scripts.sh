@@ -2080,7 +2080,29 @@ assert "contract-lint: an old-form call 'sh scripts/doctor.sh' → FAILED, the c
 clfix "Run \`sh <skill-dir>/scripts/doctor.sh\` (from the repo root); \`doctor.sh\` reports drift."
 out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
 assert "  · the <skill-dir>/… form passes, and a mention without sh is not held to it" 0 "$rc" "$out" \
-  'written from the skill.s base directory \(1/1\)' 'not written as'
+  'written from its base directory \(1/1\)' 'not written as'
+
+# …and it holds only the SUITE's skills (#95 review). In a repo install `.claude/skills` also holds
+# the repo's OWN skills, which live in the repo and resolve their paths in every install. The
+# manifest install.sh writes names the suite, so an own skill — even one in the wai-* namespace the
+# manifest does not list — is not failed: its own script is not read, a suite script is advisory.
+printf 'wai\n' > "$CL/.claude/.wai-suite-manifest"
+mkdir -p "$CL/.claude/skills/team-notes/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$CL/.claude/skills/team-notes/scripts/notes-lint.sh"
+printf 'Run `sh .claude/skills/team-notes/scripts/notes-lint.sh` before a release.\n' \
+  > "$CL/.claude/skills/team-notes/SKILL.md"
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · a repo's OWN skill calling its own script by a repo path is not held to it, exit 0" 0 "$rc" "$out" \
+  'VERDICT: OK' 'not written as|reach a suite script'
+mkdir -p "$CL/.claude/skills/wai-notes"
+printf 'Check drift with `sh ../wai/scripts/doctor.sh`.\n' > "$CL/.claude/skills/wai-notes/SKILL.md"
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · an own skill the manifest does not list, calling a suite script so → ADVISORY, exit 0" 0 "$rc" "$out" \
+  'wai-notes/SKILL.md: sh \.\./wai/scripts/doctor\.sh' 'not written as'
+printf 'Run `sh scripts/doctor.sh` (from this skill'"'"'s directory).\n' > "$CL/.claude/skills/wai/SKILL.md"
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · while the skill the manifest lists is still held: FAILED" 1 "$rc" "$out" \
+  'wai/SKILL.md: sh scripts/doctor.sh'
 
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once

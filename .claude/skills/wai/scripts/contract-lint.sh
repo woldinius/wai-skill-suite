@@ -15,9 +15,9 @@
 #   1. Every script has a caller.        A script no prompt names is dead weight — or worse, a
 #                                        mechanism someone believes is running.
 #   2. Every documented path resolves.   "Run scripts/foo.sh" is a lie if it does not exist from
-#                                        where the prompt says to run it — and an `sh` call is
-#                                        written `<skill-dir>/…`, the one form that resolves in a
-#                                        repo install and a plugin install alike (#95).
+#                                        where the prompt says to run it — and a suite skill's `sh`
+#                                        call is written `<skill-dir>/…`, the one form that resolves
+#                                        in a repo install and a plugin install alike (#95).
 #   3. Every exit code is documented.    An undocumented code is a coin flip: the model invents a
 #                                        meaning for it, and fail-closed becomes fail-open.
 #
@@ -129,31 +129,53 @@ else
   printf '%s\n' "$UNRESOLVED" | grep . | while IFS= read -r line; do hint "$line"; done
   hint "→ an agent reading this runs the path as written, from the repo root. Write it so it resolves."
 fi
-# …and every `sh` call to a suite script is written the one way that resolves in both installs. The
-# convention (agent-git-protocol.md § Running a suite script, #95): the cwd is the repo root and the
-# script is reached by path, `sh <skill-dir>/…`. `sh scripts/x.sh` "from this skill's directory"
-# resolves above — from the skill — and hands the script a cwd that is not the repo; `sh .claude/…`
-# does not exist in a plugin install. Only an `sh <path>` whose basename is OURS is read, flattened
-# so a call wrapped after `sh` is still one call; a mention without `sh` is not a call.
+# …and every `sh` call a SUITE skill makes to a suite script is written the one way that resolves in
+# both installs. The convention (agent-git-protocol.md § Running a suite script, #95): the cwd is the
+# repo root and the script is reached by path, `sh <skill-dir>/…`. `sh scripts/x.sh` "from this
+# skill's directory" resolves above — from the skill — and hands the script a cwd that is not the
+# repo; `sh .claude/…` does not exist in a plugin install. Only an `sh <path>` whose basename is a
+# suite script is read, flattened so a call wrapped after `sh` is still one call; a mention without
+# `sh` is not a call.
+# WHICH SKILLS ARE THE SUITE'S. In a repo install `.claude/skills` also holds the repo's OWN skills,
+# and a skill that lives in the repo resolves its paths in every install, so the plugin-cache reason
+# does not apply to it: its calls to a suite script are ADVISORY, its calls to its own scripts are
+# not read at all. The suite is what install.sh recorded in its manifest — or, where there is none
+# (this repo, the plugin cache), the namespace install.sh reserves: `wai` and `wai-*`.
+is_suite() {   # $1 = a skill directory's name
+  if [ -f .claude/.wai-suite-manifest ]; then grep -qxF -- "$1" .claude/.wai-suite-manifest 2>/dev/null
+  else case "$1" in wai|wai-*) return 0 ;; *) return 1 ;; esac; fi
+}
+SUITE_BNS=""
+for s in $SCRIPTS; do
+  _r="${s#.claude/skills/}"; is_suite "${_r%%/*}" && SUITE_BNS="$SUITE_BNS ${s##*/}"
+done
 CALL_RE='(^|[^A-Za-z0-9_./-])sh[[:space:]]+[^[:space:]`"()]+[.]sh'
-OFFCALL=""; N_CALL=0
+OFFCALL=""; OWNCALL=""; N_CALL=0; N_OWN=0
 for f in $RUNNABLE; do
+  _r="${f#.claude/skills/}"; _sk="${_r%%/*}"
   for call in $(tr '\n' ' ' < "$f" | grep -oE "$CALL_RE" | sed -E 's/^.*sh[[:space:]]+//' | sort -u); do
-    case " $BNS " in *" ${call##*/} "*) ;; *) continue ;; esac
-    N_CALL=$((N_CALL + 1))
-    case "$call" in
-      '<skill-dir>/'*) ;;
-      *) OFFCALL="$OFFCALL
-$f: sh $call" ;;
-    esac
+    case " $SUITE_BNS " in *" ${call##*/} "*) ;; *) continue ;; esac
+    if is_suite "$_sk"; then
+      N_CALL=$((N_CALL + 1))
+      case "$call" in '<skill-dir>/'*) ;; *) OFFCALL="$OFFCALL
+$f: sh $call" ;; esac
+    else
+      case "$call" in '<skill-dir>/'*) ;; *) N_OWN=$((N_OWN + 1)); OWNCALL="$OWNCALL
+$f: sh $call" ;; esac
+    fi
   done
 done
 if [ -z "$OFFCALL" ]; then
-  ok "every documented sh call to a suite script is written from the skill's base directory ($N_CALL/$N_CALL)"
+  ok "every documented sh call from a suite skill to a suite script is written from its base directory ($N_CALL/$N_CALL)"
 else
-  bad "documented sh call(s) to a suite script not written as <skill-dir>/…:"
+  bad "documented sh call(s) from a suite skill to a suite script not written as <skill-dir>/…:"
   printf '%s\n' "$OFFCALL" | grep . | while IFS= read -r line; do hint "$line"; done
   hint "→ write it \`sh <skill-dir>/…\`, run from the repo root (agent-git-protocol.md § Running a suite script)."
+fi
+if [ -n "$OWNCALL" ]; then
+  warn "$N_OWN sh call(s) in the repo's own skills reach a suite script by another path — ADVISORY, not failed:"
+  printf '%s\n' "$OWNCALL" | grep . | while IFS= read -r line; do hint "$line"; done
+  hint "  it resolves in a repo install; in a plugin install the suite lives outside the repo."
 fi
 if [ -n "$ADVISORY" ]; then
   warn "$N_OTHER path(s) named do not belong to this suite; these do not exist here — ADVISORY, not failed:"
