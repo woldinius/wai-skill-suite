@@ -5,8 +5,9 @@
 > as their spine. The lifecycle skills (`wai-requirements-planning`,
 > `wai-implementation`, `wai-testing`, `wai-pr-review`) follow this so a
 > cross-surface feature stays compatible across repos and releases. This file is the
-> authoritative version; if the backend repo has `docs/architecture/contract-protocol.md`, that
-> mirror is the live copy — keep them in sync.
+> authoritative version. A backend repo may keep a copy at
+> `docs/architecture/contract-protocol.md` for humans; it is read-only, and on any disagreement
+> this file governs.
 
 ## The one rule that matters
 
@@ -131,10 +132,10 @@ its own.
 
 ## Contract domain = human-gated
 
-Changes to the contract for **API, Auth/Login, Token/Billing** are a **contract domain**: their
-PRs are left for the human to merge (no auto-merge), per the suite's merge gate
-(`references/agent-git-protocol.md`). A token/billing contract change touches three provider
-integrations plus the ledger — treat it with payment-grade care.
+Changes to the contract for **API, Auth/Login, User Management, Security and Token/Billing** are a
+**contract domain**: their PRs are left for the human to merge (no auto-merge), per the suite's
+merge gate (`references/agent-git-protocol.md`). A token/billing contract change touches three
+provider integrations plus the ledger — treat it with payment-grade care.
 
 The contract domain is a **subset of the excluded domains** — the set that stays the human's even
 under an autonomy mandate — defined canonically in `references/agent-git-protocol.md §"Excluded

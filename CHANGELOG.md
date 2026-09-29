@@ -15,6 +15,17 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
   line, in one message per release window. The pin lives only in the README, so the re-pin touches
   no guarded file, and the README's fetch-and-run lines may change only their tag.
   ([#83](https://github.com/woldinius/wai-skill-suite/issues/83))
+### Fixed
+
+- **Claude Code's configuration is a guardrail.** Diffs to agents, settings, hooks or commands under
+  `.claude/`, to `.claude-plugin/*` or `.mcp.json` (any depth) classified CLEAR; they are EX-GUARD
+  now, in target repos too. This repo, a plugin root, also guards the twelve default plugin
+  locations. ([#108](https://github.com/woldinius/wai-skill-suite/issues/108))
+- **Catalog citations corrected across the skills.** `wai-pr-review` cited `AI-6` (Eval) for
+  prompt and model versioning, which is `AI-2`. An audit of every skill found more wrong pairs —
+  injection, known-CVE dependencies, attestation, the security playbook's worked example — now
+  corrected, with stale and contradictory prose fixed alongside.
+  ([#99](https://github.com/woldinius/wai-skill-suite/issues/99))
 
 ## [0.5.2] — 2026-09-28
 

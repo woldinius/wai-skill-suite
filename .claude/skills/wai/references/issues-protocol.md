@@ -32,8 +32,7 @@ whether the right thing was *asked* is the human's alone (`wai/SKILL.md` §Princ
 picking a disposition for output the checks already blessed.
 
 And severity is not the only thing that opens the decision point. A change that touches an
-**excluded domain** is the human's no matter how clean the diff or how green the checks — the
-canonical set (the contract domain, destructive migration, and **GDPR-erasure / data-deletion**)
+**excluded domain** is the human's no matter how clean the diff or how green the checks — the set
 is defined once in `agent-git-protocol.md` §*Excluded domains — always the human's, even in autonomy
 mode*, and this protocol keeps no copy of it. Routing here reads the **same** set the merge gate
 enforces, so an erasure or account-deletion change is presented and waited on exactly as a

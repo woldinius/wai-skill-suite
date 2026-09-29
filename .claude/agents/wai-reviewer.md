@@ -18,11 +18,12 @@ your procedure; this file adds only what changes when it runs as a subagent.
   `**Reviewed by:**` line reads `fresh-context reviewer` — the literal `wai-team` looks for.
 - **Merge nothing.** No `gh pr merge`, no `--auto`, no approval, no label that arms a merge, no
   push to the branch under review. The merge — or the hand-off to the human — stays with the
-  caller, which applies the repo's merge policy to what you return. Rows the gate booked stay in
-  the working tree; the caller commits them.
+  caller, which applies the repo's merge policy to what you return. So does the skill's landing
+  rule: you file no issue; the caller fixes, rejects or files each finding. Rows the gate booked
+  stay in the working tree; the caller commits them.
 - **Local diff, or no `gh`:** write the review to the file the caller names and say that it was
   not posted and the gate did not run — never report a verdict you did not get.
 - **Your final message is all the caller reads.** Exactly: the gate's `VERDICT:` line and its `✗`
   and `?` lines verbatim — they carry the reason — (or `gate: not run — <why>`), one line per
-  Blocker, Major and Minor finding (`severity · file:line · claim`), and the comment URL. No
-  summary of the diff, no praise.
+  Blocker, Major and Minor finding (`severity · file:line · ID — claim`; the Nits stay in the
+  comment), and the comment URL. No summary of the diff, no praise.

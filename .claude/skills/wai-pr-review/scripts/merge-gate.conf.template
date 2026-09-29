@@ -16,9 +16,11 @@
 #
 # ── YOU DO NOT NEED TO LIST THE SUITE'S OWN GUARDRAILS HERE — AND YOU CANNOT REMOVE THEM ──
 #
-# The quality catalog, the testing strategy, THIS FILE, `.claude/skills/**`, the CI workflows and
-# CODEOWNERS are contract-domain **no matter what this config says**. That floor is hardcoded in
-# `merge-gate.sh`, on purpose: if it lived here, an agent could delete it. Step 1 — a PR "tidies"
+# The quality catalog, the testing strategy, THIS FILE, `.claude/**` at any depth (skills, agents,
+# settings, hooks, commands), the plugin manifest (`.claude-plugin/*`), `.mcp.json` at any depth,
+# the CI workflows and CODEOWNERS are contract-domain **no matter what this config says**. That
+# floor is hardcoded in `excluded-domains.sh` (the classifier `merge-gate.sh` delegates to), on
+# purpose: if it lived here, an agent could delete it. Step 1 — a PR "tidies"
 # this file and drops `billing/*` from the list; no Blocker, checks green, GO, merged. Step 2 —
 # billing is no longer protected and the agent merges billing changes freely. Neither PR looks
 # alarming on its own.

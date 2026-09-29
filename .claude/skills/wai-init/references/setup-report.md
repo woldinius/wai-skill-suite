@@ -15,16 +15,19 @@ Use exactly this structure:
 **Status:** [Newly initialized | Already present → change proposal | Reset on request]
 **Project:** [greenfield (N commits) | grown (N commits, M files) — detected, not asked]
 **Repo mode:** [solo | team — how many humans commit here; drives the merge gate]
-**Surface:** [backend+web | iOS | Android — which surface this repo is]
+**Surface:** [backend+web | iOS | Android | library/CLI/service — which surface this repo is]
 **Detected stack:** [languages · frameworks · API style/contract · DB · AI provider · billing · infra]
 **Forge:** [GitHub — full suite | GitLab/other — see *Forge* below; the suite is GitHub-only by design]
+**Variant seed:** [platform | web | minimum — why]
 **Catalog:** [tier: minimal | compact | standard | full — why · ~N lines, ~N IDs · docs language: en | de]
-**Catalog scope:** [sections kept — shared core (`SEC`/`GDPR`/`API`/`MAINT`) + `PAY-*` + the surface's sections]
+**Catalog scope:** [kept in the variant — core, `PAY-*` where money is handled, surface sections]
 **Fit:** [full | partial (what differs) | low (why)]
 
 ### Created / Changed
 - docs/architecture/quality-attributes.md — [new at tier X | diff proposal | kept unchanged]
 - docs/architecture/testing-strategy.md — [new at tier X | diff proposal | kept unchanged]
+- docs/architecture/merge-gate.conf — [new, path globs to confirm | diff proposal | kept unchanged]
+- docs/architecture/coordination.conf — [written (Round 2) | not asked]
 
 ### Tailoring (deviations from the baseline)
 - Adopted: [dimensions/rows]

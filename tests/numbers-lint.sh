@@ -107,7 +107,7 @@ WORD_RE='six|seven|eight|nine|ten|eleven|twelve'
 
 # Living documents: what a reader is asked to believe TODAY. `git ls-files` so an untracked draft
 # never fails a build it is not part of.
-LIVING="$(git ls-files 'README.md' 'install.sh' '.claude/skills/**' 'docs/publication/**' \
+LIVING="$(git ls-files 'README.md' 'install.sh' '.claude/skills/**' '.claude/agents/**' 'docs/publication/**' \
                        'docs/learnings/README.md' 'docs/architecture/quality-attributes.md' \
                        'docs/architecture/testing-strategy.md' 'docs/open-questions.md' \
                        '.claude-plugin/*.json' \

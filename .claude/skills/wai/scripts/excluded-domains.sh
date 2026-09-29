@@ -11,8 +11,11 @@
 # money, open the door, break the contract other repos depend on, or delete someone's data. Seven
 # tags:
 #
-#   EX-GUARD  the hardcoded guardrail FLOOR (catalog, testing strategy, gate config, skills, CI,
-#             build/lint enforcement). Never configurable, never human-listable — a-fortiori.
+#   EX-GUARD  the hardcoded guardrail FLOOR (catalog, testing strategy, gate config, Claude
+#             Code's configuration directory — `.claude/` at any depth: skills, agents, settings,
+#             hooks, commands — the plugin manifest, `.mcp.json` at any depth, CI, build/lint
+#             enforcement; instruction files such as CLAUDE.md are an open decision, #128). Never
+#             configurable, never human-listable — a-fortiori.
 #   EX-PAY    payment / token / billing        }
 #   EX-AUTH   auth / login / user management    }  the CONTRACT domain — CONTRACT_PATHS in
 #   EX-API    API / contract / DTO surface      }  merge-gate.conf. A path match trips it; the
@@ -113,7 +116,7 @@ COORD_CONF="${EXCLUDED_DOMAINS_COORD_CONF:-${REPO_ROOT:-.}/docs/architecture/coo
 GUARDRAIL_PATHS="docs/architecture/quality-attributes.md docs/architecture/catalog/*
                  docs/architecture/testing-strategy.md docs/architecture/merge-gate.conf
                  docs/architecture/coordination.conf
-                 .claude/skills/*
+                 .claude/* */.claude/* .claude-plugin/* .mcp.json */.mcp.json
                  .github/*
                  package.json */package.json
                  turbo.json nx.json
