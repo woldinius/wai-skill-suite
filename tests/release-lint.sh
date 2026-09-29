@@ -134,11 +134,12 @@ done
 # ── 3b · a pin line has exactly its shape — only the tag varies ──────────────────────────────────
 # The re-pin touches README.md alone, so an agent may merge it; a pin line that also swapped the
 # host, the repository or the command (`curl … | sh`) must not ride along. The canonical repository
-# is the plugin manifest's "repository" field (a guardrail file since #108): EVERY README line that
-# carries a tag must equal one of two templates with that tag in every slot — keyed on the tag, not
-# on the command's spelling, so `git  clone`, `Git clone` or a split line cannot slip past. THE COST,
-# NAMED: an untagged line added inside a pinned block is not held here; README.md is not a guarded
-# file, so a human reading the re-pin diff is what catches that.
+# is the plugin manifest's "repository" field (a guardrail file since #108). Every README line that
+# carries a tag, or looks like a fetch-and-run command (curl, git clone, a pipe into sh — matched
+# case-insensitively, whitespace-tolerant), must equal one of two templates with one tag in every
+# slot, and each template must appear at least once — so dropping the tag, swapping the host or
+# adding an untagged `curl … | sh` all go red. THE COST, NAMED: prose that instructs a command in
+# other words (no curl, clone or pipe) is not held; the README is not a guarded file.
 MANIFEST_REPO="$(grep -oE '"repository"[[:space:]]*:[[:space:]]*"https://github\.com/[^"/]+/[^"/]+"' \
                  "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | grep -oE 'https://github\.com/[^"]+' | head -1)"
 if [ -z "$MANIFEST_REPO" ]; then
@@ -148,15 +149,19 @@ elif [ -f "$ROOT/README.md" ]; then
   T_CLONE="git clone --depth 1 --branch <V> https://github.com/$SLUG.git /tmp/wai"
   T_CURL="curl -fsSL https://raw.githubusercontent.com/$SLUG/<V>/install.sh | SKILLS_REF=<V> sh"
   BADSHAPE="$(awk -v tc="$T_CLONE" -v tu="$T_CURL" '
-      /v[0-9]+\.[0-9]+\.[0-9]+/ {
+      { low = tolower($0) }
+      /v[0-9]+\.[0-9]+\.[0-9]+/ || low ~ /curl[ \t]/ || low ~ /git[ \t]+(-[^ \t]+[ \t]+)*clone/ || low ~ /\|[ \t]*(ba|z|da)?sh([ \t]|$)/ {
         line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
         first = ""; n = line; bad = 0
         while (match(n, /v[0-9]+\.[0-9]+\.[0-9]+/)) {
           v = substr(n, RSTART, RLENGTH); if (first == "") first = v; else if (v != first) bad = 1
           n = substr(n, 1, RSTART - 1) "<V>" substr(n, RSTART + RLENGTH) }
-        if (bad || (n != tc && n != tu)) printf ", README.md:%d", NR }' "$ROOT/README.md")"
+        if (!bad && n == tc) seen_c = 1
+        if (!bad && n == tu) seen_u = 1
+        if (bad || (n != tc && n != tu)) printf ", README.md:%d", NR }
+      END { if (!seen_c) printf ", no canonical clone line"; if (!seen_u) printf ", no canonical install line" }' "$ROOT/README.md")"
   [ -z "$BADSHAPE" ] \
-    || stale "pin shape — a README pin line is not the canonical clone/install command for $MANIFEST_REPO with one tag in every slot:${BADSHAPE#,}. Only the tag may change in a re-pin"
+    || stale "pin shape — README must carry the canonical clone and install commands for $MANIFEST_REPO, one tag in every slot, and no other fetch-and-run line:${BADSHAPE#,}. Only the tag may change in a re-pin"
 fi
 
 if [ "$FAIL" -gt 0 ]; then

