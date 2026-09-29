@@ -1359,7 +1359,7 @@ out="$(edrun)"; rc=$?
 assert "a new .mcp.json server → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
 # The whole .claude/ directory, at any depth: settings.local.json outranks settings.json, a nested
 # .claude/ is read from a session's working directory, hooks/ holds the scripts a hook runs.
-for _p in .claude/settings.local.json apps/web/.claude/settings.json .claude/hooks/guard.sh .claude/commands/ship.md; do
+for _p in .claude/settings.local.json apps/web/.claude/settings.json .claude/hooks/guard.sh .claude/commands/ship.md apps/web/.mcp.json; do
   edfix; printf '%s\n' "$_p" > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
   out="$(edrun)"; rc=$?
   assert "  · $_p → EX-GUARD (Claude Code configuration, any depth)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'

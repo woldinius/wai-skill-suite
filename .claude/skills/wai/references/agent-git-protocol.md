@@ -150,7 +150,7 @@ EXCLUDED DOMAINS = contract domain   (EX-PAY ∪ EX-AUTH ∪ EX-API ∪ EX-SEC �
 
 | Tag | Catalog family | Authoritative detection (paths + diff) | Advisory-widening only |
 |---|---|---|---|
-| `EX-GUARD` | quality catalog, testing strategy, gate config, Claude Code's project configuration (`.claude/**` at any depth — skills, agents, settings, hooks, commands), the plugin manifest (`.claude-plugin/*`), `.mcp.json`, CI, build/lint enforcement | hardcoded `GUARDRAIL_PATHS` | — |
+| `EX-GUARD` | quality catalog, testing strategy, gate config, Claude Code's configuration directory (`.claude/**` at any depth — skills, agents, settings, hooks, commands), the plugin manifest (`.claude-plugin/*`), `.mcp.json` at any depth, CI, build/lint enforcement — instruction files (`CLAUDE.md`, `AGENTS.md`) are not in the floor yet, an open decision (#128) | hardcoded `GUARDRAIL_PATHS` | — |
 | `EX-PAY` | payment / token / billing | `CONTRACT_PATHS` (billing/token globs) | labels; `PAY-` family prefix |
 | `EX-AUTH` | auth / login, user management | `CONTRACT_PATHS` (auth/user globs) | labels; `AUTH` family prefix |
 | `EX-API` | API contract | `CONTRACT_PATHS` (contract/DTO globs) | `API-` family prefix |
