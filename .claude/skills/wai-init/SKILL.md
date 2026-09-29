@@ -36,8 +36,9 @@ that preserves local tailoring, custom IDs and the human's edits, never a silent
   are Issues reachable? Reports state + one-time setup steps; never logs in or mutates the remote.
 - An **AI-readiness check**: the repo properties that decide whether *any* agent can work here.
   A proposal list — never applied silently.
-- The **setup decisions**, asked once (step 4, before anything is written) and recorded so a re-run
-  doesn't re-ask: solo/team · protect `main` · docs language · artifact tier · learning mode.
+- The **setup decisions**, asked once and recorded so a re-run doesn't re-ask: variant + scope ·
+  tier · solo/team · protect `main` · docs language (step 4, before anything is written) ·
+  learning mode (step 11, last).
 - A **linted** catalog: `scripts/catalog-lint.sh` runs after every write.
 - `docs/architecture/merge-gate.conf` — the merge gate's only repo-specific input (which paths are a
   contract domain, where migrations live). Without it, nothing is agent-merged.
@@ -50,8 +51,8 @@ that preserves local tailoring, custom IDs and the human's edits, never a silent
 - A **setup report** (format below).
 
 This skill is **allowed to be heavy** — it runs once per repo, or rarely, and the catalog it
-writes is read at runtime by **every other skill** (see *Sizing*). Spend the tokens here; save
-them everywhere else.
+writes is read at runtime by **most of the suite's skills** (see *Sizing*; `wai-retro`
+deliberately does not). Spend the tokens here; save them everywhere else.
 
 ## Stance
 
@@ -68,7 +69,7 @@ them everywhere else.
 ## Sizing — the catalog is the suite's token budget
 
 The bundled baseline is the **full** tier: **87 IDs, ~510 lines** (checkable with
-`grep -c`/`wc -l`). Every skill reads the catalog at runtime, so its size is the biggest lever.
+`grep -c`/`wc -l`). Most skills read the catalog at runtime, so its size is the biggest lever.
 **The coarse cut comes first — the variant** (ADR-0004): **platform** (the full build — the only
 variant carrying `IOS-*`/`AND-*`/`PAY-*`/`AI-*`, so every mobile or token-selling repo starts
 here) · **web** (backend + frontend — no AI integration, no token economy, no store surfaces) ·
@@ -166,7 +167,9 @@ IDs) and the tailoring rules.
      team's contract owners, never the PR author alone.
    - **Protect `main`?** — **Recommended: yes.** On yes, propose a branch-protection ruleset
      (require a PR, block direct/force pushes; in `team` mode also **require 1 approval** +
-     dismiss stale; via repo settings or `gh api`, approval-gated). **If the plan forbids
+     dismiss stale; via repo settings or `gh api`, approval-gated). Team mode also needs
+     Code-Owners review and *Allow auto-merge* (without it `gh pr merge --auto` cannot arm); this
+     proposal does not set them yet — `wai-cicd`'s ruleset does. **If the plan forbids
      rulesets** (403 on free-plan private repos), say so and fall back to the **advisory gate** —
      the git protocol is then the only wall; record it so green checks aren't mistaken for
      enforced ones.
@@ -223,8 +226,9 @@ IDs) and the tailoring rules.
    if it passed. This is the check that would have caught 55 undecidable dimensions on day one.
 
 7. **Testing strategy** — write `docs/architecture/testing-strategy.md` at the **same tier**
-   (default: build e2e-testable; the catalog's `SEC-*`/`PAY-*` paths as mandatory targets, where
-   the repo has them). If it exists, step 3 applies. Get it approved.
+   (default: build e2e-testable; `wai-testing`'s mandatory targets — `SEC-*`, `PAY-*`, `GDPR-*`,
+   `RES-3`, `AI-3`/`AI-5` — where the repo has them). If it exists, step 3 applies. Get it
+   approved.
 
 8. **Merge-gate config** — write `docs/architecture/merge-gate.conf` from the template in
    `wai-pr-review/scripts/merge-gate.conf.template` (read it — format + fail-closed contract). It
@@ -276,13 +280,14 @@ IDs) and the tailoring rules.
    Record the result. **If something is missing, don't fail and don't auto-fix** — surface the
    exact one-time steps and **ask** whether to set up now or proceed catalog-only: no `gh` →
    install + `gh auth login`; no GitHub remote → `git remote add origin <url>`; Issues disabled →
-   enable; and **offer to create the labels** the suite files with — approval-gated, but the
-   **whole set** (severity `blocker`/`major`/`minor`/`nit`; type
-   `bug`/`feature`/`improvement`/`tech-debt`/`follow-up`/`audit`; plus `security` and
-   `in-progress`). Not cosmetic: `gh issue create --label minor` **fails** on a missing label, and
-   a skill told never to block then silently drops the finding. Map onto an existing scheme if
-   there is one. This step is **recommended, not blocking** — never run `gh auth login` or change
-   the remote yourself.
+   enable; and **offer to create the labels** the suite files with — approval-gated: severity
+   `blocker`/`major`/`minor`/`nit`; type `bug`/`feature`/`improvement`/`tech-debt`/`follow-up`/
+   `audit`; plus `security` and `in-progress`. Not cosmetic: `gh issue create --label minor`
+   **fails** on a missing label, and a skill told never to block then silently drops the finding.
+   The workflow labels the skills also apply (`ready-for-agent`, `ready-to-merge`,
+   `ready-for-human`, `needs-info`) are not in this set yet, and a missing one fails
+   `gh … --add-label` the same way. Map onto an existing scheme if there is one. This step is
+   **recommended, not blocking** — never run `gh auth login` or change the remote yourself.
 
    **Not GitHub? Say so plainly — do not rewrite the suite.** **GitHub is a design constraint,
    not a config value**: `gh`, PRs, Issues, Actions, rulesets, `CODEOWNERS` and auto-merge are

@@ -158,8 +158,8 @@ ships the image, and everything of it lives in GitHub.
 
 ## Merge gate & branch protection
 
-The platform's gated-merge policy lets `wai-pr-review` **auto-merge** a clean,
-non-contract-domain PR — but only if "green" is trustworthy. This skill makes it so:
+The platform's gated-merge policy lets `wai-pr-review` **auto-merge** a clean PR outside the
+excluded domains — but only if "green" is trustworthy. This skill makes it so:
 
 - **Required checks — the names must be the workflow's JOB names.** GitHub matches a required
   check against the name of a **check run**, which is the job, not the step inside it. The
@@ -194,9 +194,9 @@ non-contract-domain PR — but only if "green" is trustworthy. This skill makes 
   team PR falls back to a manual merge. In `solo`, a single owner and no required approval is
   the correct, deliberate setting.
 - **`wai-testing` decides *what* is tested; this skill wires it.** Testing defines the
-  mandatory targets and writes the tests (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`); cicd turns them
-  into required checks and provides the CI test infrastructure (ephemeral DB service, the
-  integration/e2e job). Until both are in place, keep auto-merge conservative.
+  mandatory targets and writes the tests (`SEC-*`, `PAY-*`, `GDPR-*`, `RES-3`, `AI-3`/`AI-5`);
+  cicd turns them into required checks and provides the CI test infrastructure (ephemeral DB
+  service, the integration/e2e job). Until both are in place, keep auto-merge conservative.
 
 ## Relation to the quality catalog
 

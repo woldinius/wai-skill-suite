@@ -87,7 +87,8 @@ awk -F'|' -v report="$REPORT" -v today="$(date -u +%Y-%m-%d 2>/dev/null || echo 
     # MOOT is blank BY RULE — the ledger header merge-gate.sh writes says: leave its outcome blank,
     # count it in no rate. A blank MOOT is therefore not "not yet judged", and a TAGGED one is a
     # data-quality finding: the tag has no rate to enter. Until #69 this counter contradicted its own
-    # header and reported every MOOT row as untagged. Why: docs/rationale/gate-stats.md § MOOT is blank by rule
+    # header and reported every MOOT row as untagged.
+    # Why: docs/rationale/gate-stats.md § MOOT is blank by rule, so it is not untagged
     if (v == "MOOT") { if (o == "") moot_blank++; else moot_tagged++; next }
     if (o == "") { untagged++; next }         # emitted, not yet judged by the human
     # `lost` — a RECONSTRUCTED row: its original row was lost and the verdict is known from the PR

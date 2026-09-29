@@ -81,7 +81,9 @@ the run, so the team-repo rule applies to every dependent issue (step 3). The au
 below.
 
 At kickoff, once the mandate is confirmed, record the run **START timestamp**
-(`date -u +%FT%TZ`). It bounds the cross-issue digest (step 6) and the autonomous-merge report.
+(`date -u +%FT%TZ`) and the **start commit** (`git rev-parse origin/<default>`). The timestamp
+bounds the cross-issue digest (step 6); both bound the autonomous-merge report
+(`<start-commit>..HEAD`).
 Keep its full time: it is compared against GitHub's own `updatedAt`/`createdAt`, and rounding
 would widen the window.
 
@@ -127,11 +129,13 @@ this skill adds orchestration, **not** new authority.
    issues inside are still claimed one by one, counterproofed one by one, and each closes through
    its own `Closes #N`; the package shares the branch and the PR, never the evidence.
    **`wai-pr-review` runs on fresh context** (see *Attended or unattended*), and the merge policy
-   confirmed at kickoff decides what a clean PR does next. Under **(a)** it merges under the normal
-   gate as its cycle ends (in a `team` repo: auto-merge armed, waiting for another human's approval
-   — see the git protocol), and the next cycle starts from the fresh `main`. Under **(b)** or **(c)**
-   the reviewer is told **"verdict only — do not merge"**: it posts the review and the gate result,
-   and the PR waits for the end of the run. A fix loop keeps **one PR comment per review round**
+   confirmed at kickoff decides what a clean PR does next. The fresh-context reviewer posts the
+   review and the gate result and **merges nothing**, under every policy; this session applies
+   `wai-pr-review` step 6 to the verdict it returns, the landing rule included. Under **(a)**: gate
+   GO and no Blocker/Major → merge as the cycle ends (in a `team` repo: auto-merge armed, waiting
+   for another human's approval — see the git protocol), then `verify-arrival.sh`, and the next
+   cycle starts from the fresh `main`. Under **(b)** or **(c)** this session holds the PR until the
+   end of the run. A fix loop keeps **one PR comment per review round**
    (`wai-pr-review` §*Fix loops*), the gate quoted as its `VERDICT:` and `✗`/`?` lines only.
    Everything else joins the **decision list**. In
    **autonomous** mode the allowlist eligibility floor and the serial post-merge barrier both
@@ -147,9 +151,10 @@ this skill adds orchestration, **not** new authority.
    - **Clean working tree — and no learning gaps in an autopilot run.** A gap (🧩 `LEARN #`) is
      deliberately red and waits for a *human*; nobody is at the keyboard here.
      `wai-implementation` therefore plants **no** gap during a team run. If you nonetheless find
-     one open (left over from an earlier interactive session), it blocks both the commit (local
-     pre-commit hook) and the branch switch: resolve it first (`wai-learning-gap`, flow C), then
-     move on. Never carry a gap into the next issue's branch.
+     one open (left over from an earlier interactive session), it blocks the commit (local
+     pre-commit hook). Nothing blocks the branch switch — git carries the dirty file over
+     silently — so resolve it before any checkout (`wai-learning-gap`, flow C), then move on.
+     Never carry a gap into the next issue's branch.
 
    **In a `team` repo — and under merge policy (b) or (c) in any repo — nothing merges inside the
    run.** In a `team` repo every PR ends *auto-merge armed, waiting for another human's approval*;
@@ -231,10 +236,11 @@ this skill adds orchestration, **not** new authority.
 8. **Learning hand-off (clean run, opt-in)** — after a **clean run**, and **only at an
    interactive hand-back with a human present**, offer exactly **one** learning gap by
    **handing off to `wai-learning-gap` Flow D**. Flow D owns everything: the ledger-is-consent
-   gate, the PR ranking, the one-open-gap check, and cutting the fresh `agent/learn-*` branch
-   from merged code. wai-team plants nothing, installs nothing, and **checks no ledger** — it
-   only makes the offer. **On a headless, scheduled, or otherwise non-interactive run, skip
-   silently and offer nothing.** If the run was not clean, there is no offer.
+   gate, the PR ranking, the one-open-gap check, and cutting the fresh
+   `agent/<handle>/chore-learn-<slug>` branch from merged code. wai-team plants nothing, installs
+   nothing, and **checks no ledger** — it only makes the offer. **On a headless, scheduled, or
+   otherwise non-interactive run, skip silently and offer nothing.** If the run was not clean,
+   there is no offer.
 
 ## Attended or unattended — what changes when nobody watches
 
@@ -256,8 +262,8 @@ Two consequences, and they are the whole point of this section:
    is produced by the same session that just built the thing, under maximum completion pressure,
    with no human between the verdict and the merge. So the review runs as a **fresh-context
    reviewer** — the suite's **`wai-reviewer` agent**, or where it is not installed a subagent
-   briefed the same way: hand it the diff, the issue/plan and the catalog — **never the session
-   transcript** —
+   briefed the same way: hand it the PR number and the issue/plan — **never the session
+   transcript**; it reads the diff and the catalog itself —
    and its review comment names it (`Reviewed by: fresh-context reviewer`), so a later reader can
    tell a fresh review from a self-review. If the harness cannot dispatch one, **say so and merge
    nothing**: hand the PRs over instead. An in-session self-review is a legitimate review to
@@ -309,7 +315,11 @@ only *arm the head and run the post-merge test without pausing* — the server-s
 still gates **every** merge.
 
 Report the autonomous lane with `autonomous-merge-report.sh`, reconstructed from the
-append-only gate ledger and the git log — never narrated from memory.
+append-only gate ledger and the git log — never narrated from memory. It takes three arguments:
+the gate ledger, the run's git range (`<start-commit>..HEAD`, recorded at kickoff) and the START
+timestamp. Exit 0
+is a report, including "nothing merged autonomously"; exit 2 means the ledger is unreadable or an
+argument is missing — state the gap in the report.
 
 ## Failure handling
 
@@ -389,8 +399,8 @@ thresholds had been tightened since filing, and the counterproof fired on both t
   breaking stops the run, and autonomy **never** combines with parallelism.
 - **No cross-issue note evaporates** — findings surfaced on other issues during the run are
   consolidated and filed, never dropped.
-- **Same gate, applied serially** — merging is `wai-pr-review`'s policy in queue mode; this
-  skill never merges on its own authority.
+- **Same gate, applied serially** — every merge follows `wai-pr-review`'s step-6 policy, per
+  cycle or in merge-queue mode where PRs interact; this skill adds no merge authority.
 - **Disjoint or sequential** — parallelism is earned by the disjointness check, never assumed;
   excluded domains and migrations are always serial.
 - **Mandate-bound** — the issue set, decision handling and budget come from the human; collected
@@ -407,7 +417,7 @@ thresholds had been tightened since filing, and the counterproof fired on both t
   integration.
 - **wai-learning-gap** — the clean-run, interactive hand-off (step 8) routes here through
   **Flow D**, which owns the ledger gate, the PR ranking, the one-open-gap check and the
-  `agent/learn-*` branch.
+  `agent/<handle>/chore-learn-<slug>` branch.
 - **wai** — the router; points here whenever issues should be *worked* rather than driven phase
   by phase — one issue or a backlog.
 - Protocols (in the `wai` skill): `references/issues-protocol.md` (decision points, labels,
