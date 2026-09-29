@@ -7,6 +7,16 @@ since the newest tag and no section here is newer; released entries are dated re
 re-measures their numbers.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
+## [Unreleased]
+
+### Fixed
+
+- **Catalog citations corrected across the skills.** `wai-pr-review` cited `AI-6` (Eval) for
+  prompt and model versioning, which is `AI-2`. An audit of every skill found more wrong pairs —
+  injection, known-CVE dependencies, attestation, the security playbook's worked example — now
+  corrected, with stale and contradictory prose fixed alongside.
+  ([#99](https://github.com/woldinius/wai-skill-suite/issues/99))
+
 ## [0.5.2] — 2026-09-28
 
 The review runs in an agent: `wai-reviewer`, with `wai-pr-review` preloaded, reviews on fresh

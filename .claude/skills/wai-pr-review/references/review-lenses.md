@@ -6,7 +6,7 @@
 >
 > A lens is **additive**. It never replaces the base process (understand → classify → catalog
 > dimensions → severity → merge gate), never narrows the dimension walk, and **never changes the
-> merge gate** — the contract-domain gate, the Blocker/Major decision point, the green-checks
+> merge gate** — the excluded-domain gate, the Blocker/Major decision point, the green-checks
 > condition and the absolute rule that skills never approve a PR are all lens-independent. A lens
 > can only make a review *sharper*, never *laxer*.
 

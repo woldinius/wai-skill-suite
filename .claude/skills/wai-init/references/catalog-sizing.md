@@ -69,7 +69,9 @@ smaller tier — never a shorter list of guarantees.
 
 **A core that survives every tier and every scope.** These are the dimensions the rest of the
 suite *mandates* against — `wai-testing` requires tests for them, the audits always sweep
-them, and reviews escalate on them. They are kept with their Red Flag intact, at any tier:
+them, and reviews escalate on them. They are kept with their Red Flag intact, at any tier, in
+whatever the chosen variant carries (a smaller variant drops only members whose subject it lacks
+— app attestation, prompt injection, token fraud, App Store deletion):
 **security (`SEC-*`), GDPR/privacy (`GDPR-*`), idempotency (`RES-3` — kept on every surface, the
 one exception to the `RES-*` = backend rule)**, plus **billing/token (`PAY-*`) wherever money is
 actually handled** and **output validation (`AI-3`) wherever a model is called**. If the human wants one of these gone, that is a deliberate risk decision, not a
@@ -82,8 +84,9 @@ The same tier applies to `testing-strategy.md`. Record it in the catalog header 
 
 ## Tailoring rules
 
-- **Scope to the surface first.** Always keep the cross-cutting core
-  (`SEC`/`GDPR`/`API`/`MAINT`), `PAY-*` **and `RES-3`** (correctness under repetition/disorder is
+- **Scope to the surface first, within the variant.** Keep what the variant carries of the
+  cross-cutting core (`SEC`/`GDPR`/`MAINT`, `API` where there is an API contract), `PAY-*`
+  wherever money is handled, **and `RES-3`** (correctness under repetition/disorder is
   not backend-only — a client retrying a purchase is the same dimension, and `PAY-3`/`PAY-4`
   reference it); then keep only the surface's sections — backend+web
   repo → `AI`/`RES`/`OBS`/`PERF`/`WEB` **+ `CLIENT-*`** (the web app *is* a client: no provider
@@ -98,7 +101,8 @@ The same tier applies to `testing-strategy.md`. Record it in the catalog header 
   report** what was removed.
 - **Add** tech-stack specifics, each with a **new ID in the matching section**:
   - GraphQL instead of REST → adapt `API-4` from "OpenAPI" to "SDL/Schema + contract tests".
-  - Statically typed language / TS → `MAINT-10 · Type-checking gate in CI`.
+  - Statically typed language / TS → a local `MAINT-100 · Type-checking gate in CI` (minted at
+    ≥ 100; propose it upstream if every surface needs it).
   - Terraform/Pulumi present → sharpen `MAINT-3` with concrete IaC tooling.
   - Hardcoded provider SDK calls found → note under `AI-1` as an existing Red Flag.
   - No auto-scaling/serverless → adapt `PERF-3` to the real deploy form.
