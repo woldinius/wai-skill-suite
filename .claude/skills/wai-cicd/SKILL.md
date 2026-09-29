@@ -54,7 +54,9 @@ Depending on stack and deploy target (not everything is always needed):
   `apps/api/src/auth/*` becomes `/apps/api/src/auth/`), and say in the report which paths you
   took from it. If the conf is missing, **stop and run `wai-init` first**. What CODEOWNERS adds
   on top is *who* — the handle(s). Note the catalog, the testing strategy, the gate config,
-  `.claude/skills/**` and the CI workflows are **already agent-blocking** — `merge-gate.sh`
+  Claude Code's configuration directory (`.claude/**` — skills, agents, settings, hooks,
+  commands), the plugin manifest, `.mcp.json` and the CI workflows are
+  **already agent-blocking** — `merge-gate.sh`
   hardcodes them as a guardrail floor no config can lower. CODEOWNERS routes those paths to a
   named human on top of that; skills never approve a PR, so any approval there is a human's.
 - **`.github/pull_request_template.md`** — the judgment-first PR body the lifecycle skills fill.

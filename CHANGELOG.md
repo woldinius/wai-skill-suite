@@ -11,6 +11,10 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ### Fixed
 
+- **Claude Code's configuration is a guardrail.** Diffs to agents, settings, hooks or commands under
+  `.claude/`, to `.claude-plugin/*` or `.mcp.json` (any depth) classified CLEAR; they are EX-GUARD
+  now, in target repos too. This repo, a plugin root, also guards the twelve default plugin
+  locations. ([#108](https://github.com/woldinius/wai-skill-suite/issues/108))
 - **Catalog citations corrected across the skills.** `wai-pr-review` cited `AI-6` (Eval) for
   prompt and model versioning, which is `AI-2`. An audit of every skill found more wrong pairs —
   injection, known-CVE dependencies, attestation, the security playbook's worked example — now
