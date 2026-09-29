@@ -677,7 +677,8 @@ states the fact; no number and no finding changed, and the previous wording is i
 
 - 2026-07-14 backend-web, §2 item 3 (lines 98–99): the reader's reaction is now stated as the
   fact it was: a human read the number and did not flag it.
-- 2026-08-05 first checkout, lines 125–126: no release step re-checked the self-audit's verdict.
+- 2026-08-05 first checkout, lines 125–126: the self-audit's verdict was not re-read before
+  publication.
 - [2026-08-12 three weeks](field-reports/2026-08-12-three-weeks-of-ledger.md), finding 5 (lines
   92–93): the remedy was printed 55 times while `main` still declared no required checks; its
   intake note names the passage (lines 9–10).

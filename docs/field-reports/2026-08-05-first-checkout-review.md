@@ -122,8 +122,8 @@ a link resolver, a strict-YAML frontmatter guard, a hooks-wiring probe.
 this suite had no check for. Every skill, script and protocol went through review, tests and a
 gate. The *packaging* — links, frontmatter, an installer path only exercised on updates — went
 through none, because none existed. The 2026-08-03 self-audit had already said *"do not roll the
-suite into the applying projects yet."* That was still the correct verdict on publication day; no
-release step re-checked it.
+suite into the applying projects yet."* That was still the correct verdict on publication day, and
+it was not re-read before publication.
 
 **The pattern holds all the way down:** an artefact checks whether the work is right. It cannot
 check whether anyone asked it to run.
