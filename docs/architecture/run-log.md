@@ -114,3 +114,13 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-28T22:59Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-28T23:00Z | wai-pr-review | PR #126 | GO |
 | 2026-09-29T05:40Z | wai-implementation | PR #121 fix round 2 | m4 fixed: the call-form rule holds only suite skills; own skills advisory |
+| 2026-09-28T23:11Z | wai-pr-review | PR #109 | NO-GO |
+| 2026-09-29T05:22Z | wai-pr-review | PR #125 | NO-GO |
+| 2026-09-29T05:26Z | wai-pr-review | PR #110 | NO-GO |
+| 2026-09-29T05:28Z | wai-pr-review | PR #121 | NO-GO |
+| 2026-09-29T05:30Z | wai-pr-review | PR #109 | NO-GO |
+| 2026-09-30T21:08Z | wai-pr-review | PR #125 | NO-GO |
+| 2026-09-30T21:12Z | wai-pr-review | PR #110 | NO-GO |
+| 2026-09-30T21:21Z | wai-pr-review | PR #121 | NO-GO |
+| 2026-09-30T21:29Z | wai-pr-review | PR #110 | NO-GO |
+| 2026-09-30T21:41Z | wai-pr-review | PR #110 | NO-GO |

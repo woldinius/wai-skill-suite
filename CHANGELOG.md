@@ -7,7 +7,12 @@ since the newest tag and no section here is newer; released entries are dated re
 re-measures their numbers.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
-## [Unreleased]
+## [0.5.3] — 2026-09-30
+
+Hardening after an audit of every Markdown file: Claude Code's configuration directory is a
+guardrail at any depth; `release-lint` holds the install pins and their exact shape; suite scripts
+run from the repo root, ending seven false cleans; catalog citations and about 130 documentation
+findings corrected.
 
 ### Added
 
@@ -15,6 +20,7 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
   line, in one message per release window. The pin lives only in the README, so the re-pin touches
   no guarded file; its three install lines must keep their exact shape, only the tag may change.
   ([#83](https://github.com/woldinius/wai-skill-suite/issues/83))
+
 ### Fixed
 
 - **Claude Code's configuration is a guardrail.** Diffs to agents, settings, hooks or commands under
