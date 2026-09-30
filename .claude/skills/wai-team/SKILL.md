@@ -195,7 +195,7 @@ this skill adds orchestration, **not** new authority.
    as a `ready-to-merge` list (**not** armed), and say so in the report.
 
    **A queue merge is "merged" only when it ARRIVED.** After each single merge the queue lands,
-   run `sh ../wai/scripts/verify-arrival.sh <mergeCommit>` (from this skill's directory — a
+   run `sh <skill-dir>/../wai/scripts/verify-arrival.sh <mergeCommit>` (from the repo root — a
    sibling path): exit 0 = **ARRIVED** on the freshly fetched `origin/<default>` — the report may
    say "merged"; exit 1 = **LOST** — the forge says MERGED but the default branch never received
    the commit (the stacked-PR class): stop the queue, say so loudly, hand it to the human; exit 2
@@ -230,7 +230,7 @@ this skill adds orchestration, **not** new authority.
    batch: it hands over, as (c). No answer is a no: the PRs stay approval-ready.
    (The run-log row for this skill is written by `backlog-scan.sh` itself — do not log it again.)
    **Then hand back** per `../wai/references/hand-back.md`, ending with
-   `sh ../wai/scripts/open-items.sh --brief` (from this skill's directory) pasted verbatim —
+   `sh <skill-dir>/../wai/scripts/open-items.sh --brief` (from the repo root) pasted verbatim —
    `exit 2`: say `not checked`.
 
 8. **Learning hand-off (clean run, opt-in)** — after a **clean run**, and **only at an
@@ -424,12 +424,12 @@ thresholds had been tightened since filing, and the counterproof fired on both t
   formats), `references/agent-git-protocol.md` (branches, gate, and the canonical **Excluded
   domains** section this skill cites for the serial-lane and autonomy floor — it keeps **no**
   copy of the set), `references/contract-protocol.md` (why contract work is serial).
-- This skill's mechanics live in `scripts/`: `backlog-scan.sh` (the proposal),
+- This skill's mechanics live in `<skill-dir>/scripts/`, each run from the repo root: `backlog-scan.sh` (the proposal),
   `cross-issue-digest.sh` (step 6), `post-merge-verify.sh` (the serial barrier) and
   `autonomous-merge-report.sh` (the audit trail); excluded-domain classification is the shared
-  `.claude/skills/wai/scripts/excluded-domains.sh`, obeyed by its exit code — never re-derived
-  here. Worked call, from this skill's directory:
-  `sh ../wai/scripts/excluded-domains.sh --files <file-with-paths> --diff <file-with-diff>` —
+  `excluded-domains.sh` in the `wai` skill, obeyed by its exit code — never re-derived
+  here. Worked call, from the repo root:
+  `sh <skill-dir>/../wai/scripts/excluded-domains.sh --files <file-with-paths> --diff <file-with-diff>` —
   **both flags take a FILE CONTAINING the path list / the diff**, not the paths or the diff
   themselves; passing paths positionally is the mistake this note exists for
   (`unknown argument 'test/…'`).

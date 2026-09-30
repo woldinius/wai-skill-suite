@@ -99,6 +99,10 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-28T21:48Z | wai-pr-review | PR #109 | NO-GO |
 | 2026-09-28T21:55Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-28T22:07Z | wai-pr-review | PR #109 | NO-GO |
+| 2026-09-28T22:13Z | wai-implementation | issue #95 | script calls run from the repo root, four false cleans removed; PR opened |
+| 2026-09-28T22:13Z | wai-testing | issue #95 | 19 cases on a plugin-cache fixture, each fix counterproofed |
+| 2026-09-28T23:05Z | wai-implementation | PR #121 fix round | 3 Minors fixed: run-log needs a repo, check 4b reads local IDs, contract-lint holds the call form |
+| 2026-09-28T23:05Z | wai-testing | PR #121 fix round | 8 cases, each counterproofed by reverting its fix |
 | 2026-09-28T23:12Z | wai-pr-review | PR #126 | GO |
 | 2026-09-28T22:25Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-28T22:32Z | wai-pr-review | PR #107 | NO-GO |
@@ -107,3 +111,4 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-28T22:59Z | wai-pr-review | PR #125 | NO-GO |
 | 2026-09-28T22:59Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-28T23:00Z | wai-pr-review | PR #126 | GO |
+| 2026-09-29T05:40Z | wai-implementation | PR #121 fix round 2 | m4 fixed: the call-form rule holds only suite skills; own skills advisory |

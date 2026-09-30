@@ -6,7 +6,7 @@
 > therefore becomes coordinated work in repos that no single agent run owns. This file is the rule
 > for that hand-off. It is **file-based and human-triggered by default**; an opt-in autonomous mode
 > is described near the end as a bounded *future* option, not the default. The deterministic hygiene
-> check is `sh .claude/skills/wai/scripts/handoff-lint.sh` (run from the repo root).
+> check is `sh <skill-dir>/../wai/scripts/handoff-lint.sh` (run from the repo root).
 
 ## The one invariant
 

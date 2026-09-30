@@ -15,7 +15,9 @@
 #   1. Every script has a caller.        A script no prompt names is dead weight — or worse, a
 #                                        mechanism someone believes is running.
 #   2. Every documented path resolves.   "Run scripts/foo.sh" is a lie if it does not exist from
-#                                        where the prompt says to run it.
+#                                        where the prompt says to run it — and a suite skill's `sh`
+#                                        call is written `<skill-dir>/…`, the one form that resolves
+#                                        in a repo install and a plugin install alike (#95).
 #   3. Every exit code is documented.    An undocumented code is a coin flip: the model invents a
 #                                        meaning for it, and fail-closed becomes fail-open.
 #
@@ -23,12 +25,19 @@
 #   exit 1  a check failed — the reasons are printed
 #   exit 2  the tree could not be read (fail-closed: "I could not look" is not "it is fine")
 #
-# Usage: sh contract-lint.sh [repo-root]         (default: .)
+# Usage: sh contract-lint.sh [repo-root]         (default: the suite tree this script ships in)
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX pattern semantics required
 
-ROOT="${1:-.}"
+# THE DEFAULT ROOT IS THE TREE THIS SCRIPT SHIPS IN, NOT THE CWD (#95). What this lint reads is the
+# suite — `.claude/skills/` — and in a plugin install that lives in the plugin cache, not in the
+# repo the session works in. A `.` default found no `.claude/skills` from the skill's directory, nor
+# from the repo root of a plugin user, and exited 2 with nothing checked. The script sits at
+# <root>/.claude/skills/wai/scripts/, so <root> is four levels up: the repo in a repo install, the
+# cache in a plugin install. An explicit root still wins.
+ROOT="${1:-$(cd "$(dirname "$0")/../../../.." 2>/dev/null && pwd)}"
+[ -n "$ROOT" ] || { echo "contract-lint: cannot resolve the tree this script ships in — pass the root." >&2; exit 2; }
 cd "$ROOT" 2>/dev/null || { echo "contract-lint: cannot cd to '$ROOT'" >&2; exit 2; }
 [ -d ".claude/skills" ] || { echo "contract-lint: no .claude/skills under '$ROOT' — nothing to check." >&2; exit 2; }
 
@@ -119,6 +128,54 @@ else
   bad "documented suite-script path(s) that do not resolve from the repo root or the referencing skill:"
   printf '%s\n' "$UNRESOLVED" | grep . | while IFS= read -r line; do hint "$line"; done
   hint "→ an agent reading this runs the path as written, from the repo root. Write it so it resolves."
+fi
+# …and every `sh` call a SUITE skill makes to a suite script is written the one way that resolves in
+# both installs. The convention (agent-git-protocol.md § Running a suite script, #95): the cwd is the
+# repo root and the script is reached by path, `sh <skill-dir>/…`. `sh scripts/x.sh` "from this
+# skill's directory" resolves above — from the skill — and hands the script a cwd that is not the
+# repo; `sh .claude/…` does not exist in a plugin install. Only an `sh <path>` whose basename is a
+# suite script is read, flattened so a call wrapped after `sh` is still one call; a mention without
+# `sh` is not a call.
+# WHICH SKILLS ARE THE SUITE'S. In a repo install `.claude/skills` also holds the repo's OWN skills,
+# and a skill that lives in the repo resolves its paths in every install, so the plugin-cache reason
+# does not apply to it: its calls to a suite script are ADVISORY, its calls to its own scripts are
+# not read at all. The suite is what install.sh recorded in its manifest — or, where there is none
+# (this repo, the plugin cache), the namespace install.sh reserves: `wai` and `wai-*`.
+is_suite() {   # $1 = a skill directory's name
+  if [ -f .claude/.wai-suite-manifest ]; then grep -qxF -- "$1" .claude/.wai-suite-manifest 2>/dev/null
+  else case "$1" in wai|wai-*) return 0 ;; *) return 1 ;; esac; fi
+}
+SUITE_BNS=""
+for s in $SCRIPTS; do
+  _r="${s#.claude/skills/}"; is_suite "${_r%%/*}" && SUITE_BNS="$SUITE_BNS ${s##*/}"
+done
+CALL_RE='(^|[^A-Za-z0-9_./-])sh[[:space:]]+[^[:space:]`"()]+[.]sh'
+OFFCALL=""; OWNCALL=""; N_CALL=0; N_OWN=0
+for f in $RUNNABLE; do
+  _r="${f#.claude/skills/}"; _sk="${_r%%/*}"
+  for call in $(tr '\n' ' ' < "$f" | grep -oE "$CALL_RE" | sed -E 's/^.*sh[[:space:]]+//' | sort -u); do
+    case " $SUITE_BNS " in *" ${call##*/} "*) ;; *) continue ;; esac
+    if is_suite "$_sk"; then
+      N_CALL=$((N_CALL + 1))
+      case "$call" in '<skill-dir>/'*) ;; *) OFFCALL="$OFFCALL
+$f: sh $call" ;; esac
+    else
+      case "$call" in '<skill-dir>/'*) ;; *) N_OWN=$((N_OWN + 1)); OWNCALL="$OWNCALL
+$f: sh $call" ;; esac
+    fi
+  done
+done
+if [ -z "$OFFCALL" ]; then
+  ok "every documented sh call from a suite skill to a suite script is written from its base directory ($N_CALL/$N_CALL)"
+else
+  bad "documented sh call(s) from a suite skill to a suite script not written as <skill-dir>/…:"
+  printf '%s\n' "$OFFCALL" | grep . | while IFS= read -r line; do hint "$line"; done
+  hint "→ write it \`sh <skill-dir>/…\`, run from the repo root (agent-git-protocol.md § Running a suite script)."
+fi
+if [ -n "$OWNCALL" ]; then
+  warn "$N_OWN sh call(s) in the repo's own skills reach a suite script by another path — ADVISORY, not failed:"
+  printf '%s\n' "$OWNCALL" | grep . | while IFS= read -r line; do hint "$line"; done
+  hint "  it resolves in a repo install; in a plugin install the suite lives outside the repo."
 fi
 if [ -n "$ADVISORY" ]; then
   warn "$N_OTHER path(s) named do not belong to this suite; these do not exist here — ADVISORY, not failed:"
@@ -225,7 +282,8 @@ echo "    does on that path. Only the presence of the number is checked, never i
 echo "  · ATTRIBUTION. Exit-code evidence is scoped to the markdown block. Where a block names two"
 echo "    scripts, a number written about one of them counts for both (see the ⚠ count, if any)."
 echo "  · Whether a mention is an INVOCATION. Check 1 accepts any mention of a basename, so a"
-echo "    script named only in a sentence about history counts as called."
+echo "    script named only in a sentence about history counts as called. And the call form in"
+echo "    check 2 is read only after \`sh\`: \"run \`scripts/foo.sh\`\" is not held to <skill-dir>/…"
 echo "  · Codes behind a variable (\`exit \"\$RC\"\`) unless the script's own header declares them."
 echo "  · Non-.md callers — a workflow, a hook or another script that invokes one of these."
 

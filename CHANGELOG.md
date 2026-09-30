@@ -20,6 +20,11 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
   injection, known-CVE dependencies, attestation, the security playbook's worked example — now
   corrected, with stale and contradictory prose fixed alongside.
   ([#99](https://github.com/woldinius/wai-skill-suite/issues/99))
+- **Script calls run from the repo root.** Skills ran scripts from their own directory, which a
+  plugin install puts in the plugin cache. From there `dep-cve-scan.sh` and `coordination-lint.sh`
+  reported clean (also in a repo install), `doctor.sh` no drift, `ledger-locate.sh` not opted in.
+  Calls now reach the script by path; without a repo these exit 2.
+  ([#95](https://github.com/woldinius/wai-skill-suite/issues/95))
 
 ## [0.5.2] — 2026-09-28
 

@@ -27,13 +27,15 @@
 # or change a RUN. Every write is best-effort (`|| true`); an unwritable target still exits 0.
 # Losing a row is a data gap; failing a finished run over a read-only file would be a real cost.
 #
-#   exit 0  the row was emitted — or emission failed and was swallowed (fail-open, stderr says so)
+#   exit 0  the row was emitted — or emission failed and was swallowed, or no repo was found to
+#           write it to (fail-open, stderr says so)
 #   exit 2  misuse: fewer than three non-empty arguments. The only defined negative; there is
 #           deliberately no exit 1, because this script renders no verdict about anything.
 #
 # Usage: sh run-log.sh <skill> <subject> <outcome>
 #        Appends to <repo-root>/docs/architecture/run-log.md ($RUN_LOG overrides the path — the
-#        same pattern as $MERGE_GATE_LEDGER on the gate ledger; outside a git repo, cwd-relative).
+#        same pattern as $MERGE_GATE_LEDGER on the gate ledger). Outside a git repo it writes
+#        nothing unless $RUN_LOG names a path.
 #
 # WHAT COUNTS AS ONE RUN: the unit is one row per (skill, subject) completed. A turn that hands
 # back three subjects logs three rows; a re-run on the same subject logs again (two rows for two
@@ -49,12 +51,21 @@ if [ $# -lt 3 ] || [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
 fi
 
 # Default paths are REPO-relative, not cwd-relative (merge-gate.sh carries the incident that
-# forced this; same rule here so the two halves of one gate read the same files). Overrides win;
-# outside a git repo the cwd stays the base. --show-toplevel on purpose — see merge-gate.sh: in a
-# LINKED worktree the row lands in THAT worktree's docs/architecture/run-log.md, because its branch
-# is the PR that carries the row to the default branch (#68); RUN_LOG overrides the path.
+# forced this; same rule here so the two halves of one gate read the same files). Overrides win.
+# --show-toplevel on purpose — see merge-gate.sh: in a LINKED worktree the row lands in THAT
+# worktree's docs/architecture/run-log.md, because its branch is the PR that carries the row to
+# the default branch (#68); RUN_LOG overrides the path.
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-LOG="${RUN_LOG:-${REPO_ROOT:-.}/docs/architecture/run-log.md}"
+# NO REPO, NO ROW (#95). Outside a git work tree the old default appended to the CWD — from a
+# skill's directory in a plugin install, into the plugin cache — and still said "row appended":
+# a row no repo will ever carry, reported as written. merge-gate.sh already refused that ("a row
+# belongs in its repo, never in the cwd"); the rule now lives here, for every caller. Still
+# fail-open: the run is not failed over its log, so this exits 0 and says why nothing was written.
+if [ -z "${RUN_LOG:-}" ] && [ -z "$REPO_ROOT" ]; then
+  echo "run-log: no repo found (the cwd is not inside a git work tree) — the row was not written; run it from the repo root (fail-open)." >&2
+  exit 0
+fi
+LOG="${RUN_LOG:-$REPO_ROOT/docs/architecture/run-log.md}"
 
 # One table-safe cell: newlines flattened, pipes escaped, whitespace collapsed — emit_ledger's sed
 # shape — then capped at 120 chars ON A WORD BOUNDARY with a visible '…', for emit_ledger's reason:

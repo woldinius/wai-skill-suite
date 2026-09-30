@@ -772,6 +772,24 @@ lfix; printf -- '- **MAINT-100 · Naming** — a. *Red Flag:* b.\n' >> "$D/docs/
 out="$(lint)"; rc=$?
 assert "a local ID at >= 100 → OK" 0 "$rc" "$out" 'VERDICT: OK'
 
+# THE REPO'S OWN SKILLS (#95). `.claude/skills` holds the repo's own skills beside the vendored
+# ones — in a plugin install, only them — and check 4b read all of them against the baseline alone,
+# so a skill citing the repo's own local dimension failed "re-point the citation". An ID live in
+# the catalog resolves; one defined nowhere still fails; a number the baseline retired stays DEAD.
+lfix; printf -- '- **SEC-101 · Local** — a. *Red Flag:* b.\n' >> "$D/docs/architecture/quality-attributes.md"
+mkdir -p "$D/.claude/skills/team-notes"; printf 'Anchor to `SEC-101`.\n' > "$D/.claude/skills/team-notes/SKILL.md"
+out="$(lint)"; rc=$?
+assert "a repo's own skill citing the catalog's local SEC-101 → OK (it resolves here)" 0 "$rc" "$out" 'VERDICT: OK'
+printf 'And to `SEC-102`.\n' >> "$D/.claude/skills/team-notes/SKILL.md"
+out="$(lint)"; rc=$?
+assert "  · an ID defined nowhere still fails" 1 "$rc" "$out" 'neither the baseline nor this catalog defines: SEC-102'
+lfix; sed '/^## Retired IDs/,$d' "$D/docs/architecture/quality-attributes.md" > "$D/c" && mv "$D/c" "$D/docs/architecture/quality-attributes.md"
+printf -- '- **MAINT-6 · Re-minted** — a. *Red Flag:* b.\n' >> "$D/docs/architecture/quality-attributes.md"
+mkdir -p "$D/.claude/skills/team-notes"; printf 'Anchor to `MAINT-6`.\n' > "$D/.claude/skills/team-notes/SKILL.md"
+out="$(lint)"; rc=$?
+assert "  · a number the baseline retired stays DEAD, even where the catalog re-mints it" 1 "$rc" "$out" \
+  'RETIRED baseline ID.*MAINT-6'
+
 lfix; python3 - "$D/docs/architecture/quality-attributes.md" <<'PY'
 import sys, pathlib
 p = pathlib.Path(sys.argv[1]); s = p.read_text()
@@ -877,8 +895,11 @@ CVE="$ROOT/.claude/skills/wai-security-audit/scripts/dep-cve-scan.sh"
 BASEP="/usr/bin:/bin"                         # a scanner-free PATH: coreutils only, no npm/osv/cargo…
 cverun() { PATH="$1" sh "$CVE" "$2" 2>&1; }   # $1 = PATH, $2 = repo dir
 cvedir() { N=$((N+1)); CVD="$TMP/cve$N"; mkdir -p "$CVD"; [ -n "${1:-}" ] && printf '%s' "${2:-x}" > "$CVD/$1"; }
+# The self-log cases need a git repo: run-log.sh writes a row only inside one (#95). The manifest
+# goes into the index, because inside a repo the scan lists tracked files, not the directory.
+cvegit() { git init -q "$CVD" >/dev/null 2>&1; git -C "$CVD" add -A >/dev/null 2>&1; }
 
-cvedir ""                                     # no manifests at all
+cvedir ""; cvegit                             # no manifests at all
 out="$(cverun "$BASEP" "$CVD")"; rc=$?
 assert "no ecosystem detected → nothing to scan, exit 0" 0 "$rc" "$out" 'no dependency ecosystems'
 # The run-log self-log site (issue #11): the CVE sweep marks a wai-security-audit run, 1:1 mapping,
@@ -890,7 +911,7 @@ else bad "dep-cve-scan self-logs its run into the scanned tree" "no row in $CVD/
 
 # Package.swift with no osv-scanner on PATH: the script has no native swift scanner, so this is the
 # clean fail-loud case, deterministic on any runner (osv is never preinstalled).
-cvedir Package.swift 'name'
+cvedir Package.swift 'name'; cvegit
 out="$(cverun "$BASEP" "$CVD")"; rc=$?
 assert "a manifest with no scanner → not_measured, exit 2 (never a silent 0)" 2 "$rc" "$out" 'ecosystem=swift.*not_measured' 'ran=true'
 if grep -qF '| wai-security-audit | dep CVE scan | gap: at least one ecosystem not measured |' "$CVD/docs/architecture/run-log.md" 2>/dev/null; then

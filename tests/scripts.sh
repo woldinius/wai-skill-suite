@@ -635,8 +635,8 @@ echo "backlog-scan.sh"
 
 # `~` is the placeholder for the 0x1C field separator the real --jq emits, translated at write time —
 # a control byte in a fixture literal is unreadable and travels badly through an editor.
-bkfix() {
-  N=$((N+1)); D="$TMP/bk$N"; mkdir -p "$D"
+bkfix() {   # a git repo: backlog-scan self-logs, and run-log writes a row only inside a repo (#95)
+  N=$((N+1)); D="$TMP/bk$N"; gitrepo "$D"
   printf '%s\n' \
     '12~fix the export timeout~~bug~Repro steps here. - [ ] add a regression test' \
     '13~refactor the billing charge path~alice~size:M~Cleanup. depends on #12 first.' \
@@ -1139,11 +1139,13 @@ assert_xfail "KNOWN DEFECT: …and the length check silently never ran (no lengt
 echo
 echo "run-log.sh"
 # The suite's attendance record (issue #11: the record measures side effects, not work). 0 = row
-# emitted OR emission failed and was swallowed — FAIL-OPEN, a logging failure never breaks a run —
-# and 2 = misuse (missing arguments). There is no exit 1: this script renders no verdict.
+# emitted OR emission failed and was swallowed, or no repo to write it to — FAIL-OPEN, a logging
+# failure never breaks a run — and 2 = misuse (missing arguments). There is no exit 1: this script
+# renders no verdict.
 # =================================================================================================
 RUNLOG="$ROOT/.claude/skills/wai/scripts/run-log.sh"
-rlfix() { N=$((N+1)); D="$TMP/rl$N"; mkdir -p "$D"; RL="$D/docs/architecture/run-log.md"; }
+# A git repo: outside one the log writes nothing (#95, pinned below), so every row case needs one.
+rlfix() { N=$((N+1)); D="$TMP/rl$N"; gitrepo "$D"; RL="$D/docs/architecture/run-log.md"; }
 rl() { ( cd "$D" && sh "$RUNLOG" "$@" 2>&1 ); }
 
 # THE PASS PATH. An emitter nobody has watched emit is not an emitter.
@@ -1174,8 +1176,10 @@ assert "missing arguments → misuse, exit 2 (the one defined negative — there
 if [ ! -e "$RL" ]; then ok "and misuse writes nothing"
 else bad "and misuse writes nothing" "$RL exists"; fi
 
-rlfix; out="$( cd "$D" && RUN_LOG="custom/attendance.md" sh "$RUNLOG" wai-cicd setup 'gate wired' 2>&1 )"; rc=$?
-assert "RUN_LOG overrides the path (the MERGE_GATE_LEDGER pattern)" 0 "$rc" "$out" 'custom/attendance.md'
+# A plain directory, on purpose: an explicit RUN_LOG is written even where no repo encloses the cwd.
+N=$((N+1)); D="$TMP/rlovr$N"; mkdir -p "$D"
+out="$( cd "$D" && RUN_LOG="custom/attendance.md" sh "$RUNLOG" wai-cicd setup 'gate wired' 2>&1 )"; rc=$?
+assert "RUN_LOG overrides the path (the MERGE_GATE_LEDGER pattern), even outside a repo" 0 "$rc" "$out" 'custom/attendance.md'
 if grep -q '| wai-cicd | setup | gate wired |' "$D/custom/attendance.md" 2>/dev/null; then
   ok "  · and the row landed at the override path"
 else
@@ -1185,8 +1189,7 @@ fi
 # CWD IS NOT THE REPO (issue #29 sub-fix 2). Nine SKILL.md files instruct running this script
 # "from this skill's directory"; with a cwd-relative default every one of those runs planted the
 # row in <skill-dir>/docs/architecture/ — scattered, uncommitted, and (for the suite's own repo)
-# inside the install payload. The default now resolves against the enclosing worktree. The plain
-# non-repo fixtures in every other case of this section pin the cwd fallback.
+# inside the install payload. The default now resolves against the enclosing worktree.
 N=$((N+1)); D="$TMP/rlgit$N"; gitrepo "$D"
 printf 'x\n' > "$D/f.txt"; gitcommit "$D" 'chore: base'
 mkdir -p "$D/.claude/skills/wai-testing"
@@ -1198,6 +1201,16 @@ else bad "  · the row is in <repo-root>/docs/architecture/run-log.md" "$(ls -R 
 if [ ! -e "$D/.claude/skills/wai-testing/docs" ]; then
   ok "  · and no stray docs/ tree was planted inside .claude/skills/"
 else bad "  · and no stray docs/ tree was planted inside .claude/skills/" "stray: $D/.claude/skills/wai-testing/docs"; fi
+
+# NO REPO, NO ROW (#95). Outside a git work tree the default appended to the CWD — from a skill's
+# directory in a plugin install, into the plugin cache — and still printed "row appended". It now
+# writes nothing and says so on stderr, and stays fail-open: exit 0, a lost row never fails a run.
+N=$((N+1)); D="$TMP/rlnogit$N"; mkdir -p "$D"
+out="$( cd "$D" && sh "$RUNLOG" wai-testing 'PR #7' 'green' 2>&1 )"; rc=$?
+assert "no git work tree and no RUN_LOG → exit 0 (fail-open), and it says no repo was found" 0 "$rc" "$out" \
+  'no repo found' 'row appended'
+if [ ! -e "$D/docs" ]; then ok "  · and nothing was written into the cwd"
+else bad "  · and nothing was written into the cwd" "$(find "$D/docs" -type f 2>&1)"; fi
 
 # A PIPE IN THE SUBJECT STAYS ONE CELL (issue #29 sub-fix 3 — pinned, because it was field-reported
 # and the escaping already shipped at f6425f8: a report against an older tree becomes a regression
@@ -1924,6 +1937,172 @@ N=$((N+1)); mkdir -p "$TMP/sc-plain$N"
 out="$( cd "$TMP/sc-plain$N" && CLAUDE_CONFIG_DIR="$TMP/sc-none$N" "$SH" "$SCOST" 2>&1 )"; rc_=$?
 assert "  · no dir under the derived slug → exit 2, naming the path it tried" 2 "$rc_" "$out" \
   "no transcript dir at $TMP/sc-none$N/projects/-.*sc-plain$N"
+
+# =================================================================================================
+echo
+echo "plugin install — the script outside the repo, the repo as cwd (#95)"
+# A plugin install puts the skills in the PLUGIN CACHE: no .git, and not the repo the session works
+# in. The old instruction, run a script "from this skill's directory", handed each script a cwd
+# that was neither the repo nor inside it, and every script that finds its repo through the cwd
+# read the wrong tree. The convention (agent-git-protocol.md §Running a suite script): the cwd is
+# the repo root, and the script is reached by path through the skill's base directory.
+#
+# Half one runs that convention for real: a copy of the suite's skills with no .git, as the cache
+# has none, and a fixture repo as the cwd. Half two pins the FALSE CLEANS the old call produced —
+# a scan that found "no ecosystems", a lint that passed without reading the conf that arms
+# autonomy, a doctor that saw "no drift", a consent lookup that said "not opted in". Each now says
+# it could not look (exit 2), or, from a skill directory inside the repo, reads the repo.
+# =================================================================================================
+
+# The cache holds `.claude/skills` only: a main checkout's `.claude/` also holds its worktrees.
+PCACHE="$TMP/plugin-cache"; mkdir -p "$PCACHE/.claude"; cp -R "$ROOT/.claude/skills" "$PCACHE/.claude/"
+PSK="$PCACHE/.claude/skills"
+# The repo the suite serves: a catalog, a gate conf, an ARMED coordination.conf whose floor is
+# narrowed to one domain (a lint that reads it must FAIL), and a tracked npm manifest.
+PREPO="$TMP/plugin-repo"; gitrepo "$PREPO"; mkdir -p "$PREPO/docs/architecture"
+printf -- '- **SEC-1 · Auth** — a. *Red Flag:* b.\n' > "$PREPO/docs/architecture/quality-attributes.md"
+printf 'CONTRACT_PATHS="src/billing/*"\nERASURE_PATHS="src/erase/*"\n' > "$PREPO/docs/architecture/merge-gate.conf"
+printf 'AUTONOMY_ENABLED="yes"\nAUTONOMY_EXCLUDED="EX-PAY::"\nAUTONOMY_SAFE_PATHS="docs/*"\nAUTONOMY_AFFIRMED="2026-09-28"\n' \
+  > "$PREPO/docs/architecture/coordination.conf"
+printf '{"name":"x","version":"1.0.0"}\n' > "$PREPO/package.json"
+gitcommit "$PREPO" 'chore: base'
+# Two skill directories of a REPO install: inside the work tree, so a script can find the repo there.
+mkdir -p "$PREPO/.claude/skills/wai-security-audit" "$PREPO/.claude/skills/wai-init"
+# A PATH whose only scanner is a stub npm that MEASURES (valid audit JSON): a detected npm ecosystem
+# reads ran=true on any runner, and no scanner installed on the runner can answer in its place.
+PBIN="$TMP/plugin-bin"; mkdir -p "$PBIN"
+for t in git date awk sed grep tr head tail sort uniq ls cat mkdir dirname basename find wc cut; do
+  tp="$(command -v "$t" 2>/dev/null)" && ln -sf "$tp" "$PBIN/$t"
+done
+ln -sf "$SH" "$PBIN/sh"
+cat > "$PBIN/npm" <<'NPM'
+#!/bin/sh
+echo '{"metadata":{"vulnerabilities":{"critical":0,"high":0,"moderate":0}}}'
+NPM
+chmod +x "$PBIN/npm"
+PHOME="$TMP/plugin-home"; mkdir -p "$PHOME/.claude/learning/plugin-repo"
+printf '# ledger\n' > "$PHOME/.claude/learning/plugin-repo/ledger.md"
+
+# ── half one: the cwd is the repo root, the script is reached by its path in the cache ──────────
+out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/catalog-lint.sh" 2>&1 )"; rc=$?
+assert "catalog-lint from the cache, repo as cwd → the repo's catalog, checked against the cache's baseline" 0 "$rc" "$out" \
+  'every local dimension is either' 'unchecked'
+printf -- '- **MAINT-50 · Local** — a. *Red Flag:* b.\n' >> "$PREPO/docs/architecture/quality-attributes.md"
+out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/catalog-lint.sh" 2>&1 )"; rc=$?
+assert "  · a local ID inside the baseline's number space FAILS there too (check 7 used to skip unseen)" 1 "$rc" "$out" \
+  'undeclared: MAINT-50'
+# The repo's .claude/skills holds only its OWN skills here, and the baseline from the cache must not
+# turn their citations of the repo's own dimensions into findings.
+printf -- '- **SEC-1 · Auth** — a. *Red Flag:* b.\n- **SEC-101 · Local** — a. *Red Flag:* b.\n' \
+  > "$PREPO/docs/architecture/quality-attributes.md"
+mkdir -p "$PREPO/.claude/skills/team-notes"; printf 'Anchor to `SEC-101`.\n' > "$PREPO/.claude/skills/team-notes/SKILL.md"
+out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/catalog-lint.sh" 2>&1 )"; rc=$?
+assert "  · a repo's own skill citing the catalog's local SEC-101 resolves — no false red" 0 "$rc" "$out" \
+  'VERDICT: OK' 'a SKILL cites'
+rm -rf "$PREPO/.claude/skills/team-notes"
+printf -- '- **SEC-1 · Auth** — a. *Red Flag:* b.\n' > "$PREPO/docs/architecture/quality-attributes.md"
+
+out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/catalog-variant.sh" minimum 2>&1 )"; rc=$?
+assert "catalog-variant from the cache, repo as cwd → generated from the master beside it, exit 0" 0 "$rc" "$out" \
+  '^# Quality Catalog — minimum variant'
+
+out="$( cd "$PREPO" && "$SH" "$PSK/wai/scripts/contract-lint.sh" 2>&1 )"; rc=$?
+assert "contract-lint from the cache, repo as cwd → lints the suite tree it ships in, exit 0" 0 "$rc" "$out" \
+  'VERDICT: OK' 'nothing to check'
+assert "  · and names that tree — the cache — as the root it read" 0 0 "$out" "^contract-lint: $PCACHE\$"
+
+out="$( cd "$PREPO" && "$SH" "$PSK/wai-init/scripts/coordination-lint.sh" 2>&1 )"; rc=$?
+assert "coordination-lint from the cache, repo as cwd → reads the repo's armed conf: FAILED" 1 "$rc" "$out" \
+  'NARROWER than the policy floor' 'VERDICT: OK'
+
+out="$( cd "$PREPO" && PATH="$PBIN" "$SH" "$PSK/wai-security-audit/scripts/dep-cve-scan.sh" 2>&1 )"; rc=$?
+assert "dep-cve-scan from the cache, repo as cwd → the repo's npm manifest is scanned, exit 0" 0 "$rc" "$out" \
+  'ecosystem=npm .*ran=true' 'no dependency ecosystems'
+if grep -qF '| wai-security-audit | dep CVE scan | all detected ecosystems measured |' "$PREPO/docs/architecture/run-log.md" 2>/dev/null \
+   && [ -z "$(find "$PCACHE" -name run-log.md 2>/dev/null)" ]; then
+  ok "  · its run-log row lands in the repo, and nothing is written into the cache"
+else bad "  · its run-log row lands in the repo, and nothing is written into the cache" \
+  "repo: $(tail -1 "$PREPO/docs/architecture/run-log.md" 2>&1) · cache: $(find "$PCACHE" -name run-log.md 2>&1)"; fi
+
+out="$( cd "$PREPO" && "$SH" "$PSK/wai/scripts/doctor.sh" 2>&1 )"; rc=$?
+assert "doctor from the cache, repo as cwd → audits the repo" 0 "$rc" "$out" 'merge gate is configured'
+
+out="$( cd "$PREPO" && HOME="$PHOME" "$SH" "$PSK/wai-learning-gap/scripts/ledger-locate.sh" 2>/dev/null )"; rc=$?
+assert "ledger-locate from the cache, repo as cwd → this human's ledger for the repo, exit 0" 0 "$rc" "$out" \
+  'plugin-repo/ledger\.md$'
+
+# ── half two: the old call, from the skill's directory ───────────────────────────────────────────
+# In the cache that directory is no git work tree at all; in a repo install it is inside the work
+# tree. The first must say it could not look; the second must read the repo.
+out="$( cd "$PSK/wai-security-audit" && PATH="$PBIN" "$SH" scripts/dep-cve-scan.sh 2>&1 )"; rc=$?
+assert "FALSE CLEAN: dep-cve-scan from the cache's skill dir → exit 2, no repo — never 'no ecosystems detected'" 2 "$rc" "$out" \
+  'no repo root' 'no dependency ecosystems'
+if [ -z "$(find "$PCACHE" -name run-log.md 2>/dev/null)" ]; then ok "  · and no run-log row was planted in the cache"
+else bad "  · and no run-log row was planted in the cache" "$(find "$PCACHE" -name run-log.md 2>&1)"; fi
+out="$( cd "$PREPO/.claude/skills/wai-security-audit" && PATH="$PBIN" "$SH" "$PSK/wai-security-audit/scripts/dep-cve-scan.sh" 2>&1 )"; rc=$?
+assert "FALSE CLEAN: dep-cve-scan from a skill dir INSIDE the repo → scans the whole repo, npm found" 0 "$rc" "$out" \
+  'ecosystem=npm .*ran=true' 'no dependency ecosystems'
+
+out="$( cd "$PSK/wai-init" && "$SH" scripts/coordination-lint.sh 2>&1 )"; rc=$?
+assert "FALSE CLEAN: coordination-lint from the cache's skill dir → UNKNOWN, exit 2 — never an unread OK" 2 "$rc" "$out" \
+  "cannot tell 'no coordination.conf' from 'wrong directory'" 'VERDICT: OK'
+out="$( cd "$PREPO/.claude/skills/wai-init" && "$SH" "$PSK/wai-init/scripts/coordination-lint.sh" 2>&1 )"; rc=$?
+assert "FALSE CLEAN: coordination-lint from a skill dir INSIDE the repo → reads the repo's conf: FAILED" 1 "$rc" "$out" \
+  'NARROWER than the policy floor' 'VERDICT: OK'
+
+out="$( cd "$PSK/wai" && "$SH" scripts/doctor.sh 2>&1 )"; rc=$?
+assert "FALSE CLEAN: doctor with no root, from the cache's skill dir → UNKNOWN, exit 2 — never 'no drift'" 2 "$rc" "$out" \
+  'nothing was checked' 'no drift'
+
+out="$( cd "$PSK/wai-learning-gap" && HOME="$PHOME" "$SH" scripts/ledger-locate.sh 2>&1 )"; rc=$?
+assert "FALSE 'NOT OPTED IN': ledger-locate from the cache's skill dir → exit 2 (unresolved), never 1" 2 "$rc" "$out" \
+  'cannot resolve the repo'
+
+out="$( cd "$PSK/wai" && "$SH" scripts/contract-lint.sh 2>&1 )"; rc=$?
+assert "contract-lint from its own skill dir → still the whole suite tree, exit 0 (was 'nothing to check', exit 2)" 0 "$rc" "$out" \
+  'VERDICT: OK' 'nothing to check'
+out="$( cd "$PSK/wai-init" && "$SH" scripts/catalog-variant.sh minimum 2>&1 )"; rc=$?
+assert "catalog-variant from its own skill dir → generated, exit 0 (was 'no baseline', exit 2)" 0 "$rc" "$out" \
+  '^# Quality Catalog — minimum variant'
+
+# ── the convention, held: contract-lint reads how a prompt calls a script ─────────────────────────
+# A prompt that still writes the old call — a path from the skill's directory — fails check 2; the
+# `<skill-dir>/…` form passes, and a script named without `sh` is a mention, not a call.
+clfix() {   # $1 = the prompt's text; a one-script suite tree
+  N=$((N+1)); CL="$TMP/cl$N"; mkdir -p "$CL/.claude/skills/wai/scripts"
+  printf '#!/bin/sh\nexit 0\n' > "$CL/.claude/skills/wai/scripts/doctor.sh"
+  printf '%s\n' "$1" > "$CL/.claude/skills/wai/SKILL.md"
+}
+clfix "Run \`sh scripts/doctor.sh\` (from this skill's directory)."
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "contract-lint: an old-form call 'sh scripts/doctor.sh' → FAILED, the call named" 1 "$rc" "$out" \
+  'SKILL.md: sh scripts/doctor.sh'
+clfix "Run \`sh <skill-dir>/scripts/doctor.sh\` (from the repo root); \`doctor.sh\` reports drift."
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · the <skill-dir>/… form passes, and a mention without sh is not held to it" 0 "$rc" "$out" \
+  'written from its base directory \(1/1\)' 'not written as'
+
+# …and it holds only the SUITE's skills (#95 review). In a repo install `.claude/skills` also holds
+# the repo's OWN skills, which live in the repo and resolve their paths in every install. The
+# manifest install.sh writes names the suite, so an own skill — even one in the wai-* namespace the
+# manifest does not list — is not failed: its own script is not read, a suite script is advisory.
+printf 'wai\n' > "$CL/.claude/.wai-suite-manifest"
+mkdir -p "$CL/.claude/skills/team-notes/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$CL/.claude/skills/team-notes/scripts/notes-lint.sh"
+printf 'Run `sh .claude/skills/team-notes/scripts/notes-lint.sh` before a release.\n' \
+  > "$CL/.claude/skills/team-notes/SKILL.md"
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · a repo's OWN skill calling its own script by a repo path is not held to it, exit 0" 0 "$rc" "$out" \
+  'VERDICT: OK' 'not written as|reach a suite script'
+mkdir -p "$CL/.claude/skills/wai-notes"
+printf 'Check drift with `sh ../wai/scripts/doctor.sh`.\n' > "$CL/.claude/skills/wai-notes/SKILL.md"
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · an own skill the manifest does not list, calling a suite script so → ADVISORY, exit 0" 0 "$rc" "$out" \
+  'wai-notes/SKILL.md: sh \.\./wai/scripts/doctor\.sh' 'not written as'
+printf 'Run `sh scripts/doctor.sh` (from this skill'"'"'s directory).\n' > "$CL/.claude/skills/wai/SKILL.md"
+out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
+assert "  · while the skill the manifest lists is still held: FAILED" 1 "$rc" "$out" \
+  'wai/SKILL.md: sh scripts/doctor.sh'
 
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once

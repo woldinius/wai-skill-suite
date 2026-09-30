@@ -18,12 +18,22 @@
 # What this does NOT decide: whether to offer to rename the folder on a moved-repo match, or to
 # CREATE a ledger. It reports where consent lives; acting on it is the skill's (and the human's) job.
 #
-# Usage:  sh ledger-locate.sh [repo-root]        (default: .)
+# Usage:  sh ledger-locate.sh [repo-root]        (default: the git work tree around the cwd)
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
-ROOT="${1:-.}"
+# THE DEFAULT ROOT IS THE ENCLOSING GIT WORK TREE, NEVER THE CWD (#95). From a directory that is not
+# the repo — the skill's own, in the plugin cache — a `.` default fell through to the folder-name
+# slug, found no ledger under the skill's name and answered 1, "not opted in": learning mode
+# silently off for a human who opted in. With no root and no work tree the repo cannot be resolved,
+# which is this script's exit 2. An explicit root still wins.
+if [ -n "${1:-}" ]; then
+  ROOT="$1"
+else
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$ROOT" ] || { echo "ledger-locate: no repo root given and the cwd is not inside a git work tree — cannot resolve the repo (fail closed; this is not 'not opted in')." >&2; exit 2; }
+fi
 cd "$ROOT" 2>/dev/null || { echo "ledger-locate: cannot cd to '$ROOT' — cannot resolve the repo." >&2; exit 2; }
 
 LEARN="${HOME:-}/.claude/learning"
