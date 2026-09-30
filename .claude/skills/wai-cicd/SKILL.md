@@ -54,7 +54,9 @@ Depending on stack and deploy target (not everything is always needed):
   `apps/api/src/auth/*` becomes `/apps/api/src/auth/`), and say in the report which paths you
   took from it. If the conf is missing, **stop and run `wai-init` first**. What CODEOWNERS adds
   on top is *who* — the handle(s). Note the catalog, the testing strategy, the gate config,
-  `.claude/skills/**` and the CI workflows are **already agent-blocking** — `merge-gate.sh`
+  Claude Code's configuration directory (`.claude/**` — skills, agents, settings, hooks,
+  commands), the plugin manifest, `.mcp.json` and the CI workflows are
+  **already agent-blocking** — `merge-gate.sh`
   hardcodes them as a guardrail floor no config can lower. CODEOWNERS routes those paths to a
   named human on top of that; skills never approve a PR, so any approval there is a human's.
 - **`.github/pull_request_template.md`** — the judgment-first PR body the lifecycle skills fill.
@@ -156,8 +158,8 @@ ships the image, and everything of it lives in GitHub.
 
 ## Merge gate & branch protection
 
-The platform's gated-merge policy lets `wai-pr-review` **auto-merge** a clean,
-non-contract-domain PR — but only if "green" is trustworthy. This skill makes it so:
+The platform's gated-merge policy lets `wai-pr-review` **auto-merge** a clean PR outside the
+excluded domains — but only if "green" is trustworthy. This skill makes it so:
 
 - **Required checks — the names must be the workflow's JOB names.** GitHub matches a required
   check against the name of a **check run**, which is the job, not the step inside it. The
@@ -192,9 +194,9 @@ non-contract-domain PR — but only if "green" is trustworthy. This skill makes 
   team PR falls back to a manual merge. In `solo`, a single owner and no required approval is
   the correct, deliberate setting.
 - **`wai-testing` decides *what* is tested; this skill wires it.** Testing defines the
-  mandatory targets and writes the tests (`SEC-*`, `RES-3`, `GDPR-*`, `AI-3`); cicd turns them
-  into required checks and provides the CI test infrastructure (ephemeral DB service, the
-  integration/e2e job). Until both are in place, keep auto-merge conservative.
+  mandatory targets and writes the tests (`SEC-*`, `PAY-*`, `GDPR-*`, `RES-3`, `AI-3`/`AI-5`);
+  cicd turns them into required checks and provides the CI test infrastructure (ephemeral DB
+  service, the integration/e2e job). Until both are in place, keep auto-merge conservative.
 
 ## Relation to the quality catalog
 

@@ -1,9 +1,9 @@
 # Agent Git & PR Protocol
 
-> The shared rule for how wAI skills handle git. The lifecycle skills
-> (`wai-requirements-planning`, `wai-implementation`, `wai-pr-review`,
-> `wai-architecture-audit`) follow this so a requirement becomes **one reviewable PR on
-> an agent-owned branch** that the human merges. This file is the authoritative version;
+> The shared rule for how wAI skills handle git. The skills that touch git
+> (`wai-requirements-planning`, `wai-implementation`, `wai-testing`, `wai-pr-review`,
+> `wai-team`, both audits, `wai-retro`) follow this so a requirement becomes **one reviewable PR
+> on an agent-owned branch** that the human merges. This file is the authoritative version;
 > each lifecycle skill also carries a short self-sufficient stanza so it works standalone.
 > **This file is the only authority.** A repo may keep a convenience copy at
 > `docs/architecture/agent-git-protocol.md` for humans to read, but it is **read-only and never
@@ -40,8 +40,8 @@ personal may be imposed repo-wide** (see *Personal state* below).
 push, and open/update a PR. Skills **never** commit, push, or force-push **directly** to
 `main`. The only way `main` changes is by merging a reviewed PR — and that merge is **gated**:
 
-- **Auto-merge — only `wai-pr-review`, only when safe.** The gate is a **conjunction**: the
-  reviewer's judgment (*Merge* — no Blocker/Major) **and** a green run of
+- **Auto-merge — only under `wai-pr-review`'s merge step, only when safe.** The gate is a
+  **conjunction**: the reviewer's judgment (*Merge* — no Blocker/Major) **and** a green run of
   `.claude/skills/wai-pr-review/scripts/merge-gate.sh`, which checks the mechanical
   preconditions below and returns an exit code. **Obey the exit code; never re-derive it from
   memory.** The script is
@@ -107,7 +107,9 @@ Enabling *Require branches to be up to date before merging* in the ruleset makes
 this for you.
 
 Merging `main` triggers the release build, so when in doubt the PR waits for the human.
-**Planning and implementation never merge** — only `wai-pr-review` does.
+**Planning and implementation never merge** — only the session applying `wai-pr-review`'s merge
+step does. The `wai-reviewer` agent reviews and runs the gate but merges nothing; its caller
+applies the merge policy.
 
 **If the merge is denied by the environment** (a permission gate or safety classifier refuses
 `gh pr merge` — commonly for a PR the agent authored in the same session): don't fight it and
@@ -150,12 +152,12 @@ EXCLUDED DOMAINS = contract domain   (EX-PAY ∪ EX-AUTH ∪ EX-API ∪ EX-SEC �
 
 | Tag | Catalog family | Authoritative detection (paths + diff) | Advisory-widening only |
 |---|---|---|---|
-| `EX-GUARD` | quality catalog, testing strategy, gate config, `.claude/skills/**`, CI, build/lint enforcement | hardcoded `GUARDRAIL_PATHS` | — |
+| `EX-GUARD` | quality catalog, testing strategy, gate config, Claude Code's configuration directory (`.claude/**` at any depth — skills, agents, settings, hooks, commands), the plugin manifest (`.claude-plugin/*`), `.mcp.json` at any depth, CI, build/lint enforcement — instruction files (`CLAUDE.md`, `AGENTS.md`) are not in the floor yet, an open decision (#128) | hardcoded `GUARDRAIL_PATHS` | — |
 | `EX-PAY` | payment / token / billing | `CONTRACT_PATHS` (billing/token globs) | labels; `PAY-` family prefix |
 | `EX-AUTH` | auth / login, user management | `CONTRACT_PATHS` (auth/user globs) | labels; `AUTH` family prefix |
-| `EX-API` | API contract | `CONTRACT_PATHS` (contract/DTO globs) | labels; `API-` family prefix |
-| `EX-SEC` | security | `CONTRACT_PATHS` (security globs) | labels; `SEC-` family prefix |
-| `EX-MIG` | destructive migration | `MIGRATION_PATHS` + a destructive-statement grep | labels |
+| `EX-API` | API contract | `CONTRACT_PATHS` (contract/DTO globs) | `API-` family prefix |
+| `EX-SEC` | security | `CONTRACT_PATHS` (security globs) | `SEC-` family prefix |
+| `EX-MIG` | destructive migration | `MIGRATION_PATHS` + a destructive-statement grep | — |
 | `EX-GDPR` | erasure / data-deletion | `ERASURE_PATHS` + an erasure grep **over every added code line of the diff** | labels; `GDPR-` family prefix |
 
 `EX-GDPR` closes an everyday self-merge hole. An ad-hoc `DELETE FROM users`, an `ON DELETE CASCADE`,
@@ -174,7 +176,9 @@ made the gate trip on its own mandatory citation: a label is a declaration, a de
 
 Why the guardrails (`EX-GUARD`) are in the set at all is worth stating, because it is the one domain
 with no config knob. The floor covers both what *defines* the standard (the quality catalog, the
-testing strategy, `merge-gate.conf`, `.claude/skills/**`) and what *enforces* it (the CI workflows,
+testing strategy, `merge-gate.conf`, `.claude/skills/**`, `.claude/agents/**`, the plugin
+manifest) and what *enforces*
+it (the CI workflows,
 `CODEOWNERS`, and the gate's own enforcement logic — the `package.json` scripts, the build files, the
 lint and type configs). Protecting the workflow protects the *declaration* `run: pnpm lint`; it does
 **not** protect what `pnpm lint` actually does. A skill that could merge a change to the standard it
@@ -220,8 +224,9 @@ and under `--autonomy` an advisory citation still **holds** the drain — autono
 - **An empty or unaffirmed surface refuses autonomy entirely.** If `CONTRACT_PATHS`, `ERASURE_PATHS`
   or `AUTONOMY_SAFE_PATHS` is empty, or `AUTONOMY_AFFIRMED` is absent, autonomy is off — and under an
   autonomy caller an empty `CONTRACT_PATHS` means "**all** paths are contract-domain," never "no path
-  touched." A repo that declines the allowlist gets no autonomy in solo mode; only a team repo, where
-  a server-side approving review is the real wall, may run it.
+  touched." A repo that declines the allowlist gets no autonomy, solo or team. A team repo's
+  everyday lane (auto-merge armed, one human approval) is unaffected, because that lane is not
+  autonomy.
 - **No autonomous-merge command exists.** Every merge — autonomous or not — routes through the same
   `merge-gate.sh` conjunction, and the model obeys its exit code rather than re-deriving it. The
   drain-preflight is advisory fail-fast only; a preflight that wrongly *keeps* an item still meets a
@@ -233,7 +238,7 @@ and under `--autonomy` an advisory citation still **holds** the drain — autono
 
 **Single mechanism.** All of this is one script — `excluded-domains.sh`, homed next to `doctor.sh` —
 with `--autonomy` for the allowlist-eligibility gate and `--list-domains [--policy-only]` for the
-floor. `merge-gate.sh` §5–6 **delegate** domain classification to it; `merge-gate.sh` §4 — the
+floor. `merge-gate.sh` §5 **delegates** domain classification to it; `merge-gate.sh` §4 — the
 team-mode approving-review enforcement — **stays in `merge-gate.sh`** and is *not* part of the
 classifier's remit. The hardcoded `GUARDRAIL_PATHS` floor lives inside the shared script so config
 still cannot lower it.
@@ -269,10 +274,12 @@ find the domain set written out anywhere else, that copy is the bug — fix it b
   implementation, or the change is small enough to need no plan document — **implementation cuts
   the branch itself**. Nobody works on `main` because an earlier step was skipped.
 - If you are on `main` (or any default branch), **branch first** — never work directly on it.
-- **Branch guard — a hook, not a habit.** `.githooks/pre-commit` **refuses** a commit on
-  `main`/`master` (`git config core.hooksPath .githooks`). It used to say *"run
-  `git branch --show-current` before committing"* — stated right here, enforced by nothing, and
-  **three commits landed on `main` anyway.**
+- **Branch guard — a hook where one is installed.** The suite's own repo ships
+  `.githooks/pre-commit`, which **refuses** a commit on the default branch (and on `master`),
+  wired once with `git config core.hooksPath .githooks`. Nothing installs it into a target repo
+  yet (suite issue #92): there, unless the repo copied and wired the hook, run
+  `git branch --show-current` before every commit. That check alone used to be the rule — stated
+  right here, enforced by nothing, and **three commits landed on `main` anyway.**
 
   The third is the whole argument. It carried a fix; the follow-up `git push origin <branch>` pushed
   that **branch ref**, which was unchanged, so it was a **silent no-op**; and `gh pr edit` returned
@@ -295,9 +302,10 @@ find the domain set written out anywhere else, that copy is the bug — fix it b
   only because somebody asked which branches were safe to delete — *"every PR is merged, so every
   branch is safe"* would have destroyed the work.
 
-  `.githooks/pre-push` now **refuses** a push to a branch whose PR is MERGED. It fails *open* on a
-  `gh` error on purpose — a hook that blocks pushes when you are offline is a hook people delete.
-  So keep the backstop, and it is one line:
+  `.githooks/pre-push` now **refuses** a push to a branch whose PR is MERGED — in the suite's own
+  repo, and in a target repo only if it copied and wired the hook. It fails *open* on a `gh` error
+  on purpose — a hook that blocks pushes when you are offline is a hook people delete. So keep the
+  backstop, and it is one line:
 
       # is the branch tip the commit the PR actually merged?
       [ "$(git rev-parse origin/<branch>)" = "$(gh pr view <n> --json headRefOid --jq .headRefOid)" ]
@@ -339,7 +347,7 @@ carrying their own copy of it.
   Uncapped spend was possible on the free tier: a single user could drain the
   monthly inference budget. The cap is enforced server-side at debit time.
 
-  Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+  Co-Authored-By: Claude <model name> <noreply@anthropic.com>
   ```
 
 - **Stage explicitly; never `git add -A` or `git add .` on a shared branch.** Add the paths you
@@ -354,11 +362,12 @@ carrying their own copy of it.
   the wrong file" has no fixed target, so a hook would fire on every legitimate multi-file commit,
   get muted, and protect nothing. The cost of a staging slip is also smaller: a reviewable diff, not
   a silent no-op push to the wrong branch. So the branch guard earned its hook (discipline failed
-  three times); staging earns a rule. Do **not** re-add the retired *"run `git branch --show-current`
-  before every commit"* habit — the hook already owns that, and stating it twice invites the reader
-  to trust the words over the enforcement.
-- **Provenance trailer on every commit**, naming the model **actually in use** — write the real
-  name, as above. `Claude <model name>` is a placeholder in this document, not a string to commit.
+  three times); staging earns a rule. Where the hook is installed, do **not** add the manual
+  *"run `git branch --show-current` before every commit"* check on top — the hook owns that, and
+  stating it twice invites the reader to trust the words over the enforcement. Where it is not (a
+  target repo today, suite issue #92), the manual check is the only guard.
+- **Provenance trailer on every commit**, naming the model **actually in use** — the
+  `Claude <model name>` in the example above is a placeholder, not a string to commit.
 - Commit the skill's own durable artifacts on the branch too: the plan
   (`docs/planning/<slug>/`), an audit report (`docs/architecture/audits/`), doc updates.
 
@@ -440,8 +449,9 @@ everyone else**:
   up, "restore" it, or delete it as a commented-out block** — that silently steals the exercise and
   hands out an unearned Leitner promotion. This binds *every* skill, and the two that would
   otherwise walk straight into it are the ones that hunt red tests (`wai-testing`) and dead
-  code (`wai-architecture-audit`: a box-1 gap *is* a commented-out block, and its safe
-  cleanups are applied on approval). If a marker blocks your work, hand it back to the human, or
+  code (`wai-architecture-audit`: a gap is a block of 🧩 marker comments where a line was
+  removed — it looks like dead comments — and that skill's safe cleanups are applied on
+  approval). If a marker blocks your work, hand it back to the human, or
   ask `wai-learning-gap` to resolve it (flow C) — explicitly, with an explanation. Never in passing.
 
 ## Running a suite script

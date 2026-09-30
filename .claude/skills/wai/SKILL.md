@@ -23,18 +23,20 @@ review itself.
   its run with a **▶ Recommended next** block — a situational hand-off based on what it
   found (which skill, on what, why, and any decision you must make first). This router gives
   you the same recommendation as a *starting* point.
-- **Skills own the branch; `main` is gated.** Planning opens the `agent/<handle>/…` branch
-  (local + remote — the handle segment keeps two developers off each other's branch),
-  implementation commits and opens the PR. `wai-pr-review` then **auto-merges** a clean,
-  non-contract-domain PR with green checks to `main` (and deletes the branch); any
-  contract-domain (API, Auth/Login, Token, Billing, Security) or destructive-migration change is
-  **left for your merge**. In a **`team`** repo (the `**Repo mode:**` line in the quality
-  catalog) the agent never merges by itself: it arms GitHub auto-merge, and the PR waits for
-  **another human's approval**. **Blocker/Major findings are your decision point** — presented
-  with a recommendation, handled differently only on your explicit mandate ("collect as issues",
-  "fix directly"). Merging ships a release. Full rules: `references/agent-git-protocol.md` — the
-  only authority; a repo copy under `docs/architecture/` is read-only and never overrides it.
-  Issue handling: `references/issues-protocol.md`.
+- **Skills own the branch; `main` is gated.** Planning opens the `agent/<handle>/…` branch (local +
+  remote — the handle segment keeps two developers off each other's branch), implementation commits
+  and opens the PR. `wai-pr-review` then **auto-merges** a clean PR with green checks that touches
+  no **excluded domain** to `main` (and deletes the branch); a change in one — the contract domain
+  (API, Auth/Login, User Management, Token, Billing, Security), a destructive migration, GDPR
+  erasure / data deletion, or the suite's own guardrails; canonical set in
+  `references/agent-git-protocol.md` §*Excluded domains* — is **left for your merge**. In a
+  **`team`** repo (the `**Repo mode:**` line in the quality catalog) the agent never merges by
+  itself: it arms GitHub auto-merge, and the PR waits for **another human's approval**.
+  **Blocker/Major findings are your decision point** — presented with a recommendation, handled
+  differently only on your explicit mandate ("collect as issues", "fix directly"). Merging ships a
+  release. Full rules: `references/agent-git-protocol.md` — the only authority; a repo copy under
+  `docs/architecture/` is read-only and never overrides it. Issue handling:
+  `references/issues-protocol.md`.
 - **The contract is the spine.** The backend and the three clients live in separate repos but
   share one **versioned API contract**; a cross-surface feature changes it **first and
   backward-compatibly**, then the clients adopt. Full rules: `references/contract-protocol.md`.
@@ -61,7 +63,7 @@ PER REQUIREMENT (you orchestrate; skills work on one agent/<handle>/<type>-<slug
 COMMISSIONED (mandated — one issue or many, run without a gap between phases)
   wai-team                   → works one or more issues through the per-requirement cycle,
                                     one branch+PR per issue, integrated via the merge queue;
-                                    Blocker/Major & contract merges collect in your decision list.
+                                    Blocker/Major & excluded-domain merges join your decision list.
                                     UNATTENDED at any n: review on fresh context; the merge
                                     policy is confirmed at kickoff (default: the repo's own —
                                     solo merges each clean PR under the gate)
@@ -136,9 +138,12 @@ PERIODIC (after a few features/refactors, or on security triggers)
   presence now; staleness of an already-generated artifact (an old `ci.yml`) still needs a
   `wai-cicd` re-run.
 - **Want the start log — how often skills actually START, not just hand back?**
-  → opt in, per developer, to the invocation hook: `sh <skill-dir>/scripts/invocation-log.sh --snippet` prints
-  the `PostToolUse` block for your **`.claude/settings.local.json`** (never `settings.json` — a
-  committed hook would switch it on repo-wide; personal state never becomes repo state). The hook
+  → opt in, per developer, to the invocation hook: `sh <skill-dir>/scripts/invocation-log.sh
+  --snippet` prints
+  the `PostToolUse` block for your **`.claude/settings.local.json`** (never the repo's
+  `.claude/settings.json` — a committed hook would switch it on repo-wide; personal state never
+  becomes repo state; with linked worktrees or several suite repos, the user-level
+  `~/.claude/settings.json` with an absolute path, as the snippet explains). The hook
   appends one mechanical row per wai-skill invocation to `docs/architecture/invocation-log.md` —
   no outcome column, ever; the model-written record stays `run-log.md`, and
   `retro-compliance.sh` prints the two per skill side by side — starts beside subject rows, two
@@ -171,8 +176,8 @@ Keep it short — this is a signpost, not a deliverable:
 
 ## Then, typically
 [The likely chain afterward, e.g. planning → implementation → pr-review → merge to main
-(auto for a clean, non-contract-domain PR; left for your merge if risky). The invoked skill's
-own ▶ Recommended next will confirm/adjust this as it learns more.]
+(auto for a clean PR outside the excluded domains; left for your merge if risky). The invoked
+skill's own ▶ Recommended next will confirm/adjust this as it learns more.]
 ```
 
 ## Principles
@@ -188,9 +193,9 @@ own ▶ Recommended next will confirm/adjust this as it learns more.]
   replace it.
 - **One branch, one PR per requirement.** Point planning/implementation/review at the same
   `agent/**` branch so the work reads as one reviewable PR you merge.
-- **`main` is gated, not free.** Only `wai-pr-review` merges, and only a clean,
-  non-contract-domain PR with green checks; risky changes wait for your merge. That gate is the
-  point of the whole flow.
+- **`main` is gated, not free.** Only `wai-pr-review`'s merge step merges, and only a clean PR
+  with green checks outside the excluded domains; risky changes wait for your merge. That gate is
+  the point of the whole flow.
 
 ## Related Skills
 

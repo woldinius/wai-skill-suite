@@ -71,7 +71,8 @@ In a `wai-team` run nobody answers, so **no decision is self-answered**: each op
 grill trigger fires — fuzzy and high-stakes — the issue is not built on guesses; it waits for an
 attended grill.
 
-Under merge policy (a), a marked assumption on a decision that would not trigger a grill does not
+Under merge policy (a) (the repo's own mode, confirmed at a `wai-team` kickoff — `wai-team`
+§*Mandate first*), a marked assumption on a decision that would not trigger a grill does not
 hold the merge — it rides the decision list for the human's veto after the fact. A decision that
 would trigger a grill (fuzzy and high-stakes) holds the issue: nothing merges on it.
 

@@ -79,8 +79,11 @@ last audit — don't re-derive a full report when nothing meaningful changed.
    `references/audit-playbook.md`; in a TypeScript repo e.g. `knip`, `ts-prune`, `depcheck`,
    `madge`, `jscpd`) — run them ad-hoc; they need not be wired into CI. If a tool won't run,
    report the metric as **not measured this run** — never carry the previous audit's number
-   forward as if it were fresh. Record file/module sizes and import-cycle counts. **Tools find
-   the syntactic layer** (unreferenced exports, copy-paste) — the semantic layer is step 3.
+   forward as if it were fresh. Record file/module sizes and import-cycle counts, and run the
+   small **mutation pass** (playbook §7: a fixed budget of one-line mutations on guards and
+   money/validation logic — the field run used ~25–30 — every survivor verified, the kill rate
+   recorded as a trend). **Tools find the syntactic layer** (unreferenced exports, copy-paste) —
+   the semantic layer is step 3.
 
 3. **Semantic redundancy, consistency & dead-ends pass** — the part tools miss and the reason
    the audit exists. Read the code and **reason** (for a large codebase, fan out parallel readers
@@ -158,8 +161,10 @@ last audit — don't re-derive a full report when nothing meaningful changed.
 
 7. **Design-principle / catalog / baseline evolution** — When a finding shows the **rules** are
    stale or a new pattern should be adopted platform-wide, propose changes to the catalog/ADRs/
-   **architecture baseline** (with new IDs in the right series), kept in a separate report
-   section from code findings. This is how the architecture and design principles stay current.
+   **architecture baseline** (a new local ID at ≥ 100 under `## Local IDs`, or an upstream
+   proposal — never the next free number in the baseline's series, see `wai-init` step 5a), kept
+   in a separate report section from code findings. This is how the architecture and design
+   principles stay current.
 
 8. **Write the dated report, commit on a branch, hand off** — Persist to
    `docs/architecture/audits/<YYYY-MM-DD>.md` (create the folder if needed) using the output
@@ -221,6 +226,7 @@ Use exactly this structure for `docs/architecture/audits/<YYYY-MM-DD>.md`:
 - Largest modules: [file — lines] (god-file threshold: >800)
 - Import cycles: [N] · Copy-paste duplication: [%/clusters]
 - Semantic redundancy / inconsistency / cross-surface dead-ends: [N found in step 3]
+- Mutation kill rate: [killed/total · budget · areas mutated] · [trend]
 - [deltas vs last audit where available]
 
 ### Findings
@@ -258,8 +264,9 @@ Omit empty sections. If clean, make that clear in `Overall` and keep it brief.
 
 - `references/audit-playbook.md` — per-stack tooling commands for the metrics pass, the
   semantic-redundancy / consistency / cross-surface dead-end method, the modularity rubric
-  (size thresholds, cohesion checks), the container/distribution checklist, and the
-  drift-detection method (architecture baseline, fitness functions + trend).
+  (size thresholds, cohesion checks), the determinism/idempotency review, the
+  container/distribution checklist, the drift-detection method (architecture baseline, fitness
+  functions + trend) and the mutation pass (§7).
 - `docs/architecture/quality-attributes.md` — the live catalog; cite its IDs. If absent,
   note it once and use the dimensions above (run `wai-init` to generate it).
 - `references/contract-protocol.md` (in the `wai` skill) — the contract spine; basis for
@@ -288,7 +295,8 @@ plan → implement → review:
 - **wai-pr-review** — reviews a single diff *before merge*; this skill audits the *whole codebase
   periodically*.
 - **wai-implementation** — takes over fixing the findings.
-- **wai-init** — when drift means the **catalog itself** must change, or the catalog is missing,
-  (re-)run it to regenerate `docs/architecture/quality-attributes.md`.
+- **wai-init** — when drift means the **catalog itself** must change, re-run it to propose a
+  catalog update (a diff that keeps local tailoring); when the catalog is missing, run it to
+  create `docs/architecture/quality-attributes.md`.
 - **wai** — the suite router/overview.
 - Shared source of truth for all of them: `docs/architecture/quality-attributes.md`.

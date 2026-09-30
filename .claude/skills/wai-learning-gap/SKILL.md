@@ -159,7 +159,9 @@ Protocol: `.claude/skills/wai-learning-gap/SKILL.md`.
   `## Learning axes` table is **absent**: for a template-shaped ledger, add **only** that table and
   touch nothing else. A human-authored ledger whose shape differs is left exactly as it is — Flow
   A's axis filter then degrades to "all axes eligible" for it (`ledger-lint.sh` reports, never
-  rewrites). Once both sections are present this step is skipped.
+  rewrites; pass it the ledger path `ledger-locate.sh` prints — without one it reads the
+  `temp/learning/` fallback, not the home ledger). Once both sections are present this step is
+  skipped.
 - **No learning mode** when: the human says "skip", during urgent hotfixes, or for pure
   docs/comment changes with no runtime effect.
 
@@ -217,9 +219,11 @@ are in `references/axes.md`.
    this case once landed in the wrong tree through a lingering `cd`
    ([suite issue #13](https://github.com/woldinius/wai-skill-suite/issues/13)).
 
-   Once planted, confirm the gap fails visibly with `verify-gap-breaks.sh` — **except against a
-   Socratic architecture gap**, which stays green by design and would be wrongly rejected by the
-   probe (pass its `--form socratic` and it skips). Every other gap must go red.
+   Once planted, confirm the gap fails visibly with `verify-gap-breaks.sh` — its first argument
+   is the form, then the project's test command (`--form cloze npm test`; `--form structural` for
+   a structural gap) — **except against a Socratic architecture gap**, which stays green by design
+   and would be wrongly rejected by the probe (pass its `--form socratic` and it skips). Every
+   other gap must go red.
 2. **Topic choice:** prefer due topics from low boxes (see the ledger), within the stack profile.
    **Axis filter:** consider only topics whose axis is enabled in the `## Learning axes` table,
    weighting a `focus` axis above a `basics` one; which axis a line belongs to is model judgment
@@ -256,13 +260,13 @@ are in `references/axes.md`.
    All CODE-REMOVAL rungs still fail visibly — confirm with `verify-gap-breaks.sh`. The
    Socratic architecture gap is a separate, non-removal form (see *Learning axes*) and does not use
    this ladder.
-5. **Plant the marker** in the file's comment syntax (`//`, `#`, `<!-- -->`, …); format per the
-   marker template above.
+5. **Plant the marker** in the file's comment syntax (`//`, `#`, `<!-- -->`, …); format per
+   *Template: marker* below.
 6. **Update the ledger:** new row in the gap log (status `open`), and add the topic to box 1 if it
    is new.
 7. **Closing message:** file:line (clickable), the exercise, the concrete verification command, and
    the escalation: "Say **hint** for a more concrete tip, **solution** for code + explanation.
-   (`git diff` gives the solution away — cheating works, but only hurts you.)"
+   (`git diff` shows the removed line — reading it turns the exercise into copying.)"
 
 ## Flow B — review (the human reports a solution, or the marker is gone next turn)
 
@@ -327,8 +331,9 @@ nothing and says nothing.
    private list); you pick the single most instructive PR and the one line and axis worth
    learning. Only exit **0** yields a shortlist; **1** (no eligible PR — all excluded) and **2**
    (the PR list could not be read → fail-closed) both mean **plant nothing**.
-5. **Branch discipline.** Plant on a **fresh `agent/learn-*` branch cut from the merged
-   commit** — **never** on `main`'s working tree, and never on a still-open PR branch.
+5. **Branch discipline.** Plant on a **fresh `agent/<handle>/chore-learn-<slug>` branch cut from
+   the merged commit** (the git protocol's branch form) — **never** on `main`'s working tree, and
+   never on a still-open PR branch.
 6. **Plant via Flow A.** From here Flow D **hands to Flow A** (topic/axis/box choice, the
    code-removal ladder or a Socratic gap, `verify-gap-breaks.sh`, the ledger row). Flow D adds
    only the preconditions and the branch.

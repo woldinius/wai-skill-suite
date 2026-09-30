@@ -62,7 +62,9 @@ tokens. Four consequences shape every security audit:
 - **Proportional & honest.** A hardened codebase gets a short "posture is sound" report; don't
   manufacture findings. But be thorough where money, auth, PII and the contract meet.
 - **Allowed to evolve the rules.** When a finding shows the catalog's `SEC-*` is missing a
-  dimension, propose a new ID (separated from code findings).
+  dimension, propose a new local `SEC` ID at ≥ 100 under `## Local IDs`, or an upstream
+  proposal — never the next free baseline number (`wai-init` step 5a) — separated from code
+  findings.
 
 ## Process
 
@@ -197,8 +199,10 @@ parts you hadn't charted yet.
 9. **Write the dated report, commit on a branch, hand off** — Persist to
    `docs/architecture/security-audits/<YYYY-MM-DD>.md` (create the folder if needed) using the
    output format below, at the redaction level step 8 established — **never a live secret or a
-   working exploit**, in any repo. Per the git protocol, commit the report on an
-   `agent/<handle>/chore-security-audit-<YYYY-MM-DD>` branch and open a PR; never touch `main`.
+   working exploit**, in any repo. Then lint it with the attack-path lint from step 5 — report
+   path, then catalog path — and obey its exit code (see References). Per the git protocol, commit
+   the report on an `agent/<handle>/chore-security-audit-<YYYY-MM-DD>` branch and open a PR;
+   never touch `main`.
    **Blocker/Major findings are the human's decision point** (present with a recommendation and
    wait). Then the **landing rule** applies (`issues-protocol.md` §*Where a finding lands* and
    §*Security findings*): a finding that is neither fixed nor deliberately rejected is **filed**
@@ -215,12 +219,12 @@ parts you hadn't charted yet.
 ## Severity & trend (security-framed)
 
 - **Blocker** — exploitable now, high impact: auth bypass (`SEC-1`), IDOR to another tenant's
-  data (`SEC-8`), a secret committed in the repo/history (`SEC-3`), RCE/SQL injection (`SEC-4`),
+  data (`SEC-8`), a secret committed in the repo/history (`SEC-3`), RCE/SQL injection (`SEC-7`),
   an unauthenticated expensive endpoint enabling cost-drain (`SEC-9`), a purchase path that
   credits on client trust (`SEC-13`).
 - **Major** — exploitable under conditions, or a missing defense on a money/auth/PII path:
   no rate limit on an expensive endpoint (`SEC-9`), a known-CVE dependency in the runtime
-  (`SEC-11`), prompt injection with a real sink (`SEC-4`), missing attestation on a protected
+  (`SEC-5`), prompt injection with a real sink (`SEC-4`), missing attestation on a protected
   call (`CLIENT-2`), plaintext PII in logs (`GDPR-5`).
 - **Minor** — hardening / defense-in-depth: missing security header, over-broad token scope,
   no CVE-scan gate (advisory), verbose error leakage without direct impact.
@@ -283,7 +287,7 @@ Use exactly this structure for `docs/architecture/security-audits/<YYYY-MM-DD>.m
 - [Catalog ID] — [gap → recommended hardening]
 
 ### Security catalog proposals
-- [New SEC-* / revised wording · why the current rule misses this class]
+- [New local SEC ID (≥ 100) or upstream proposal / revised wording · why the rule misses this class]
 
 ### Positives — what's holding up
 - [Named strong controls, with the ID they satisfy]
@@ -311,7 +315,10 @@ Omit empty sections. If the posture is sound, say so in `Posture` and keep it br
   consistency: every cited `F<n>` resolves to a defined finding, each `AP-<n>` is well-formed
   (severity, ≥1 link, an objective, a cheapest-break marker), and every Blocker/Major finding is
   either chained or on the Standalone line. It checks **form/consistency, not truth** — a green
-  lint is not a validated kill-chain, and it prints so on every run. Obey the exit code:
+  lint is not a validated kill-chain, and it prints so on every run. Run it once step 9 has
+  written the report: the report's path is its required first argument, and the live catalog's
+  path as the second adds the check that every cited ID exists (without it, that check skips).
+  Obey the exit code:
   `exit 0` = well-formed — or there is no Attack paths section *and* no Blocker/Major finding to
   account for · `exit 1` = a form/linkage check failed and each reason names its repair — fix
   the report before it is handed over · `exit 2` = the report could not be read (**UNKNOWN**) —

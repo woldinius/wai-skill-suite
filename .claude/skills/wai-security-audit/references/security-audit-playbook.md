@@ -39,7 +39,7 @@
 | Dependency CVEs | osv-scanner | `docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner scan -r /src` |
 | Dependency CVEs (JS/TS) | the package manager's audit | `npm audit --audit-level=high` — or `pnpm audit` / `yarn npm audit`, matching the lockfile |
 | Image CVEs | trivy | `trivy image <ghcr-image>:<tag>` (or `trivy fs .`) |
-| Insecure regex / eval / etc. | semgrep | included in `p/javascript` ruleset |
+| Insecure regex / eval / etc. | semgrep | add `--config p/javascript` to the SAST command above |
 
 ### Python
 | Goal | Tool | Command |
@@ -164,8 +164,8 @@ is real; only you can.
 - `F4` — `GET /export/:id` checks route auth but not row ownership (IDOR, `SEC-8`); it returns only
   a non-sensitive display name, so *low impact* alone.
 - `F7` — that display name is reflected unescaped into an admin-only log viewer (stored XSS,
-  `SEC-7`); the viewer is admin-only, so *low reachability* alone.
-- `F9` — the admin session cookie lacks `HttpOnly` (`SEC-10`); a hardening *nit* alone.
+  `WEB-2`); the viewer is admin-only, so *low reachability* alone.
+- `F9` — the admin session cookie lacks `HttpOnly` (`CLIENT-7`); a hardening *nit* alone.
 
 Chained: `F4` enumerates other tenants and one sets their display name to an XSS payload → an admin
 opens the log viewer and `F7` fires *in an admin context* → `F9` lets the payload lift the admin

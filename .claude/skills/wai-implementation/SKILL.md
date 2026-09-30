@@ -168,15 +168,18 @@ truth** (`PAY-*`; tokens are digital goods → iOS StoreKit / Android Play Billi
    `not checked`.
 
 9. **Learning gap — the last action, and only when you hand back to the human.** Applies only if
-   **this** human has a personal learning ledger (`~/.claude/learning/<repo-slug>/ledger.md`, or
-   the `temp/learning/` fallback). **No ledger → skip silently and create nothing**: learning
-   mode is a per-developer opt-in, never a repo-wide switch (git protocol §*Personal state never
-   becomes repo state*).
+   **this** human has a personal learning ledger for this repo — decided by `wai-learning-gap`'s
+   lookup, `ledger-locate.sh` (exit 0: a ledger claims this repo), which matches by the identity
+   the ledger records, not by a path, so a renamed or transferred repo still finds its ledger.
+   **No ledger → skip silently and create nothing**: learning mode is a per-developer opt-in,
+   never a repo-wide switch (git protocol §*Personal state never becomes repo state*).
 
-   For a participant, run **`wai-learning-gap`** as the **final action of the turn**, after the
-   phase commit — exactly one gap per implementation phase, found when control returns to the
-   human. The `▶ Recommended next` line is a suggestion *to the human*, not an automatic
-   continuation: they close the gap first, then run testing.
+   For a participant, run **`wai-learning-gap`** after the phase commit and **before the
+   hand-back** of step 8: the gap is the last change to the tree, and its closing message
+   (`wai-learning-gap` Flow A step 7) comes before the open-items footer, which stays last.
+   Exactly one gap per implementation phase, found when control returns to the human. The
+   `▶ Recommended next` line is a suggestion *to the human*, not an automatic continuation: they
+   close the gap first, then run testing.
 
    **Two cases where you plant nothing:**
    - **An autopilot run** (`wai-team`, any number of issues): nobody is at the keyboard to close the
@@ -265,9 +268,9 @@ If the document doesn't exist in the current repo, the safe **default** applies:
   detailed unit tests.
 - Keep a note "test needs" (in the plan and if applicable in `docs/`), which functions
   later need e2e coverage.
-- **Security- and billing-relevant functions** are mandatory test targets (`SEC-*`,
-  `RES-3`, `GDPR-*`) — mark them clearly as such, so they don't get lost in the later test
-  phase.
+- **Security-, billing-, GDPR-, idempotency- and AI-output-relevant functions** are mandatory
+  test targets (`SEC-*`, `PAY-*`, `GDPR-*`, `RES-3`, `AI-3`/`AI-5` — `wai-testing` §*Mandatory
+  test targets*) — mark them clearly as such, so they don't get lost in the later test phase.
 
 **Intermediate tests for foundational seams:** when a phase produces a seam later phases build
 on — a contract endpoint, ledger/money logic, an auth boundary — you may invoke
@@ -317,9 +320,9 @@ This skill is the **implementation** stage in the lifecycle plan → implement �
 - **wai-pr-review** — the full review stage (in the `wai-reviewer` agent when `wai-team` runs it,
   or when asked); the self-review here (step 5) is only the short form for your own diff before
   handover.
-- **wai-learning-gap** — the **last action of the turn** (step 9), and **only** if *this* human
-  has a personal ledger. `CLAUDE.md` never activates learning mode. No ledger → skip silently
-  and create nothing.
+- **wai-learning-gap** — the **last action before the hand-back** (step 9), and **only** if
+  *this* human has a personal ledger. `CLAUDE.md` never activates learning mode. No ledger → skip
+  silently and create nothing.
 - **wai** — the suite router/overview.
 - Shared source of truth: `docs/architecture/quality-attributes.md` (testing strategy:
   `docs/architecture/testing-strategy.md`; contract rules: `references/contract-protocol.md`

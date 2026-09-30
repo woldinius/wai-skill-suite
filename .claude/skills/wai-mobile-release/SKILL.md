@@ -111,11 +111,14 @@ Depending on platform (not everything is always needed):
 
 ## Merge gate & store submission
 
-The platform's gated-merge policy lets `wai-pr-review` **auto-merge** a clean,
-non-contract-domain PR — but only if "green" is trustworthy. For mobile:
+The platform's gated-merge policy lets `wai-pr-review` **auto-merge** a clean PR outside the
+excluded domains — but only if "green" is trustworthy. For mobile:
 
 - **Required checks** — wire `mobile-ci.yml`'s gate jobs (lint, build, unit, UI, the
-  contract-consumer test, secret scan) as **required status checks** in the `main` ruleset.
+  contract-consumer test, secret scan) as **required status checks** in the `main` ruleset, by
+  the **job** names the workflow actually emits, never step names: a step reports no check run,
+  and the PR waits forever (`wai-cicd` §*Merge gate & branch protection*). For per-gate
+  granularity, make each gate its own job.
 - **Human-gated contract domains** — `CODEOWNERS` forces the human onto the generated API
   client, auth, and token/billing (StoreKit/Play Billing) code — matching the suite's escalation;
   a billing change is `PAY-*` and always human-merged.
@@ -184,8 +187,8 @@ commit). Two are mobile-specific and load-bearing:
 ## Related Skills
 
 This skill is a **setup** stage (stage 0) for the mobile surfaces, parallel to `wai-cicd`:
-- **wai-cicd** — the same role for **backend+web** (Docker/Compose/Hetzner + that surface's
-  merge gate). This skill is its mobile counterpart.
+- **wai-cicd** — the same role for **backend+web** (Docker/Compose over SSH to your own Linux
+  server + that surface's merge gate). This skill is its mobile counterpart.
 - **wai-init** — creates the surface-scoped quality catalog for this mobile repo (`IOS-*` /
   `AND-*` + `CLIENT-*` + the shared core); run it first so the artifacts cite the right IDs.
 - **wai-testing** — defines the mandatory mobile tests this skill wires as **required merge

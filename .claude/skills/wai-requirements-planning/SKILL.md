@@ -133,7 +133,7 @@ human gave you in chat, and note the gap in the plan.
    - **GDPR** (`GDPR-1`–`GDPR-4`) — is new personal data processed? Does content go to
      external providers (third-country transfer, redaction)? Does it concern minors/
      student data? Do deletion obligations/retention apply?
-   - **AI orchestration** (`AI-3`/`AI-5`) — which model/routing, which output validation
+   - **AI orchestration** (`AI-1`/`AI-3`/`AI-5`) — which model/routing, which output validation
      (JSON schema), which fallback on provider outage?
    - **Resilience** (`RES-1`/`RES-3`) — is the operation long-running → asynchronous/queue?
      Does it need idempotency (retry safety)?

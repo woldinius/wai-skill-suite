@@ -27,8 +27,7 @@ impossible. **A hand-off moves information, never commits.**
 ## The two mailboxes
 
 Every repo has two, both under a **gitignored `temp/`** — they are scratch, not repo state (the same
-`temp/` the suite uses for every draft and working file; `~/git` holds only repos, drafts live in
-the repo's ignored `temp/`).
+`temp/` the suite uses for every draft and working file).
 
 | Mailbox (a repo's…) | Written by | Read + drained by | Holds |
 |---|---|---|---|
@@ -59,15 +58,15 @@ A backend feature needs a matching iOS change. The human drives it:
 
 1. **Backend agent finishes the contract change** (the initiator's checklist in
    `contract-protocol.md` is done) and writes a **request** into the **iOS repo's `temp/input/`**:
-   `temp/input/2026-08-02T14-30Z__req__contract-v2-token-budget.md`. Writing into a sibling repo's
-   gitignored mailbox touches no tracked file — the invariant holds.
+   `temp/input/2026-08-02T14-30-00Z__contract-v2-token-budget__req.md`. Writing into a sibling
+   repo's gitignored mailbox touches no tracked file — the invariant holds.
 2. **The human runs the iOS agent.** That is the trigger: the human sequenced the two runs; nothing
    automated crossed the boundary. One agent at a time.
 3. **iOS agent reads its `temp/input/`**, resolves the pointer (checks out the contract version,
    reads the OpenAPI spec at the path the message names), does the work on its **own** `agent/**`
    branch in its **own** repo, opens its **own** PR, writes a **reply** into its **own**
-   `temp/output/` (`…__resp__contract-v2-token-budget.md` — pointer: *adopted in the client PR, back-compat
-   confirmed*), and **drains** the consumed request from its `temp/input/`.
+   `temp/output/` (`…__contract-v2-token-budget__res.md` — pointer: *adopted in the client PR,
+   back-compat confirmed*), and **drains** the consumed request from its `temp/input/`.
 4. **Backend agent, next time the human runs it, reads-and-drains** the reply from the **iOS repo's
    `temp/output/`** — and now knows the client landed.
 
@@ -76,19 +75,20 @@ reader reconstructs the whole exchange from two files.
 
 ## The message envelope — a pointer, never a payload
 
-**Filename** carries the routing, sortably: an ISO-8601 UTC timestamp, a kind, and a correlation key.
+**Filename** carries the routing, sortably: an ISO-8601 UTC timestamp (dashes for the time's
+colons), a correlation key, and a kind.
 
-    <timestamp>__<kind>__<correlation-key>.md
-    2026-08-02T14-30Z__req__contract-v2-token-budget.md
-    kind in { req | resp | ack }
+    <YYYY-MM-DDTHH-MM-SSZ>__<correlation-key>__<req|res>.md
+    2026-08-02T14-30-00Z__contract-v2-token-budget__req.md
+    kind in { req | res }
 
-**Header fields** — a short front block:
+**Header fields** — a short front block; `handoff-lint.sh` requires all five:
 
-    From:        <sender repo> · <branch or PR>
-    To:          <recipient repo> · <surface>
-    Correlation: <key>          # ties req and resp across repos
-    Kind:        req | resp | ack
-    Gated:       human          # who triggered this hand-off
+    From:           <sender repo> · <branch or PR>
+    To:             <recipient repo> · <surface>
+    Correlation-Id: <key>          # ties req and res across repos
+    Kind:           req | res
+    Pointer:        temp/…         # the mailbox path the message points at
 
 **The body is a POINTER.** It says *where the authoritative thing lives and what to do with it* — a
 branch name, a PR number, a path to the OpenAPI spec, a catalog ID **and its dimension name**. It
