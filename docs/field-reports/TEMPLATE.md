@@ -1,6 +1,6 @@
 # Field report — [repo shape] · [YYYY-MM-DD]
 
-<!-- Four fields and a paste — that is the whole ask. Copy this file into your own repo as
+<!-- Three fields and a paste — that is the whole ask. Copy this file into your own repo as
      docs/field-reports/YYYY-MM-DD-<slug>.md, or paste it into a "Field report" issue on the
      suite repo. Write in whatever language your repo works in; reports are translated on
      intake if needed. -->
@@ -15,7 +15,9 @@ ones: they are what docs/open-questions.md Q3 is waiting for. -->
 
 **gate-stats output:**
 
-<!-- paste of:  sh .claude/skills/wai-pr-review/scripts/gate-stats.sh -->
+<!-- paste of:  sh .claude/skills/wai-pr-review/scripts/gate-stats.sh
+     (the path after an install.sh install; with the plugin, run the same path under the
+     plugin's directory in the plugin cache, from inside your repo) -->
 
 ```text
 (paste here)

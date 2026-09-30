@@ -98,6 +98,9 @@ Protocol: `.claude/skills/wai-learning-gap/SKILL.md`.
 
 ## Ground rules (always)
 
+- **Where the scripts live.** Every script this skill names sits in this skill's `scripts/`; run it
+  from the repo root as `sh <skill-dir>/scripts/<name>.sh` (`references/agent-git-protocol.md` in
+  the `wai` skill, §*Running a suite script*).
 - **Opt-in gate first.** The lookup itself is `ledger-locate.sh`: exit **0** = a ledger claims this
   repo (opted in — the path is printed), **1** = none does (not opted in), **2** = could not resolve
   (fail-closed → treat as not-opted-in and do nothing). It owns the identity-not-path match, so

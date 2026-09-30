@@ -21,6 +21,7 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX pattern 
 # stays the base. An explicit argument still wins, read against the cwd it was given in.
 # Why: docs/rationale/catalog-lint.md § Default paths resolve against the repo root
 CAT="${1:-docs/architecture/quality-attributes.md}"
+SELF_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)"   # before any cd: $0 may be relative
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -n "$REPO_ROOT" ]; then
   if [ -n "${1:-}" ]; then case "$CAT" in /*) ;; *) CAT="$PWD/$CAT" ;; esac; fi
@@ -32,6 +33,11 @@ fi
 # for two different reasons: it is what the vendored skills were written against (check 4), and it
 # is where a missing Red Flag can be recovered from (check 1).
 BASE=".claude/skills/wai-init/references/quality-attributes.baseline.md"
+# A PLUGIN INSTALL VENDORS NOTHING INTO THE REPO (#95): the baseline ships beside this script, in the
+# plugin cache. Without this fallback checks 1, 4a and 7 lost their baseline there, and check 7 — the
+# local-ID number space — was skipped without a word: a false clean. A copy vendored in the repo
+# still wins: it is the one the vendored skills (check 4b) were written against.
+[ -f "$BASE" ] || [ -z "$SELF_DIR" ] || BASE="$SELF_DIR/../references/quality-attributes.baseline.md"
 
 FAIL=0
 note() { echo "  ✗ $1"; FAIL=1; }
@@ -241,12 +247,19 @@ else
   UNKNOWN=""; DEAD=""
   for c in $(cited_in "$SKILLS"); do
     printf '%s\n' "$BASE_IDS" | grep -qx "$c" && continue
-    if printf '%s\n' "$BASE_RET" | grep -qx "$c"; then DEAD="$DEAD $c"; else UNKNOWN="$UNKNOWN $c"; fi
+    if printf '%s\n' "$BASE_RET" | grep -qx "$c"; then DEAD="$DEAD $c"; continue; fi
+    # The repo's OWN skills sit under .claude/skills too — in a plugin install they are the only ones
+    # there — and they may cite the repo's own dimensions: an ID live in THIS catalog (a local one at
+    # >= 100, or a declared one) resolves (#95). Checked AFTER the retired list, so a number the
+    # baseline retired stays DEAD even where a catalog re-mints it. A suite skill citing a local ID
+    # still fails in the suite's own repo, whose catalog defines none.
+    printf '%s\n' "$LIVE" | grep -qx "$c" && continue
+    UNKNOWN="$UNKNOWN $c"
   done
   if [ -z "$UNKNOWN$DEAD" ]; then
-    pass "every ID a skill cites is a LIVE baseline dimension"
+    pass "every ID a skill cites is a LIVE baseline dimension, or a live dimension of this catalog"
   else
-    [ -z "$UNKNOWN" ] || note "a SKILL cites an ID the baseline does not define:$UNKNOWN"
+    [ -z "$UNKNOWN" ] || note "a SKILL cites an ID neither the baseline nor this catalog defines:$UNKNOWN"
     if [ -n "$DEAD" ]; then
       note "a SKILL cites a RETIRED baseline ID:$DEAD — every finding anchored to it points at a dimension that has moved"
       for d in $DEAD; do hint "$d — the baseline moved this number to: $(retire_target "$d")"; done
@@ -317,6 +330,8 @@ if [ -n "$BASE_IDS" ]; then
     hint "  declare them under a '## Local IDs' section instead. That declaration is the"
     hint "  translation table you will need for as long as the repo lives."
   fi
+else
+  skip "local-ID number space unchecked — no baseline at $BASE"
 fi
 
 echo

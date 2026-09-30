@@ -14,17 +14,29 @@
 #
 #   exit 0  consistent — or the file is ABSENT (autonomy off, comms none: the safe default is a pass)
 #   exit 1  a check failed — printed WITHOUT ever echoing a secret value; the repair is named
-#   exit 2  UNKNOWN — the conf/catalog is unreadable, or the policy-domain floor could not be sourced.
-#           Fail-closed: a config that cannot be verified must not be trusted to arm autonomy.
+#   exit 2  UNKNOWN — the conf/catalog is unreadable, or the policy-domain floor could not be sourced,
+#           or no conf path was given and no repo encloses the cwd. Fail-closed: a config that
+#           cannot be verified must not be trusted to arm autonomy.
 #
 # Usage: sh coordination-lint.sh [coordination.conf] [quality-attributes.md]
-#        (defaults: docs/architecture/coordination.conf · docs/architecture/quality-attributes.md)
+#        (defaults: docs/architecture/coordination.conf · docs/architecture/quality-attributes.md,
+#        read from the repo root; outside a git repo only an explicit conf path is accepted)
 
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi   # POSIX word-split + pattern semantics
 
-CONF="${1:-docs/architecture/coordination.conf}"
-CAT="${2:-docs/architecture/quality-attributes.md}"
+# DEFAULT PATHS RESOLVE AGAINST THE REPO ROOT, NEVER THE CWD (#95). Run "from this skill's
+# directory", the cwd-relative default found no conf there, took ABSENT for "autonomy off" and passed
+# — VERDICT: OK, exit 0 — without ever reading the conf that decides autonomy. Absent is a pass only
+# where absent is a fact about the repo; with no conf path and no work tree around the cwd, "no conf"
+# cannot be told from "wrong directory", so that is UNKNOWN. An explicit path still wins.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "${1:-}" ] && [ -z "$REPO_ROOT" ]; then
+  echo "coordination-lint: no conf path given and the cwd is not inside a git work tree — cannot tell 'no coordination.conf' from 'wrong directory' (UNKNOWN). Run it from the repo root, or pass the conf path." >&2
+  exit 2
+fi
+CONF="${1:-${REPO_ROOT:-.}/docs/architecture/coordination.conf}"
+CAT="${2:-${REPO_ROOT:-.}/docs/architecture/quality-attributes.md}"
 # Risk PATHS are inherited from merge-gate.conf, the sibling of the conf we were handed — one source
 # of truth for "which paths are dangerous", never duplicated into coordination.conf.
 MGCONF="$(dirname "$CONF")/merge-gate.conf"

@@ -6,8 +6,8 @@ The detail lives in the artifact — PR comment, report, plan, issue — and the
 2. **Your decisions** — only if any; one line each (a Blocker/Major, an excluded-domain merge, an
    open question).
 3. **Next** — 1 line: the recommended step and the skill that takes it.
-4. **Footer** — the output of `sh ../wai/scripts/open-items.sh --brief` (from the skill's
-   directory), pasted verbatim. Run it before writing *Next*: the script derives, the model
+4. **Footer** — the output of `sh <skill-dir>/../wai/scripts/open-items.sh --brief` (from the
+   repo root), pasted verbatim. Run it before writing *Next*: the script derives, the model
    recommends. `exit 2` = nothing derivable: write `open items — not checked`.
 
 At most ~12 lines, unless a Blocker/Major needs more. A skill whose report is its hand-back (the

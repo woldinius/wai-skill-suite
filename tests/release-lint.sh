@@ -134,12 +134,13 @@ done
 # ── 3b · a pin line has exactly its shape — only the tag varies ──────────────────────────────────
 # The re-pin touches README.md alone, so an agent may merge it; a pin line that also swapped the
 # host, the repository or the command (`curl … | sh`) must not ride along. The canonical repository
-# is the plugin manifest's "repository" field (a guardrail file since #108). Every README line that
-# carries a tag, or looks like a fetch-and-run command (curl, git clone, a pipe into sh — matched
-# case-insensitively, whitespace-tolerant), must equal one of two templates with one tag in every
-# slot, and each template must appear at least once — so dropping the tag, swapping the host or
-# adding an untagged `curl … | sh` all go red. THE COST, NAMED: prose that instructs a command in
-# other words (no curl, clone or pipe) is not held; the README is not a guarded file.
+# is the plugin manifest's "repository" field (a guardrail file since #108). What is HELD: the three
+# canonical install lines — the tagged clone, the tagged curl install, the plugin-marketplace line —
+# must each be present exactly; and every README line that carries a tag, a `curl`, a `git clone`, a
+# pipe into sh or a `/plugin marketplace add` (case-insensitive, whitespace-tolerant) must equal one
+# of them, one tag in every slot. What is NOT held, named: other fetch commands (wget, `gh repo
+# clone`, `git -C … clone`, `sh -c "$(…)"`), and text hidden in an HTML comment — the README is not
+# a guarded file, so a re-pin diff that adds more than a tag still needs a reader.
 MANIFEST_REPO="$(grep -oE '"repository"[[:space:]]*:[[:space:]]*"https://github\.com/[^"/]+/[^"/]+"' \
                  "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | grep -oE 'https://github\.com/[^"]+' | head -1)"
 if [ -z "$MANIFEST_REPO" ]; then
@@ -148,9 +149,10 @@ elif [ -f "$ROOT/README.md" ]; then
   SLUG="${MANIFEST_REPO#https://github.com/}"
   T_CLONE="git clone --depth 1 --branch <V> https://github.com/$SLUG.git /tmp/wai"
   T_CURL="curl -fsSL https://raw.githubusercontent.com/$SLUG/<V>/install.sh | SKILLS_REF=<V> sh"
-  BADSHAPE="$(awk -v tc="$T_CLONE" -v tu="$T_CURL" '
+  T_MKT="/plugin marketplace add $SLUG"
+  BADSHAPE="$(awk -v tc="$T_CLONE" -v tu="$T_CURL" -v tm="$T_MKT" '
       { low = tolower($0) }
-      /v[0-9]+\.[0-9]+\.[0-9]+/ || low ~ /curl[ \t]/ || low ~ /git[ \t]+(-[^ \t]+[ \t]+)*clone/ || low ~ /\|[ \t]*(ba|z|da)?sh([ \t]|$)/ {
+      /v[0-9]+\.[0-9]+\.[0-9]+/ || low ~ /curl[ \t]/ || low ~ /git[ \t]+(-[^ \t]+[ \t]+)*clone/ || low ~ /\|[ \t]*(ba|z|da)?sh([ \t]|$)/ || low ~ /\/plugin[ \t]+marketplace[ \t]+add/ {
         line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
         first = ""; n = line; bad = 0
         while (match(n, /v[0-9]+\.[0-9]+\.[0-9]+/)) {
@@ -158,10 +160,12 @@ elif [ -f "$ROOT/README.md" ]; then
           n = substr(n, 1, RSTART - 1) "<V>" substr(n, RSTART + RLENGTH) }
         if (!bad && n == tc) seen_c = 1
         if (!bad && n == tu) seen_u = 1
-        if (bad || (n != tc && n != tu)) printf ", README.md:%d", NR }
-      END { if (!seen_c) printf ", no canonical clone line"; if (!seen_u) printf ", no canonical install line" }' "$ROOT/README.md")"
+        if (!bad && n == tm) seen_m = 1
+        if (bad || (n != tc && n != tu && n != tm)) printf ", README.md:%d", NR }
+      END { if (!seen_c) printf ", no canonical clone line"; if (!seen_u) printf ", no canonical install line"
+            if (!seen_m) printf ", no canonical marketplace line" }' "$ROOT/README.md")"
   [ -z "$BADSHAPE" ] \
-    || stale "pin shape — README must carry the canonical clone and install commands for $MANIFEST_REPO, one tag in every slot, and no other fetch-and-run line:${BADSHAPE#,}. Only the tag may change in a re-pin"
+    || stale "pin shape — README must carry the canonical clone, install and marketplace lines for $MANIFEST_REPO, one tag in every slot, and no deviating curl, clone, pipe-into-sh or marketplace line:${BADSHAPE#,}. Only the tag may change in a re-pin"
 fi
 
 if [ "$FAIL" -gt 0 ]; then

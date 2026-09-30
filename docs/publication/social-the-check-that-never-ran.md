@@ -146,7 +146,7 @@ Full write-up, both scripts and the commit history: [link]
 > A gate that fails open on the wrong shell is worse than no gate.
 
 **D — the anti-hype angle**
-> I designed a 90-file restructuring of my agent's knowledge base.
+> I designed a 91-file restructuring of my agent's knowledge base.
 > Then I did the arithmetic and reversed my own recommendation: the split would have made my most
 > expensive runs *more* expensive, not less.
 > The actual fix was one word in a config header.
@@ -165,3 +165,7 @@ Full write-up, both scripts and the commit history: [link]
 - Variant C is the most honest and probably the most engaging — self-critical technical posts travel
   further than "here's what I built."
 - Don't post the thread *and* the LinkedIn post the same day; they share the same hook.
+- **Note (2026-09-29):** "50 lines of shell" in post 6/ of the thread cannot be traced to a
+  measurement — the first `merge-gate.sh` predates this repository, and at the 2026-08-11
+  republish the script had 458 lines. Trace the figure or drop it before posting, per this
+  directory's [README](README.md).

@@ -60,8 +60,8 @@ it does not skip these:
 - **No wall-clock, no unseeded randomness.** Freeze time, seed the RNG.
 - **Bound the parallelism of heavy tiers.** A test tier with an expensive per-file setup (a real
   database per file, a container, a WASM runtime) will start timing out once enough files use it —
-  and the fix belongs in the runner's worker cap, never in raised timeouts. See the same section
-  of `wai-testing`.
+  and the fix belongs in the runner's worker cap, never in raised timeouts. See *Bound the
+  parallelism of a heavy tier* in `wai-testing`'s `references/test-patterns.md`.
 - A flaky test is worse than no test: it erodes the very gate it is supposed to feed.
 
 ## Current phase

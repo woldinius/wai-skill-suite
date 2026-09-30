@@ -13,7 +13,7 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 - **`release-lint` holds the install pins to the newest tag.** A lagging pin is named by file and
   line, in one message per release window. The pin lives only in the README, so the re-pin touches
-  no guarded file, and the README's fetch-and-run lines may change only their tag.
+  no guarded file; its three install lines must keep their exact shape, only the tag may change.
   ([#83](https://github.com/woldinius/wai-skill-suite/issues/83))
 ### Fixed
 
@@ -26,6 +26,11 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
   injection, known-CVE dependencies, attestation, the security playbook's worked example — now
   corrected, with stale and contradictory prose fixed alongside.
   ([#99](https://github.com/woldinius/wai-skill-suite/issues/99))
+- **Script calls run from the repo root.** Skills ran scripts from their own directory, which a
+  plugin install puts in the plugin cache. From there `dep-cve-scan.sh` and `coordination-lint.sh`
+  reported clean (also in a repo install), `doctor.sh` no drift, `ledger-locate.sh` not opted in.
+  Calls now reach the script by path; without a repo these exit 2.
+  ([#95](https://github.com/woldinius/wai-skill-suite/issues/95))
 
 ## [0.5.2] — 2026-09-28
 
