@@ -158,3 +158,4 @@ repository's, not this one's.)
 | 2026-09-30T21:21Z | 121 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
 | 2026-09-30T21:29Z | 110 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
 | 2026-09-30T21:41Z | 110 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-CONTRACT EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
+| 2026-09-30T21:48Z | 130 | NO-GO | ✗ touches an excluded domain — the human merges these, always: EX-GUARD; ✓ quality catalog present; ✓ repo mode: solo; ✓ all 1 check(s) main requires are SUCCESS | |
