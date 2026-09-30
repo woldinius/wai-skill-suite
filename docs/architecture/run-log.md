@@ -99,6 +99,8 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-28T21:48Z | wai-pr-review | PR #109 | NO-GO |
 | 2026-09-28T21:55Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-28T22:07Z | wai-pr-review | PR #109 | NO-GO |
+| 2026-09-28T21:32Z | wai-implementation | #83 — release-lint holds the install pins to the newest tag (PR #110) | third relation: one finding names each lagging file:line and the pin-bump PR; behind only; suites 604 green |
+| 2026-09-28T21:32Z | wai-testing | #83 — release-lint pin fixtures (PR #110) | 6 cases (window, missed line, equal, ahead, no pin, one-finding count); 8 sabotages each seen red; sh + dash |
 | 2026-09-28T22:13Z | wai-implementation | issue #95 | script calls run from the repo root, four false cleans removed; PR opened |
 | 2026-09-28T22:13Z | wai-testing | issue #95 | 19 cases on a plugin-cache fixture, each fix counterproofed |
 | 2026-09-28T23:05Z | wai-implementation | PR #121 fix round | 3 Minors fixed: run-log needs a repo, check 4b reads local IDs, contract-lint holds the call form |
