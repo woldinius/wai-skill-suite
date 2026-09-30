@@ -639,3 +639,49 @@ The keep-items are one run each; the 9/9 and 3/3 are strong but from two develop
 still cannot see the question or the ordering except by *naming* the situation — which is prose, and
 prose is a probability, not a guarantee. That trade is deliberate (you cannot mechanise the ceiling),
 but it is a trade, not a fix.
+
+---
+
+## Corrections, 2026-09-29 · field reports, re-read against this repository
+
+A documentation audit re-read the field reports against this repository's tree, history and
+issues. Per rule 2 in [learnings/README.md](learnings/README.md), the reports stay as written
+except for the three rewordings listed at the end; each correction is recorded here and points at
+the report and line.
+
+- [2026-07-14 backend-web](field-reports/2026-07-14-backend-web-error-statistics.md), headline
+  (lines 18–19): both sentences, "0 were found by thinking" (quoted in the index of
+  learnings/README.md) and "every single one was found by an artefact that ran and disagreed",
+  have four exceptions in the report's own tables. Rows 7 and 8 of §1a (lines 47–48) were
+  overruled by upstream review, as their cells say, not refuted by running anything; the
+  "Running the thing" cell (line 31) and the §1a heading (line 37) do not hold for them either.
+  Rows 15 and 17 of §1c (lines 74 and 76) were caught by reading, "only on a second reading" and
+  "by reading the result", and the §1 table names "re-reading my own work" as a catch (line 33).
+- [2026-07-14 iOS](field-reports/2026-07-14-ios-error-statistics.md), takeaway 4 (lines 96–97):
+  the rows it cites are 5 cases, issues B4–B6 and doc claims B7 and B9, where the sentence counts
+  4 issues + 3 doc claims.
+- [2026-08-05 first checkout](field-reports/2026-08-05-first-checkout-review.md), the table of
+  filed findings (lines 100–112): #1–#11 are issue numbers of the repository this one was
+  republished from on 2026-08-11; in this repository those numbers are other issues and PRs.
+- [2026-08-05 second review](field-reports/2026-08-05-second-review-corrections.md), lines 4, 20
+  and 23: PR #12 and the commits `819923d` and `fa49324` belong to that earlier repository too.
+  They are not in this repository's history, so the `git show` check cannot be re-run here.
+- [2026-08-06 thirty runs](field-reports/2026-08-06-thirty-runs-zero-false-negatives.md), lines
+  13–14: GO 5 + NO-GO 22 + UNKNOWN 0 is 27; the other 3 of the 30 verdicts are not itemised.
+- [2026-09-06 two months](field-reports/2026-09-06-two-months-of-gate-259-verdicts.md), outcome
+  note, line 30: the patch for #68 merged as PR #79. PR #72 is where it was reviewed; #72 was
+  closed unmerged when its base branch was deleted (#80; this resolves #81).
+
+**Reworded, not corrected.** Three sentences judged a person instead of stating a fact. Each now
+states the fact; no number and no finding changed, and the previous wording is in git history:
+
+- 2026-07-14 backend-web, §2 item 3 (lines 98–99): the reader's reaction is now stated as the
+  fact it was: a human read the number and did not flag it.
+- 2026-08-05 first checkout, lines 125–126: the self-audit's verdict was not re-read before
+  publication.
+- [2026-08-12 three weeks](field-reports/2026-08-12-three-weeks-of-ledger.md), finding 5 (lines
+  92–93): the remedy was printed 55 times while `main` still declared no required checks; its
+  intake note names the passage (lines 9–10).
+
+The four passages rephrased on 2026-09-15 in the 2026-09-06 report are listed in that report's own
+wording note.
