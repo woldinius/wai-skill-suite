@@ -12,9 +12,9 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 ### Fixed
 
 - **The gate's zero-checks advice fits the base.** When no check reports but the base declares
-  required checks, the ✗ line says so and names the likely causes, a merge conflict with the base
-  or a workflow not triggered, instead of prescribing wai-cicd. The verdict stays NO-GO;
-  `gate-stats.sh` counts it under checks, not setup.
+  required checks, the ✗ line says so and names the likely causes (a run not started yet, a merge
+  conflict, a workflow not triggered) instead of prescribing wai-cicd. The verdict stays
+  NO-GO; `gate-stats.sh` counts it under checks, not setup.
   ([#127](https://github.com/woldinius/wai-skill-suite/issues/127))
 
 ## [0.5.3] — 2026-09-30

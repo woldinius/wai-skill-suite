@@ -114,8 +114,16 @@ with main, and the gate said *run wai-cicd* — a setup step for a repo that was
 
 So the gate asks the same required set it judges by — rulesets, then legacy branch protection —
 before it advises. **None declared:** *run wai-cicd*, unchanged. **Declared:** the line says the base
-declares them and none reported, and names the likely causes: a merge conflict with the base, or a
-workflow that was not triggered. The verdict is NO-GO either way; only the advice differs.
+declares them and none reported, and names the likely causes: the run has not started yet, a merge
+conflict with the base, or a workflow not triggered. The first is the most common: in 4 of the 7
+zero-checks rows in this repo's ledger (#26 twice, #49, #63), the gate ran within a minute of a
+push (the review of #140, read from commit and creation times). The verdict is NO-GO either way;
+only the advice differs.
+
+The line names at most three required checks, within 70 characters, then *+N more*. It comes before
+the domain ✗ in the ledger cell, which is capped at 400 characters. With nine matrix contexts named
+in full, the cap cut the `EX-*` IDs off the row, and `gate-stats.sh --report` no longer counted them
+(the review of #140).
 
 The declared case is worded as *required check(s) not green*, so `gate-stats.sh` counts it under
 *checks*, not *setup* — setup there means "no required checks declared", which is not this case.
