@@ -54,7 +54,10 @@ week. This is that same incident with a new missing file in it, so it gets the s
 not an advisory.
 
 LOOKED UP RELATIVE TO THE REPO, NEVER TO $0. doctor is routinely run from a suite CHECKOUT against
-a foreign target — install.sh's last line does exactly that. Resolving the classifier next to THIS
+a foreign target — install.sh's last line does exactly that. (Corrected 2026-10-04: install.sh runs
+the copy it just installed in the target, `"$SKILLS_DIR/wai/scripts/doctor.sh"`, and always has; a
+checkout's doctor reaches a target only when someone runs it by hand. The rule holds either way.)
+Resolving the classifier next to THIS
 script would find the checkout's own copy and pronounce the target healthy. The only question that
 matters is what the TARGET's merge-gate.sh will find when it runs there, and it resolves the path
 from its own location inside the target: .claude/skills/wai/scripts/excluded-domains.sh.
@@ -77,3 +80,45 @@ properly when it runs — but it runs at SETUP time, and this file can rot at an
 Read as affirmative: yes/true/on/1. The canonical value coordination-lint enforces is "yes", but a
 human who wrote `true` believes autonomy is on, and doctor's whole job is the gap between what the
 human believes is switched on and what actually is.
+
+## A plugin install is not a repo install
+
+Since #95 the scripts read the right repo from a plugin install, but what doctor printed still
+assumed a repo install (#124). A plugin user was told to re-run install.sh for a version stamp a
+plugin never writes, read "the merge gate is not installed in this repo — run install.sh", and was
+handed `sh .claude/skills/wai-pr-review/scripts/gate-stats.sh --report --mark`, a path that repo
+does not have. Every line was an advisory, so nothing was misreported as drift, but each one sent
+the user to the other installer.
+
+So doctor now tells them apart by where the running copy sits, with three outcomes:
+
+- **repo**: the copy belongs to this repository. It is the repo's own `.claude/skills`, as
+  install.sh lays one out, or a copy in another worktree of the same repository (git's common dir
+  is the same). A plugin's own repo, such as this one, carries both the skills and the manifest; it
+  is a repo install too.
+- **plugin**: the copy sits outside the repository, in a tree with `.claude-plugin/plugin.json`
+  that is no git checkout itself. The plugin cache is a copy, never a clone. The version comes
+  from that manifest; a repo that also carries an install.sh stamp is told every wai skill loads
+  twice.
+- **external**: anything else outside the repository, mostly a suite checkout run by hand
+  against another repo. It is worded neutrally ("doctor runs from …, outside this repo"),
+  reports the repo's own install state, and vouches for nothing from its own copy.
+
+The first version knew only the manifest. The review of #137 reproduced what that cost: a
+checkout's doctor run against a repo with no suite answered ✓ for the plugin and for its own
+classifier, a repo install was told it was installed twice, and in this suite's own linked
+worktrees (skills in the main checkout, cwd in `.claude/worktrees/*`) doctor reported a plugin and
+`--snippet` refused. The known cost of the rule: a plugin loaded in place from a checkout
+(`--plugin-dir`, or a marketplace added from a local directory) reads as external, so it gets the
+neutral wording, not the plugin's.
+
+A printed command names a script by its path beside the running one: repo-relative when that copy
+is the repo's own `.claude/skills`, absolute and quoted otherwise, so a path with a space runs as
+printed. An absolute path into the plugin cache carries the version, which is right for a command
+run now and wrong for one stored in a config (see `invocation-log.md` § *A plugin install gets no
+snippet*). `retro-compliance.sh` follows the same rule for its `--snippet` hint. `invocation-log.sh
+--snippet` uses the same install predicate as doctor.
+
+The classifier rule of the section above stands: a repo with its own gate is checked at its own
+copy, wherever doctor runs from. Only a repo with no gate of its own, audited from a plugin, is
+checked at the plugin's copy, because that is the gate that runs for it.

@@ -49,6 +49,8 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 # An explicit argument still wins. With none, and no work tree around the cwd — the plugin cache is
 # not a git repo — the old `.` fallback committed that same false clean again (#95), so that is now
 # UNKNOWN: doctor cannot tell which repo it was meant to check.
+# The skills tree this doctor runs from, resolved before any cd ($0 may be relative).
+SELF_SKILLS="$(CDPATH='' cd -- "$(dirname -- "$0")/../.." 2>/dev/null && pwd -P || true)"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "${1:-}" ] && [ -z "$REPO_ROOT" ]; then
   echo "doctor: no repo root given and the cwd is not inside a git work tree — nothing was checked (UNKNOWN). Run it from the repo root, or pass the root." >&2
@@ -75,6 +77,30 @@ conf_val() { sed -n "s/^$1=//p" "$2" 2>/dev/null | tr -d '"' | head -1; }
 
 echo "doctor: $ROOT"
 
+# ── WHICH INSTALL IS RUNNING (invocation-log.sh --snippet decides the same way in a git repo) ───
+#   repo      the running copy belongs to this repository: its .claude/skills, or another
+#             worktree of it (git's common dir is the same)
+#   plugin    outside it, in a tree with .claude-plugin/plugin.json that is no git checkout itself
+#             (the plugin cache is a copy, never a clone)
+#   external  outside it otherwise: a suite checkout run against another repo, a personal copy.
+#             Worded neutrally, and it vouches for nothing from its own copy.
+# A printed command names a script by its path beside this one: repo-relative when this copy is the
+# repo's own .claude/skills, absolute and quoted otherwise — never a repo path the install may lack.
+# Why: docs/rationale/doctor.md § A plugin install is not a repo install
+gcd() { ( cd "$1" 2>/dev/null && _g="$(git rev-parse --git-common-dir 2>/dev/null)" && cd "$_g" 2>/dev/null && pwd -P ); }
+SELF_ROOT=""; [ -n "$SELF_SKILLS" ] && SELF_ROOT="$(cd "$SELF_SKILLS/../.." 2>/dev/null && pwd -P)"
+INREPO=no; MODE=external
+if [ -z "$SELF_SKILLS" ] || [ "$SELF_SKILLS" = "$(pwd -P)/.claude/skills" ]; then INREPO=yes; MODE=repo
+else
+  _sc="$(gcd "$SELF_SKILLS")"
+  if [ -n "$_sc" ] && [ "$_sc" = "$(gcd .)" ]; then MODE=repo
+  elif [ -f "$SELF_ROOT/.claude-plugin/plugin.json" ] && [ ! -e "$SELF_ROOT/.git" ]; then MODE=plugin
+  fi
+fi
+PLUGIN_ROOT=""; [ "$MODE" = plugin ] && PLUGIN_ROOT="$SELF_ROOT"
+SKD="${SELF_SKILLS:-$(pwd -P)/.claude/skills}"
+sib() { if [ "$INREPO" = yes ]; then printf '.claude/skills/%s' "$1"; else printf '"%s/%s"' "$SKD" "$1"; fi; }
+
 # A LINKED worktree writes its own books. The three append-only writers (gate ledger, run log,
 # invocation log) resolve --show-toplevel, so here their rows land in THIS worktree's
 # docs/architecture/ and reach the default branch with this branch's PR — a field repo lost 27 rows
@@ -92,8 +118,16 @@ fi
 
 # Suite version — the provenance foundation. Phase B compares an artifact's stamp against this.
 VER=".claude/.wai-suite-version"
-if [ -f "$VER" ]; then ok "installed suite version: $(head -1 "$VER" 2>/dev/null)"
-else note "no $VER — re-run install.sh to stamp the suite version (staleness checks will need it)"; fi
+if [ "$MODE" = plugin ]; then
+  PV="$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$PLUGIN_ROOT/.claude-plugin/plugin.json" 2>/dev/null | head -1)"
+  ok "plugin install: the suite runs from $PLUGIN_ROOT (version ${PV:-not stated in its plugin.json}) — its skills are not in this repo, so install.sh's $VER is not expected here"
+  # Both installs at once: Claude Code loads each wai skill twice, the plugin's copy under its prefix.
+  [ -f "$VER" ] && note "this repo also carries a repo install ($VER: $(head -1 "$VER" 2>/dev/null)) — with the plugin enabled, every wai skill loads twice. Keep one: remove the repo copy (install.sh's .claude/.wai-suite-manifest lists it), or disable the plugin for this repo."
+else
+  [ "$MODE" = external ] && note "doctor runs from $SELF_ROOT, outside this repo — the install checks below read this repo's own install, never the copy doctor runs from"
+  if [ -f "$VER" ]; then ok "installed suite version: $(head -1 "$VER" 2>/dev/null)"
+  else note "no $VER — re-run install.sh to stamp the suite version (staleness checks will need it)"; fi
+fi
 
 CATALOG="docs/architecture/quality-attributes.md"
 CONF="docs/architecture/merge-gate.conf"
@@ -142,7 +176,7 @@ if [ -f "$LEDGER" ] && [ -r "$LEDGER" ]; then
   case "$SINCE" in
     M*) NV="${SINCE#M}"
         if [ "$NV" -ge "$RT" ]; then
-          note "$NV verdict(s) since the last report marker — AT/OVER the report threshold ($RT, override REPORT_THRESHOLD env). Cut one: sh .claude/skills/wai-pr-review/scripts/gate-stats.sh --report --mark"
+          note "$NV verdict(s) since the last report marker — AT/OVER the report threshold ($RT, override REPORT_THRESHOLD env). Cut one: sh $(sib wai-pr-review/scripts/gate-stats.sh) --report --mark"
         else
           note "$NV verdict(s) since the last report marker (threshold $RT, override REPORT_THRESHOLD env)"
         fi ;;
@@ -180,14 +214,26 @@ fi
 # merge-gate.sh delegates every domain question here and is UNKNOWN without it. A partial install
 # therefore disables the gate, not just a helper: checked as DRIFT (✗), at the path the gate uses.
 # Why: docs/rationale/doctor.md § The classifier’s presence became load-bearing
-GATE_SH=".claude/skills/wai-pr-review/scripts/merge-gate.sh"
-EXCL_SH=".claude/skills/wai/scripts/excluded-domains.sh"
+# Checked where the gate that runs for THIS repo resolves it: the repo's own copy whenever it has
+# one (a checkout's doctor run against a target must not vouch for the target from its own copy);
+# with none, and doctor running from a plugin, the plugin's copy beside this doctor. An external
+# copy (a checkout) never stands in: the repo's own state is reported.
+GDIR=".claude/skills"
+REINSTALL="Re-run install.sh (it installs the whole suite; the classifier ships with the 'wai' skill)."
+if [ "$MODE" = plugin ] && [ ! -f "$GDIR/wai-pr-review/scripts/merge-gate.sh" ]; then
+  GDIR="$SKD"
+  REINSTALL="Update or reinstall the plugin (it ships the whole suite; the classifier comes with the 'wai' skill)."
+fi
+GATE_SH="$GDIR/wai-pr-review/scripts/merge-gate.sh"
+EXCL_SH="$GDIR/wai/scripts/excluded-domains.sh"
 if [ -f "$GATE_SH" ]; then
   if [ -f "$EXCL_SH" ]; then
     ok "the shared domain classifier is installed where merge-gate.sh looks for it ($EXCL_SH)"
   else
-    drift "$EXCL_SH is MISSING though $GATE_SH is installed → the gate cannot classify excluded domains, fails closed, and returns UNKNOWN on EVERY PR — which is indistinguishable from a week with no PRs. Re-run install.sh (it installs the whole suite; the classifier ships with the 'wai' skill)."
+    drift "$EXCL_SH is MISSING though $GATE_SH is installed → the gate cannot classify excluded domains, fails closed, and returns UNKNOWN on EVERY PR — which is indistinguishable from a week with no PRs. $REINSTALL"
   fi
+elif [ "$MODE" = plugin ]; then
+  note "no merge-gate.sh in the plugin beside this doctor ($GATE_SH) — the plugin is incomplete, so nothing reads the shared domain classifier. Update or reinstall the plugin."
 else
   note "no $GATE_SH here — the merge gate is not installed in this repo, so nothing reads the shared domain classifier yet. Run install.sh if this repo is meant to have the suite."
 fi

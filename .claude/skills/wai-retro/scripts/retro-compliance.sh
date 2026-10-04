@@ -33,6 +33,8 @@
 set -u
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
+# The skills tree this script runs from, resolved before any cd ($0 may be relative).
+SELF_SKILLS="$(CDPATH='' cd -- "$(dirname -- "$0")/../.." 2>/dev/null && pwd -P || true)"
 SINCE=""
 ROOT=""
 while [ $# -gt 0 ]; do
@@ -58,6 +60,13 @@ case "$SINCE" in
   *) echo "retro-compliance: --since wants YYYY-MM-DD, got '$SINCE'" >&2; exit 2 ;;
 esac
 cd "$ROOT" 2>/dev/null || { echo "retro-compliance: cannot cd to '$ROOT'" >&2; exit 2; }
+# A printed command names a sibling script by its path beside this one: repo-relative when this
+# copy is the repo's own .claude/skills, absolute and quoted otherwise (doctor.sh's path rule).
+# Why: docs/rationale/doctor.md § A plugin install is not a repo install
+sib() {
+  if [ -n "$SELF_SKILLS" ] && [ "$SELF_SKILLS" != "$(pwd -P)/.claude/skills" ]; then printf '"%s/%s"' "$SELF_SKILLS" "$1"
+  else printf '.claude/skills/%s' "$1"; fi
+}
 
 RLOG="${RUN_LOG:-docs/architecture/run-log.md}"
 LEDGER="${MERGE_GATE_LEDGER:-docs/architecture/gate-ledger.md}"
@@ -144,7 +153,7 @@ if [ -f "$ILOG" ] && [ -r "$ILOG" ]; then
     echo "    two units, not a rate: an invocation row counts one start, a run-log row counts one subject handled (merge-gate.sh writes one per verdict) — neither is the other's denominator, so no share is printed."
   fi
 else
-  echo "  invocations (hook): not installed — the start log is opt-in (sh .claude/skills/wai/scripts/invocation-log.sh --snippet); absence means the hook is off, never that nothing ran"
+  echo "  invocations (hook): not installed — the start log is opt-in (sh $(sib wai/scripts/invocation-log.sh) --snippet); absence means the hook is off, never that nothing ran"
 fi
 
 # ── gate-ledger verdicts in the period ───────────────────────────────────────────────────────────
