@@ -54,7 +54,10 @@ week. This is that same incident with a new missing file in it, so it gets the s
 not an advisory.
 
 LOOKED UP RELATIVE TO THE REPO, NEVER TO $0. doctor is routinely run from a suite CHECKOUT against
-a foreign target — install.sh's last line does exactly that. Resolving the classifier next to THIS
+a foreign target — install.sh's last line does exactly that. (Corrected 2026-10-04: install.sh runs
+the copy it just installed in the target, `"$SKILLS_DIR/wai/scripts/doctor.sh"`, and always has; a
+checkout's doctor reaches a target only when someone runs it by hand. The rule holds either way.)
+Resolving the classifier next to THIS
 script would find the checkout's own copy and pronounce the target healthy. The only question that
 matters is what the TARGET's merge-gate.sh will find when it runs there, and it resolves the path
 from its own location inside the target: .claude/skills/wai/scripts/excluded-domains.sh.
@@ -87,17 +90,34 @@ handed `sh .claude/skills/wai-pr-review/scripts/gate-stats.sh --report --mark`, 
 does not have. Every line was an advisory, so nothing was misreported as drift, but each one sent
 the user to the other installer.
 
-So doctor now tells the two apart by where the running copy sits. Inside the repo's
-`.claude/skills` it is a repo install, as install.sh lays one out; outside the repo, in a tree that
-carries `.claude-plugin/plugin.json`, it is a plugin install, and the version comes from that
-manifest. A plugin's own repo, such as this one, carries both the skills and the manifest; the copy
-that runs sits in the repo, so it is a repo install. When a repo has a plugin and a stamp from an
-earlier repo install, doctor names both, because every wai skill then loads twice.
+So doctor now tells them apart by where the running copy sits, with three outcomes:
 
-A printed command names a script by its path beside the running one: repo-relative inside the
-repo, absolute outside. An absolute path into the plugin cache carries the version, which is right
-for a command run now and wrong for one stored in a config (see `invocation-log.md` § *A plugin
-install gets no snippet*). `retro-compliance.sh` follows the same rule for its `--snippet` hint.
+- **repo**: the copy belongs to this repository. It is the repo's own `.claude/skills`, as
+  install.sh lays one out, or a copy in another worktree of the same repository (git's common dir
+  is the same). A plugin's own repo, such as this one, carries both the skills and the manifest; it
+  is a repo install too.
+- **plugin**: the copy sits outside the repository, in a tree with `.claude-plugin/plugin.json`
+  that is no git checkout itself. The plugin cache is a copy, never a clone. The version comes
+  from that manifest; a repo that also carries an install.sh stamp is told every wai skill loads
+  twice.
+- **external**: anything else outside the repository, mostly a suite checkout run by hand
+  against another repo. It is worded neutrally ("doctor runs from …, outside this repo"),
+  reports the repo's own install state, and vouches for nothing from its own copy.
+
+The first version knew only the manifest. The review of #137 reproduced what that cost: a
+checkout's doctor run against a repo with no suite answered ✓ for the plugin and for its own
+classifier, a repo install was told it was installed twice, and in this suite's own linked
+worktrees (skills in the main checkout, cwd in `.claude/worktrees/*`) doctor reported a plugin and
+`--snippet` refused. The known cost of the rule: a plugin loaded in place from a checkout
+(`--plugin-dir`, or a marketplace added from a local directory) reads as external, so it gets the
+neutral wording, not the plugin's.
+
+A printed command names a script by its path beside the running one: repo-relative when that copy
+is the repo's own `.claude/skills`, absolute and quoted otherwise, so a path with a space runs as
+printed. An absolute path into the plugin cache carries the version, which is right for a command
+run now and wrong for one stored in a config (see `invocation-log.md` § *A plugin install gets no
+snippet*). `retro-compliance.sh` follows the same rule for its `--snippet` hint. `invocation-log.sh
+--snippet` uses the same install predicate as doctor.
 
 The classifier rule of the section above stands: a repo with its own gate is checked at its own
 copy, wherever doctor runs from. Only a repo with no gate of its own, audited from a plugin, is

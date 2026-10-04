@@ -23,8 +23,8 @@
 # command can point at it for long; --snippet says so instead of printing one (#123).
 #
 # FAIL-OPEN, ABSOLUTELY: a hook that breaks the harness is worse than a lost row. Bad JSON, no
-# repo, unwritable file — everything exits 0 silently. The ONE defined negative is misuse
-# (an unknown argument): exit 2, so a typo in the hook config is visible, not swallowed.
+# repo, unwritable file — everything exits 0 silently. In hook mode the ONE defined negative is
+# misuse (an unknown argument): exit 2, so a typo in the hook config is visible, not swallowed.
 #
 #   exit 0  row appended, or input ignored (non-Skill tool, non-wai skill, unreadable anything)
 #   exit 1  --snippet in a plugin install: no snippet — the start log needs a repo install
@@ -40,15 +40,24 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 if [ "$#" -gt 0 ]; then
   case "$1" in
     --snippet)
-      # Plugin install: this copy runs from outside the repo, in a tree that carries a plugin
-      # manifest. Its path changes with every plugin update, so no snippet is printed for it.
+      # Plugin install (doctor.sh's predicate): this copy belongs to no worktree of the cwd's repo
+      # and sits in a tree with a plugin manifest that is no git checkout itself (the cache is a
+      # copy). Its path changes with every plugin update, so no snippet is printed for it.
       # Why: docs/rationale/invocation-log.md § A plugin install gets no snippet
+      gcd() { ( cd "$1" 2>/dev/null && _g="$(git rev-parse --git-common-dir 2>/dev/null)" && cd "$_g" 2>/dev/null && pwd -P ); }
       SELF_SKILLS="$(CDPATH='' cd -- "$(dirname -- "$0")/../.." 2>/dev/null && pwd -P || true)"
-      TOP="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-      [ -n "$TOP" ] && TOP="$(cd "$TOP" 2>/dev/null && pwd -P || true)"
-      if [ -n "$SELF_SKILLS" ] && [ "$SELF_SKILLS" != "${TOP:-/nonexistent}/.claude/skills" ] \
-         && [ -f "$SELF_SKILLS/../../.claude-plugin/plugin.json" ]; then
-        PLUGIN_ROOT="$(cd "$SELF_SKILLS/../.." 2>/dev/null && pwd -P)"
+      SELF_ROOT=""; [ -n "$SELF_SKILLS" ] && SELF_ROOT="$(cd "$SELF_SKILLS/../.." 2>/dev/null && pwd -P)"
+      PLUGIN=no
+      if [ -n "$SELF_SKILLS" ]; then
+        _sc="$(gcd "$SELF_SKILLS")"
+        if [ -z "$_sc" ] || [ "$_sc" != "$(gcd .)" ]; then
+          [ -f "$SELF_ROOT/.claude-plugin/plugin.json" ] && [ ! -e "$SELF_ROOT/.git" ] && PLUGIN=yes
+        fi
+      fi
+      if [ "$PLUGIN" = yes ]; then
+        PLUGIN_ROOT="$SELF_ROOT"
+        PNAME="$(sed -n 's/^[[:space:]]*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$PLUGIN_ROOT/.claude-plugin/plugin.json" 2>/dev/null | head -1)"
+        PNAME="${PNAME:-<plugin>}"
         cat <<PLUG
 No snippet: in a plugin install, the start log needs a repo install.
 This copy runs from the plugin at $PLUGIN_ROOT.
@@ -58,8 +67,10 @@ next update, and fails once it is removed: a hook error on every Skill call, and
 stable path into a plugin, \${CLAUDE_PLUGIN_ROOT}, resolves only in the plugin's own components,
 such as its hooks.json, and a hook there would run for every user of the plugin, while the start
 log is a per-developer opt-in.
-A start log needs a repo install (install.sh): there the script sits in the repo, at a path that
-does not change, and --snippet run from that copy prints the hook. Without one, retro-compliance.sh
+For a start log, switch this repo to a repo install:
+run install.sh in the repo and disable this plugin there (claude plugin disable $PNAME --scope local);
+with both on, every wai skill loads twice. The script then sits in the repo at a path that does
+not change, and --snippet run from that copy prints the hook. Without one, retro-compliance.sh
 reports the hook as not installed, which means off, never that nothing ran.
 PLUG
         exit 1

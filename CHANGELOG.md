@@ -19,14 +19,14 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ### Fixed
 
-- **`doctor.sh` tells a plugin install from a repo install.** From a plugin it reads the version
-  from the plugin manifest and no longer sends the user to `install.sh`. Printed commands, here and
-  in `retro-compliance.sh`, name a script by its path beside the running one; the learning-gap
-  `CLAUDE.md` anchor names the skill, not a repo path.
+- **`doctor.sh` tells a plugin install from a repo install.** A plugin's version comes from its
+  manifest, with no pointer to `install.sh`; a suite checkout or another worktree of the repo is no
+  plugin. Printed commands, here and in `retro-compliance.sh`, name a script by its quoted path
+  beside the running one; the learning-gap anchor names the skill.
   ([#124](https://github.com/woldinius/wai-skill-suite/issues/124))
 - **`invocation-log.sh --snippet` in a plugin install** printed a hook command whose path does not
   exist there, so the hook failed on every Skill call. It now prints no hook, says the start log
-  needs a repo install, and exits 1.
+  needs a repo install with the plugin disabled for that repo, and exits 1.
   ([#123](https://github.com/woldinius/wai-skill-suite/issues/123))
 
 ## [0.5.3] — 2026-09-30

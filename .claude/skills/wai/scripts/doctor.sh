@@ -77,21 +77,29 @@ conf_val() { sed -n "s/^$1=//p" "$2" 2>/dev/null | tr -d '"' | head -1; }
 
 echo "doctor: $ROOT"
 
-# ── WHICH INSTALL IS RUNNING: the repo's own copy, or a plugin outside it ────────────────────────
-# Repo install: this doctor sits in the repo's .claude/skills, where install.sh put it. Plugin
-# install: it sits outside the repo, in a tree that carries .claude-plugin/plugin.json. The version
-# below reads the install that is running (the classifier check reads the gate that runs for this
-# repo); a printed command names a script by its path beside this one (repo-relative inside the
-# repo, absolute outside), never a repo path the install may not have.
+# ── WHICH INSTALL IS RUNNING (invocation-log.sh --snippet decides the same way in a git repo) ───
+#   repo      the running copy belongs to this repository: its .claude/skills, or another
+#             worktree of it (git's common dir is the same)
+#   plugin    outside it, in a tree with .claude-plugin/plugin.json that is no git checkout itself
+#             (the plugin cache is a copy, never a clone)
+#   external  outside it otherwise: a suite checkout run against another repo, a personal copy.
+#             Worded neutrally, and it vouches for nothing from its own copy.
+# A printed command names a script by its path beside this one: repo-relative when this copy is the
+# repo's own .claude/skills, absolute and quoted otherwise — never a repo path the install may lack.
 # Why: docs/rationale/doctor.md § A plugin install is not a repo install
-INREPO=no
-[ -n "$SELF_SKILLS" ] && [ "$SELF_SKILLS" = "$(pwd -P)/.claude/skills" ] && INREPO=yes
-MODE=repo; PLUGIN_ROOT=""
-if [ "$INREPO" = no ] && [ -n "$SELF_SKILLS" ] && [ -f "$SELF_SKILLS/../../.claude-plugin/plugin.json" ]; then
-  MODE=plugin; PLUGIN_ROOT="$(cd "$SELF_SKILLS/../.." 2>/dev/null && pwd -P)"
+gcd() { ( cd "$1" 2>/dev/null && _g="$(git rev-parse --git-common-dir 2>/dev/null)" && cd "$_g" 2>/dev/null && pwd -P ); }
+SELF_ROOT=""; [ -n "$SELF_SKILLS" ] && SELF_ROOT="$(cd "$SELF_SKILLS/../.." 2>/dev/null && pwd -P)"
+INREPO=no; MODE=external
+if [ -z "$SELF_SKILLS" ] || [ "$SELF_SKILLS" = "$(pwd -P)/.claude/skills" ]; then INREPO=yes; MODE=repo
+else
+  _sc="$(gcd "$SELF_SKILLS")"
+  if [ -n "$_sc" ] && [ "$_sc" = "$(gcd .)" ]; then MODE=repo
+  elif [ -f "$SELF_ROOT/.claude-plugin/plugin.json" ] && [ ! -e "$SELF_ROOT/.git" ]; then MODE=plugin
+  fi
 fi
+PLUGIN_ROOT=""; [ "$MODE" = plugin ] && PLUGIN_ROOT="$SELF_ROOT"
 SKD="${SELF_SKILLS:-$(pwd -P)/.claude/skills}"
-sib() { if [ "$INREPO" = yes ]; then printf '.claude/skills/%s' "$1"; else printf '%s/%s' "$SKD" "$1"; fi; }
+sib() { if [ "$INREPO" = yes ]; then printf '.claude/skills/%s' "$1"; else printf '"%s/%s"' "$SKD" "$1"; fi; }
 
 # A LINKED worktree writes its own books. The three append-only writers (gate ledger, run log,
 # invocation log) resolve --show-toplevel, so here their rows land in THIS worktree's
@@ -115,8 +123,11 @@ if [ "$MODE" = plugin ]; then
   ok "plugin install: the suite runs from $PLUGIN_ROOT (version ${PV:-not stated in its plugin.json}) — its skills are not in this repo, so install.sh's $VER is not expected here"
   # Both installs at once: Claude Code loads each wai skill twice, the plugin's copy under its prefix.
   [ -f "$VER" ] && note "this repo also carries a repo install ($VER: $(head -1 "$VER" 2>/dev/null)) — with the plugin enabled, every wai skill loads twice. Keep one: remove the repo copy (install.sh's .claude/.wai-suite-manifest lists it), or disable the plugin for this repo."
-elif [ -f "$VER" ]; then ok "installed suite version: $(head -1 "$VER" 2>/dev/null)"
-else note "no $VER — re-run install.sh to stamp the suite version (staleness checks will need it)"; fi
+else
+  [ "$MODE" = external ] && note "doctor runs from $SELF_ROOT, outside this repo — the install checks below read this repo's own install, never the copy doctor runs from"
+  if [ -f "$VER" ]; then ok "installed suite version: $(head -1 "$VER" 2>/dev/null)"
+  else note "no $VER — re-run install.sh to stamp the suite version (staleness checks will need it)"; fi
+fi
 
 CATALOG="docs/architecture/quality-attributes.md"
 CONF="docs/architecture/merge-gate.conf"
@@ -205,7 +216,8 @@ fi
 # Why: docs/rationale/doctor.md § The classifier’s presence became load-bearing
 # Checked where the gate that runs for THIS repo resolves it: the repo's own copy whenever it has
 # one (a checkout's doctor run against a target must not vouch for the target from its own copy);
-# with none, and doctor running from a plugin, the plugin's copy beside this doctor.
+# with none, and doctor running from a plugin, the plugin's copy beside this doctor. An external
+# copy (a checkout) never stands in: the repo's own state is reported.
 GDIR=".claude/skills"
 REINSTALL="Re-run install.sh (it installs the whole suite; the classifier ships with the 'wai' skill)."
 if [ "$MODE" = plugin ] && [ ! -f "$GDIR/wai-pr-review/scripts/merge-gate.sh" ]; then

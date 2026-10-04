@@ -61,10 +61,10 @@ case "$SINCE" in
 esac
 cd "$ROOT" 2>/dev/null || { echo "retro-compliance: cannot cd to '$ROOT'" >&2; exit 2; }
 # A printed command names a sibling script by its path beside this one: repo-relative when this
-# copy sits in the repo (a repo install), absolute when it runs from outside (a plugin install).
+# copy is the repo's own .claude/skills, absolute and quoted otherwise (doctor.sh's path rule).
 # Why: docs/rationale/doctor.md § A plugin install is not a repo install
 sib() {
-  if [ -n "$SELF_SKILLS" ] && [ "$SELF_SKILLS" != "$(pwd -P)/.claude/skills" ]; then printf '%s/%s' "$SELF_SKILLS" "$1"
+  if [ -n "$SELF_SKILLS" ] && [ "$SELF_SKILLS" != "$(pwd -P)/.claude/skills" ]; then printf '"%s/%s"' "$SELF_SKILLS" "$1"
   else printf '.claude/skills/%s' "$1"; fi
 }
 

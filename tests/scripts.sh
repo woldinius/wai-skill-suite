@@ -2148,7 +2148,7 @@ out="$(pvdoc)"; rc=$?
 assert "doctor from a plugin, repo as cwd → a plugin install, named with its root and version, exit 0" 0 "$rc" "$out" \
   "plugin install: the suite runs from $PVR \(version $PVER\)" 'to stamp the suite version|Run install\.sh'
 assert "  · the report hint names gate-stats.sh beside the running doctor, in the plugin" 0 "$rc" "$out" \
-  "Cut one: sh $PVS/wai-pr-review/scripts/gate-stats\.sh --report --mark" 'sh \.claude/skills/'
+  "Cut one: sh \"$PVS/wai-pr-review/scripts/gate-stats\.sh\" --report --mark" 'sh \.claude/skills/'
 assert "  · the classifier is checked beside merge-gate.sh in the plugin, not in the repo" 0 "$rc" "$out" \
   "classifier is installed where merge-gate\.sh looks for it \($PVS/wai/scripts/excluded-domains\.sh\)" 'merge-gate\.sh here'
 # The printed command is a command: run from the repo root, it cuts the report and plants the marker.
@@ -2193,10 +2193,45 @@ assert "  · and --snippet there prints the hook, exit 0" 0 "$rc" "$out" \
   '"command": "sh \.claude/skills/wai/scripts/invocation-log\.sh"' 'No snippet'
 rm -rf "$RIREPO/.claude-plugin"
 
+# A manifest alone does not make a plugin (#137 review). A suite CHECKOUT carries one too, and run
+# by hand against another repo it must not vouch for that repo from its own copy (A) nor call a
+# repo install a double install (B). A linked worktree of the same repository is the same repo,
+# wherever the skill dir and the cwd sit (C): git's common dir says so.
+CHK="$TMP/suite-checkout"; gitrepo "$CHK"; mkdir -p "$CHK/.claude"
+cp -R "$ROOT/.claude/skills" "$CHK/.claude/"; cp -R "$ROOT/.claude-plugin" "$CHK/"; gitcommit "$CHK" 'chore: suite'
+CHKS="$CHK/.claude/skills"
+out="$( cd "$PVREPO" && "$SH" "$CHKS/wai/scripts/doctor.sh" 2>&1 )"; rc=$?
+assert "(A) a suite checkout's doctor against a repo with no suite → no plugin line, no ✓ from its own copy" 0 "$rc" "$out" \
+  "doctor runs from $CHK, outside this repo" 'plugin install|classifier is installed'
+assert "  · the repo's own state is reported: no gate here, install.sh's note" 0 "$rc" "$out" \
+  'no \.claude/skills/wai-pr-review/scripts/merge-gate\.sh here'
+out="$( cd "$PVREPO" && "$SH" "$CHKS/wai/scripts/invocation-log.sh" --snippet 2>&1 )"; rc=$?
+assert "  · and its --snippet there is no plugin's: the snippet, exit 0" 0 "$rc" "$out" '"command"' 'No snippet'
+out="$( cd "$RIREPO" && "$SH" "$CHKS/wai/scripts/doctor.sh" 2>&1 )"; rc=$?
+assert "(B) a suite checkout's doctor against a repo install → its stamp, no double-load advice" 0 "$rc" "$out" \
+  'installed suite version: abc1234' 'loads twice|plugin install'
+CHKWT="$TMP/suite-checkout-wt"; git -C "$CHK" worktree add -q "$CHKWT" -b side >/dev/null 2>&1
+out="$( cd "$CHKWT" && "$SH" "$CHKS/wai/scripts/doctor.sh" 2>&1 )"; rc=$?
+assert "(C) doctor from the main checkout, cwd in a linked worktree of it → the same repo, no plugin line" 0 "$rc" "$out" \
+  'this checkout is a linked worktree' 'plugin install|outside this repo'
+out="$( cd "$CHKWT" && "$SH" "$CHKS/wai/scripts/invocation-log.sh" --snippet 2>&1 )"; rc=$?
+assert "  · and --snippet there prints the hook, exit 0" 0 "$rc" "$out" \
+  '"command": "sh \.claude/skills/wai/scripts/invocation-log\.sh"' 'No snippet'
+# The same-repository test on its own: a suite tree vendored in a SUBDIRECTORY of the repo, with a
+# manifest and no .git of its own. Only git's common dir says it is this repo, not a plugin.
+VND="$TMP/vendored"; gitrepo "$VND"; mkdir -p "$VND/vendor/wai/.claude"
+cp -R "$ROOT/.claude/skills" "$VND/vendor/wai/.claude/"; cp -R "$ROOT/.claude-plugin" "$VND/vendor/wai/"
+gitcommit "$VND" 'chore: vendored suite'
+out="$( cd "$VND" && "$SH" vendor/wai/.claude/skills/wai/scripts/doctor.sh 2>&1 )"; rc=$?
+assert "a suite vendored in a subdir of the repo (manifest, no .git of its own) → the same repo, no plugin line" 0 "$rc" "$out" \
+  'no quality catalog' 'plugin install|outside this repo'
+out="$( cd "$VND" && "$SH" vendor/wai/.claude/skills/wai/scripts/invocation-log.sh --snippet 2>&1 )"; rc=$?
+assert "  · and --snippet there prints the hook, exit 0" 0 "$rc" "$out" '"command"' 'No snippet'
+
 # ── retro-compliance ──────────────────────────────────────────────────────────────────────────────
 out="$( cd "$PVREPO" && PATH="$NOGHBIN" "$SH" "$PVS/wai-retro/scripts/retro-compliance.sh" 2>&1 )"; rc=$?
 assert "retro-compliance from a plugin → the --snippet hint names invocation-log.sh in the plugin" 0 "$rc" "$out" \
-  "not installed — the start log is opt-in \(sh $PVS/wai/scripts/invocation-log\.sh --snippet\)" 'sh \.claude/skills/'
+  "not installed — the start log is opt-in \(sh \"$PVS/wai/scripts/invocation-log\.sh\" --snippet\)" 'sh \.claude/skills/'
 out="$( cd "$RIREPO" && PATH="$NOGHBIN" "$SH" .claude/skills/wai-retro/scripts/retro-compliance.sh 2>&1 )"; rc=$?
 assert "retro-compliance in a repo install → the repo path beside it" 0 "$rc" "$out" \
   'not installed — the start log is opt-in \(sh \.claude/skills/wai/scripts/invocation-log\.sh --snippet\)'
@@ -2209,6 +2244,10 @@ assert "  · it names the copy and why its path will not hold (the version is in
   "runs from the plugin at $PVR\."
 assert "  · and why the plugin's own hooks.json is not the way: it would run for every user" 1 "$rc" "$out" \
   'hooks\.json, and a hook there would run for every user of the plugin'
+# …and the whole move, not half of it: a repo install alone, with the plugin still on, loads every
+# skill twice, which doctor then reports (#137 review).
+assert "  · it names the whole move: a repo install AND the plugin disabled for that repo" 1 "$rc" "$out" \
+  'install\.sh in the repo and disable this plugin there'
 out="$( cd "$TMP" && "$SH" "$PVS/wai/scripts/invocation-log.sh" --snippet 2>&1 )"; rc=$?
 assert "--snippet from a plugin, cwd in no repo at all → the same exit 1, never a snippet" 1 "$rc" "$out" \
   'No snippet: in a plugin install' '"command"'
@@ -2221,6 +2260,22 @@ LGTXT="$(awk '/^### Optional CLAUDE\.md anchor/,/^## Ground rules/' "$ROOT/.clau
          grep -F 'MARKER — see' "$ROOT/.claude/skills/wai-learning-gap/scripts/install-hook.sh")"
 assert "the learning-gap CLAUDE.md anchor and hook comment cite the skill, not a path a plugin repo lacks" 0 0 "$LGTXT" \
   "Protocol: the \`wai-learning-gap\` skill's" '\.claude/skills/wai-learning-gap'
+
+# ── the eval's gate grader keys on a line only a RUN of merge-gate.sh prints (#137 review) ────────
+# The first graders passed on a run where the gate never ran: a call that failed, a Read of the
+# script (it holds VERDICT lines), a reply that says UNKNOWN. The grader now needs a line the gate
+# ASSEMBLES at run time, after the plugin-path call. Two premises keep it honest, pinned here: a run
+# in an empty, non-repo workspace prints that line, and no file in the tree holds it, so reading
+# cannot satisfy it. The phrase is assembled below, never written whole in this file either.
+EVGR="$ROOT/evals/pr-review-smoke/graders/gate-ran-from-plugin.md"
+EVRE="$(sed -n "s/^pattern: '.*\*?\(.*\)'\$/\1/p" "$EVGR" 2>/dev/null)"
+EVWS="$TMP/eval-ws"; mkdir -p "$EVWS"
+out="$( cd "$EVWS" && PATH="$NOGHBIN" "$SH" "$PVS/wai-pr-review/scripts/merge-gate.sh" 1 2>&1 )"; rc=$?
+assert "eval premise: the gate run in an empty workspace prints the line the grader keys on" 2 "$rc" "$out" "${EVRE:-no grader pattern read}"
+EVLIT="skipped the gate-ledger row and the run-log row for this $(printf 'UNKNO')WN verdict"
+EVHOLD="$(grep -rlF --exclude-dir=.git --exclude-dir=worktrees --exclude-dir=results -- "$EVLIT" "$ROOT" 2>/dev/null)"
+if [ -n "$EVRE" ] && [ -z "$EVHOLD" ]; then ok "  · and no file in the tree holds that line, so a Read cannot satisfy the grader"
+else bad "  · and no file in the tree holds that line, so a Read cannot satisfy the grader" "pattern: '${EVRE}' · held by: ${EVHOLD:-none}"; fi
 
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once

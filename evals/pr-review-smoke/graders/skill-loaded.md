@@ -1,5 +1,5 @@
 ---
 type: tool_used
 tool: Skill
-input_match: '"skill"\s*:\s*"(?:[\w-]+:)?wai-pr-review"'
+input_match: '"skill"\s*:\s*"wai-suite:wai-pr-review"'
 ---

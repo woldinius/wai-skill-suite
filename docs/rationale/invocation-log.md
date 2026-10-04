@@ -33,8 +33,11 @@ because the cache path carries the version. An update installs the next version 
 one and removes the old directory 14 days later, so such a hook first runs a stale copy, then fails.
 
 The decision (#123): in a plugin install, `--snippet` prints no hook and says plainly that the
-start log needs a repo install (exit 1). It keeps the hook a per-developer opt-in and relies on no
-internal path of Claude Code. The alternatives weighed:
+start log needs a repo install, with the plugin disabled for that repo (exit 1). It keeps the hook a
+per-developer opt-in and relies on no internal path of Claude Code. It is an interim answer: #138
+revisits it before the plugin directory submission, since it leaves plugin users without a start
+log. "Plugin install" is doctor.sh's predicate, so a suite checkout or another worktree of the same
+repo still gets the snippet. The alternatives weighed:
 
 - **A plugin `hooks/hooks.json` with `${CLAUDE_PLUGIN_ROOT}`.** The documented stable path into a
   plugin, but it resolves only in the plugin's own components, and a hook there runs for every
