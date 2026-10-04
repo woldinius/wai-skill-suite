@@ -113,9 +113,37 @@ printf 'SUCCESS\ttest\nSKIPPED\tbuild-push\n' > "$D/checks"
 out="$(gate)"; rc=$?
 assert "unreadable required set → strict, fail-closed" 1 "$rc" "$out" 'no required status checks' 'Branch not protected|message'
 
+# ZERO CHECKS IS NOT GREEN — and the repair depends on what the base declares (#127). On #109 the
+# required check `ci` existed; GitHub started no run because the PR conflicted with main, and the
+# gate still prescribed wai-cicd. Declared: the line names the likely causes. None declared: wai-cicd.
 gfix; : > "$D/checks"
 out="$(gate)"; rc=$?
-assert "zero checks is not green" 1 "$rc" "$out" 'zero checks'
+assert "zero checks, required checks declared → NO-GO naming the likely causes, not wai-cicd (#127)" 1 "$rc" "$out" \
+  "✗ required check\(s\) not green: main declares 2 \(size-gate, test\), none reported — zero checks is not 'green'; likely the run has not started yet \(re-run in a minute\), a merge conflict with main, or a workflow not triggered\$" \
+  'run wai-cicd'
+out="$(sh "$ROOT/.claude/skills/wai-pr-review/scripts/gate-stats.sh" "$D/docs/architecture/gate-ledger.md" 2>&1)"; rc=$?
+assert "  · and gate-stats counts that row under checks, not setup" 0 "$rc" "$out" 'setup 0 · checks 1 · domain 0 · other 0'
+gfix; : > "$D/checks"; rm -f "$D/ruleset-ids"; printf 'ci\n' > "$D/protection"
+out="$(gate)"; rc=$?
+assert "  · the same when branch protection, not a ruleset, declares them" 1 "$rc" "$out" \
+  'main declares 1 \(ci\), none reported' 'run wai-cicd'
+# AT MOST THREE NAMES IN 70 CHARACTERS (review of #140). This ✗ precedes the domain ✗ in the
+# 400-character ledger cell; nine matrix contexts named in full cut the EX-* IDs off the row.
+gfix; : > "$D/checks"; printf 'a\nb\nc\nd\n' > "$D/required"
+out="$(gate)"; rc=$?
+assert "  · four short required names → three named, then +1 more" 1 "$rc" "$out" 'main declares 4 \(a, b, c, \+1 more\), none'
+gfix; : > "$D/checks"; printf '.claude/skills/wai/SKILL.md\napps/api/src/billing/tokens.ts\n' > "$D/files"
+for os in macos ubuntu windows; do for v in 18 20 22; do printf 'build (%s-latest, node %s)\n' "$os" "$v"; done; done > "$D/required"
+out="$(gate)"; rc=$?
+assert "  · nine matrix contexts → the names that fit in 70 characters, then +7 more" 1 "$rc" "$out" \
+  'main declares 9 \(build \(macos-latest, node 18\), build \(macos-latest, node 20\), \+7 more\), none'
+out="$(sh "$ROOT/.claude/skills/wai-pr-review/scripts/gate-stats.sh" --report "$D/docs/architecture/gate-ledger.md" 2>&1)"; rc=$?
+assert "  · and the domain ✗ survives the ledger cell's cap: --report still counts its EX-* IDs" 0 "$rc" "$out" \
+  'top exclusion reasons: EX-API 1 · EX-GUARD 1 · EX-PAY 1'
+gfix; : > "$D/checks"; rm -f "$D/ruleset-ids"
+out="$(gate)"; rc=$?
+assert "zero checks, no required checks declared → NO-GO that prescribes wai-cicd" 1 "$rc" "$out" \
+  "✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd\$" 'merge conflict'
 
 # The guardrail floor: the agent may not merge a change to the standard it is judged against.
 gfix; printf '.claude/skills/wai/SKILL.md\n' > "$D/files"

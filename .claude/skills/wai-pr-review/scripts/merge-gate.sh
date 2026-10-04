@@ -396,11 +396,23 @@ if [ -z "$REQUIRED" ]; then                        # legacy branch protection, s
 fi
 
 CHECKS="$(gh pr checks "$PR" --repo "$REPO" --json name,state --jq '.[] | "\(.state)\t\(.name)"' 2>/dev/null || true)"
+N_REQ="$(printf '%s\n' "$REQUIRED" | grep -c . || true)"
 
-if [ -z "$CHECKS" ]; then
+# ZERO CHECKS IS NEVER GREEN, but its repair depends on the declared set (#127). Declared: the setup
+# is in place and no run started — "run wai-cicd" is the wrong fix, so the line names the likely
+# causes. The phrase "required check(s) not green" files it under checks in gate-stats, not setup.
+# AT MOST THREE NAMES IN 70 CHARACTERS, then "+N more" (the first is always named): this ✗ precedes
+# the domain ✗ in the 400-character ledger cell, and a full list cut the EX-* IDs off the row.
+# Why: docs/rationale/merge-gate.md § Zero checks: a setup gap, or a run that never started
+if [ -z "$CHECKS" ] && [ -n "$REQUIRED" ]; then
+  REQ_LIST="$(printf '%s\n' "$REQUIRED" | awk '
+    !full && n < 3 && (n == 0 || length(s) + 2 + length($0) <= 70) { s = s (n ? ", " : "") $0; n++; next }
+    { full = 1; more++ }
+    END { printf "%s", s; if (more) printf ", +%d more", more }')"
+  no_go "required check(s) not green: $BASE declares $N_REQ ($REQ_LIST), none reported — zero checks is not 'green'; likely the run has not started yet (re-run in a minute), a merge conflict with $BASE, or a workflow not triggered"
+elif [ -z "$CHECKS" ]; then
   no_go "no CI checks report on this PR — zero checks is not 'green'; run wai-cicd"
 elif [ -n "$REQUIRED" ]; then
-  N_REQ="$(printf '%s\n' "$REQUIRED" | grep -c . || true)"
   # ONE awk, TWO STREAMS, separated by a control byte no check name can contain.
   #
   # The shell-loop version of this was written first and it did not survive contact: a check name may
