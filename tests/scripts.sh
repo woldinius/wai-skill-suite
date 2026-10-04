@@ -1539,7 +1539,11 @@ assert "empty stdin → exit 0, silent" 0 "$rc" "$out" ''
 # The ONE defined negative: misuse. A typo'd hook config must be visible, not swallowed.
 ivfix; out="$( cd "$D" && "$SH" "$IVLOG" --bogus 2>&1 )"; rc=$?
 assert "an unknown argument → exit 2 (misuse is the one loud path)" 2 "$rc" "$out" 'unknown argument'
-out="$( "$SH" "$IVLOG" --snippet 2>&1 )"; rc=$?
+# --snippet from a REPO install: the copy that runs sits in the repo's own .claude/skills. A plugin
+# install gets no snippet (#123); that half is pinned with the plugin cases at the end of this file.
+IVREPO="$TMP/iv-repo"; gitrepo "$IVREPO"; mkdir -p "$IVREPO/.claude/skills/wai/scripts"
+cp "$IVLOG" "$IVREPO/.claude/skills/wai/scripts/"
+out="$( cd "$IVREPO" && "$SH" .claude/skills/wai/scripts/invocation-log.sh --snippet 2>&1 )"; rc=$?
 assert "--snippet prints the settings.local.json opt-in (and names local, not settings.json)" 0 "$rc" "$out" 'settings.local.json'
 # …and says WHY it is the repo-local file, naming the global alternative with its condition (#68):
 # an opt-in nobody can reason about is one nobody keeps.
@@ -2103,6 +2107,120 @@ printf 'Run `sh scripts/doctor.sh` (from this skill'"'"'s directory).\n' > "$CL/
 out="$("$SH" "$PSK/wai/scripts/contract-lint.sh" "$CL" 2>&1)"; rc=$?
 assert "  · while the skill the manifest lists is still held: FAILED" 1 "$rc" "$out" \
   'wai/SKILL.md: sh scripts/doctor.sh'
+
+# =================================================================================================
+echo
+echo "plugin install vs repo install — what the suite tells each (#123, #124)"
+# Since #95 the scripts read the right repo from a plugin install, but what they PRINTED still
+# assumed a repo install: doctor sent a plugin user to install.sh and named gate-stats.sh by a repo
+# path that plugin repo does not have; retro-compliance did the same for invocation-log.sh; and
+# `--snippet` printed a hook command that exits 127 there, on every Skill call. Now an install is
+# told apart by where the running script sits (inside the repo, or in a tree with a plugin
+# manifest), a printed command names a script by its path beside the running one, and a plugin
+# install gets no snippet: the cache path carries the version.
+# =================================================================================================
+
+# A plugin cache entry as Claude Code lays it out: <cache>/<marketplace>/<plugin>/<version>/, a
+# copy of the plugin root with the manifest beside the skills and no .git.
+PVR="$TMP/plugin-cache-v/wai/wai-suite/0.5.3"; mkdir -p "$PVR/.claude"
+cp -R "$ROOT/.claude/skills" "$PVR/.claude/"; cp -R "$ROOT/.claude-plugin" "$PVR/"
+PVS="$PVR/.claude/skills"
+PVER="$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$PVR/.claude-plugin/plugin.json" | head -1)"
+# The repo the plugin serves: set up, one verdict since the last report marker, no start log.
+PVREPO="$TMP/plugin-v-repo"; gitrepo "$PVREPO"; mkdir -p "$PVREPO/docs/architecture"
+printf -- '- **SEC-1 · Auth** — a. *Red Flag:* b.\n' > "$PVREPO/docs/architecture/quality-attributes.md"
+printf 'CONTRACT_PATHS="src/billing/*"\n' > "$PVREPO/docs/architecture/merge-gate.conf"
+{ printf '| when (UTC) | PR | verdict | why | outcome |\n|---|---|---|---|---|\n'
+  printf '| 2026-08-01T00:00Z | 1 | GO | x | |\n<!-- report 2026-08-01 rows=1 -->\n'
+  printf '| 2026-08-02T00:00Z | 2 | GO | x | |\n'
+} > "$PVREPO/docs/architecture/gate-ledger.md"
+printf '| when (UTC) | skill | subject | outcome |\n|---|---|---|---|\n| 2026-08-02T00:00Z | wai-pr-review | PR #2 | GO |\n' \
+  > "$PVREPO/docs/architecture/run-log.md"
+gitcommit "$PVREPO" 'chore: base'
+# The same repo with a REPO install: the suite's skills in its .claude/skills, install.sh's stamp.
+RIREPO="$TMP/repo-install"; cp -R "$PVREPO" "$RIREPO"; mkdir -p "$RIREPO/.claude/skills"
+for sk in wai wai-pr-review wai-retro; do cp -R "$ROOT/.claude/skills/$sk" "$RIREPO/.claude/skills/"; done
+printf 'abc1234  (ref main)\n' > "$RIREPO/.claude/.wai-suite-version"
+pvdoc() { ( cd "$PVREPO" && REPORT_THRESHOLD=1 "$SH" "$PVS/wai/scripts/doctor.sh" 2>&1 ); }
+
+# ── doctor ────────────────────────────────────────────────────────────────────────────────────────
+out="$(pvdoc)"; rc=$?
+assert "doctor from a plugin, repo as cwd → a plugin install, named with its root and version, exit 0" 0 "$rc" "$out" \
+  "plugin install: the suite runs from $PVR \(version $PVER\)" 'to stamp the suite version|Run install\.sh'
+assert "  · the report hint names gate-stats.sh beside the running doctor, in the plugin" 0 "$rc" "$out" \
+  "Cut one: sh $PVS/wai-pr-review/scripts/gate-stats\.sh --report --mark" 'sh \.claude/skills/'
+assert "  · the classifier is checked beside merge-gate.sh in the plugin, not in the repo" 0 "$rc" "$out" \
+  "classifier is installed where merge-gate\.sh looks for it \($PVS/wai/scripts/excluded-domains\.sh\)" 'merge-gate\.sh here'
+# The printed command is a command: run from the repo root, it cuts the report and plants the marker.
+CMD="$(printf '%s\n' "$out" | sed -n 's/.*Cut one: //p')"
+if ( cd "$PVREPO" && "$SH" -c "$CMD" ) >/dev/null 2>&1 && tail -1 "$PVREPO/docs/architecture/gate-ledger.md" | grep -q '^<!-- report '; then
+  ok "  · and the printed command runs from the repo root: the report is cut, the marker planted"
+else bad "  · and the printed command runs from the repo root" "cmd: $CMD · ledger: $(tail -1 "$PVREPO/docs/architecture/gate-ledger.md" 2>&1)"; fi
+git -C "$PVREPO" checkout -q -- docs/architecture/gate-ledger.md
+
+mv "$PVS/wai/scripts/excluded-domains.sh" "$TMP/excl-aside.sh"
+out="$(pvdoc)"; rc=$?
+mv "$TMP/excl-aside.sh" "$PVS/wai/scripts/excluded-domains.sh"
+assert "doctor: the plugin's classifier missing → DRIFT, exit 1, and the repair is the plugin, not install.sh" 1 "$rc" "$out" \
+  'excluded-domains\.sh is MISSING.*Update or reinstall the plugin' 'Re-run install\.sh'
+
+mkdir -p "$PVREPO/.claude"; printf 'abc1234  (ref main)\n' > "$PVREPO/.claude/.wai-suite-version"
+out="$(pvdoc)"; rc=$?
+rm -rf "$PVREPO/.claude"
+assert "doctor: a plugin AND a repo install's stamp → both named, keep one (advisory, exit 0)" 0 "$rc" "$out" \
+  'also carries a repo install \(\.claude/\.wai-suite-version: abc1234.*loads twice'
+
+out="$( cd "$RIREPO" && REPORT_THRESHOLD=1 "$SH" .claude/skills/wai/scripts/doctor.sh 2>&1 )"; rc=$?
+assert "doctor in a repo install → install.sh's stamp, no plugin line, exit 0" 0 "$rc" "$out" \
+  'installed suite version: abc1234' 'plugin install'
+assert "  · its report hint names the repo path beside it" 0 "$rc" "$out" \
+  'Cut one: sh \.claude/skills/wai-pr-review/scripts/gate-stats\.sh --report --mark'
+# A repo with its OWN gate is checked at its own copy, wherever doctor runs from: a doctor from a
+# plugin (or a suite checkout run by hand) must not vouch for that repo from the copy beside it.
+mv "$RIREPO/.claude/skills/wai/scripts/excluded-domains.sh" "$TMP/ri-excl-aside.sh"
+out="$( cd "$RIREPO" && "$SH" "$PVS/wai/scripts/doctor.sh" 2>&1 )"; rc=$?
+mv "$TMP/ri-excl-aside.sh" "$RIREPO/.claude/skills/wai/scripts/excluded-domains.sh"
+assert "doctor from a plugin, against a repo with its own gate and no classifier → that repo's DRIFT, exit 1" 1 "$rc" "$out" \
+  '✗ \.claude/skills/wai/scripts/excluded-domains\.sh is MISSING.*Re-run install\.sh'
+# A plugin's OWN repo carries both: the skills in the repo and the manifest at its root (this suite
+# is one). The copy that runs sits in the repo, so it is a repo install — the manifest alone is not.
+cp -R "$ROOT/.claude-plugin" "$RIREPO/"
+out="$( cd "$RIREPO" && "$SH" .claude/skills/wai/scripts/doctor.sh 2>&1 )"; rc=$?
+assert "doctor in a plugin's own repo (skills in it, manifest at its root) → a repo install" 0 "$rc" "$out" \
+  'installed suite version: abc1234' 'plugin install'
+out="$( cd "$RIREPO" && "$SH" .claude/skills/wai/scripts/invocation-log.sh --snippet 2>&1 )"; rc=$?
+assert "  · and --snippet there prints the hook, exit 0" 0 "$rc" "$out" \
+  '"command": "sh \.claude/skills/wai/scripts/invocation-log\.sh"' 'No snippet'
+rm -rf "$RIREPO/.claude-plugin"
+
+# ── retro-compliance ──────────────────────────────────────────────────────────────────────────────
+out="$( cd "$PVREPO" && PATH="$NOGHBIN" "$SH" "$PVS/wai-retro/scripts/retro-compliance.sh" 2>&1 )"; rc=$?
+assert "retro-compliance from a plugin → the --snippet hint names invocation-log.sh in the plugin" 0 "$rc" "$out" \
+  "not installed — the start log is opt-in \(sh $PVS/wai/scripts/invocation-log\.sh --snippet\)" 'sh \.claude/skills/'
+out="$( cd "$RIREPO" && PATH="$NOGHBIN" "$SH" .claude/skills/wai-retro/scripts/retro-compliance.sh 2>&1 )"; rc=$?
+assert "retro-compliance in a repo install → the repo path beside it" 0 "$rc" "$out" \
+  'not installed — the start log is opt-in \(sh \.claude/skills/wai/scripts/invocation-log\.sh --snippet\)'
+
+# ── invocation-log --snippet ──────────────────────────────────────────────────────────────────────
+out="$( cd "$PVREPO" && "$SH" "$PVS/wai/scripts/invocation-log.sh" --snippet 2>&1 )"; rc=$?
+assert "--snippet from a plugin → exit 1, no hook printed: the start log needs a repo install" 1 "$rc" "$out" \
+  'No snippet: in a plugin install, the start log needs a repo install' '"command"'
+assert "  · it names the copy and why its path will not hold (the version is in it)" 1 "$rc" "$out" \
+  "runs from the plugin at $PVR\."
+assert "  · and why the plugin's own hooks.json is not the way: it would run for every user" 1 "$rc" "$out" \
+  'hooks\.json, and a hook there would run for every user of the plugin'
+out="$( cd "$TMP" && "$SH" "$PVS/wai/scripts/invocation-log.sh" --snippet 2>&1 )"; rc=$?
+assert "--snippet from a plugin, cwd in no repo at all → the same exit 1, never a snippet" 1 "$rc" "$out" \
+  'No snippet: in a plugin install' '"command"'
+out="$( cd "$RIREPO" && "$SH" .claude/skills/wai/scripts/invocation-log.sh --snippet 2>&1 )"; rc=$?
+assert "--snippet in a repo install → the hook, at the repo path beside it, exit 0" 0 "$rc" "$out" \
+  '"command": "sh \.claude/skills/wai/scripts/invocation-log\.sh"' 'No snippet'
+
+# ── learning-gap: the texts a repo keeps name the skill, not a repo path ─────────────────────────
+LGTXT="$(awk '/^### Optional CLAUDE\.md anchor/,/^## Ground rules/' "$ROOT/.claude/skills/wai-learning-gap/SKILL.md"
+         grep -F 'MARKER — see' "$ROOT/.claude/skills/wai-learning-gap/scripts/install-hook.sh")"
+assert "the learning-gap CLAUDE.md anchor and hook comment cite the skill, not a path a plugin repo lacks" 0 0 "$LGTXT" \
+  "Protocol: the \`wai-learning-gap\` skill's" '\.claude/skills/wai-learning-gap'
 
 echo
 # The pinned count stands NEXT to passed/failed, never inside them — six pinned defects once

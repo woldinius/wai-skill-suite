@@ -22,3 +22,27 @@ The skill name is the one field a row takes from the hook payload, and a name ca
 extra columns — a crafted skill name minted rows with a fake timestamp and skill, corrupting the
 very start count this log exists to make trustworthy. Hence the table-safe sanitisation
 (run-log.sh's cell() shape) before the append.
+
+## A plugin install gets no snippet
+
+`--snippet` printed the hook command `sh .claude/skills/wai/scripts/invocation-log.sh`. In a
+plugin install the skills live in the plugin cache, so that path does not exist in the repo: the
+hook exited 127 on every Skill call, the start log stayed empty, and `retro-compliance.sh` reported
+the hook as not installed (#123). An absolute path into the cache holds only until the next update,
+because the cache path carries the version. An update installs the next version beside the old
+one and removes the old directory 14 days later, so such a hook first runs a stale copy, then fails.
+
+The decision (#123): in a plugin install, `--snippet` prints no hook and says plainly that the
+start log needs a repo install (exit 1). It keeps the hook a per-developer opt-in and relies on no
+internal path of Claude Code. The alternatives weighed:
+
+- **A plugin `hooks/hooks.json` with `${CLAUDE_PLUGIN_ROOT}`.** The documented stable path into a
+  plugin, but it resolves only in the plugin's own components, and a hook there runs for every
+  user of the plugin. Kept opt-in only if the script checks a per-developer switch (an `env` entry
+  in `.claude/settings.local.json`) and exits silently without it: every plugin user still runs
+  the hook process on every Skill call.
+- **Resolve the current version at hook time**, from `~/.claude/plugins/installed_plugins.json` or
+  a glob over the cache. A user-level hook can do it, but it depends on Claude Code's internal
+  file layout, and a glob would also match the old versions that stay on disk until they are removed.
+- **Copy the script to a stable per-developer path** (say `~/.claude/wai/`) and hook that copy. It
+  survives updates, but it never updates itself, so a fix to the script would not reach the hook.

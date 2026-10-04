@@ -93,7 +93,7 @@ Learning mode is **personal**: active only for a developer who has a personal le
 gap (🧩 `LEARN #`, working tree only — a local pre-commit hook blocks committing it) at the end of
 an implementation phase. **No ledger → the skill is silently off for you:** no gap, no hook,
 nothing created. To opt in, run `wai-learning-gap` once.
-Protocol: `.claude/skills/wai-learning-gap/SKILL.md`.
+Protocol: the `wai-learning-gap` skill's `SKILL.md`.
 ```
 
 ## Ground rules (always)

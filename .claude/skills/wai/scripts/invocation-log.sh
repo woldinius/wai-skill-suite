@@ -19,12 +19,15 @@
 # which would switch it on for every colleague (git protocol: personal state never becomes repo
 # state; the hook is personal, the LOG it appends is repo evidence like the gate ledger).
 # Print the exact snippet:   sh invocation-log.sh --snippet
+# A REPO INSTALL ONLY: in a plugin install this copy's path carries the plugin version, so no hook
+# command can point at it for long; --snippet says so instead of printing one (#123).
 #
 # FAIL-OPEN, ABSOLUTELY: a hook that breaks the harness is worse than a lost row. Bad JSON, no
 # repo, unwritable file — everything exits 0 silently. The ONE defined negative is misuse
 # (an unknown argument): exit 2, so a typo in the hook config is visible, not swallowed.
 #
 #   exit 0  row appended, or input ignored (non-Skill tool, non-wai skill, unreadable anything)
+#   exit 1  --snippet in a plugin install: no snippet — the start log needs a repo install
 #   exit 2  misuse: an unknown argument
 #
 # Usage: sh invocation-log.sh            (hook mode: reads the PostToolUse JSON from stdin)
@@ -37,6 +40,30 @@ if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 if [ "$#" -gt 0 ]; then
   case "$1" in
     --snippet)
+      # Plugin install: this copy runs from outside the repo, in a tree that carries a plugin
+      # manifest. Its path changes with every plugin update, so no snippet is printed for it.
+      # Why: docs/rationale/invocation-log.md § A plugin install gets no snippet
+      SELF_SKILLS="$(CDPATH='' cd -- "$(dirname -- "$0")/../.." 2>/dev/null && pwd -P || true)"
+      TOP="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+      [ -n "$TOP" ] && TOP="$(cd "$TOP" 2>/dev/null && pwd -P || true)"
+      if [ -n "$SELF_SKILLS" ] && [ "$SELF_SKILLS" != "${TOP:-/nonexistent}/.claude/skills" ] \
+         && [ -f "$SELF_SKILLS/../../.claude-plugin/plugin.json" ]; then
+        PLUGIN_ROOT="$(cd "$SELF_SKILLS/../.." 2>/dev/null && pwd -P)"
+        cat <<PLUG
+No snippet: in a plugin install, the start log needs a repo install.
+This copy runs from the plugin at $PLUGIN_ROOT.
+That path carries the plugin's version. An update installs the next version beside it and
+removes this one later, so a hook command pointing here keeps running this old copy after the
+next update, and fails once it is removed: a hook error on every Skill call, and no rows. The
+stable path into a plugin, \${CLAUDE_PLUGIN_ROOT}, resolves only in the plugin's own components,
+such as its hooks.json, and a hook there would run for every user of the plugin, while the start
+log is a per-developer opt-in.
+A start log needs a repo install (install.sh): there the script sits in the repo, at a path that
+does not change, and --snippet run from that copy prints the hook. Without one, retro-compliance.sh
+reports the hook as not installed, which means off, never that nothing ran.
+PLUG
+        exit 1
+      fi
       cat <<'SNIP'
 Add to .claude/settings.local.json (per-developer opt-in — NOT settings.json):
 {

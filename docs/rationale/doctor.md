@@ -77,3 +77,28 @@ properly when it runs — but it runs at SETUP time, and this file can rot at an
 Read as affirmative: yes/true/on/1. The canonical value coordination-lint enforces is "yes", but a
 human who wrote `true` believes autonomy is on, and doctor's whole job is the gap between what the
 human believes is switched on and what actually is.
+
+## A plugin install is not a repo install
+
+Since #95 the scripts read the right repo from a plugin install, but what doctor printed still
+assumed a repo install (#124). A plugin user was told to re-run install.sh for a version stamp a
+plugin never writes, read "the merge gate is not installed in this repo — run install.sh", and was
+handed `sh .claude/skills/wai-pr-review/scripts/gate-stats.sh --report --mark`, a path that repo
+does not have. Every line was an advisory, so nothing was misreported as drift, but each one sent
+the user to the other installer.
+
+So doctor now tells the two apart by where the running copy sits. Inside the repo's
+`.claude/skills` it is a repo install, as install.sh lays one out; outside the repo, in a tree that
+carries `.claude-plugin/plugin.json`, it is a plugin install, and the version comes from that
+manifest. A plugin's own repo, such as this one, carries both the skills and the manifest; the copy
+that runs sits in the repo, so it is a repo install. When a repo has a plugin and a stamp from an
+earlier repo install, doctor names both, because every wai skill then loads twice.
+
+A printed command names a script by its path beside the running one: repo-relative inside the
+repo, absolute outside. An absolute path into the plugin cache carries the version, which is right
+for a command run now and wrong for one stored in a config (see `invocation-log.md` § *A plugin
+install gets no snippet*). `retro-compliance.sh` follows the same rule for its `--snippet` hint.
+
+The classifier rule of the section above stands: a repo with its own gate is checked at its own
+copy, wherever doctor runs from. Only a repo with no gate of its own, audited from a plugin, is
+checked at the plugin's copy, because that is the gate that runs for it.

@@ -108,7 +108,7 @@ CHAINED=""
 # shellcheck disable=SC2016  # single quotes are intentional: this is the hook's source, not ours
 {
   printf '%s\n' "#!/bin/sh"
-  printf '%s\n' "# $MARKER — see .claude/skills/wai-learning-gap/SKILL.md"
+  printf '%s\n' "# $MARKER — see the wai-learning-gap skill's SKILL.md"
   printf '%s\n' "# Blocks committing an open learning gap ($GAP_WORD #). Self-disables when the ledger is gone."
   printf 'LEDGER=%s\n' "\"$LEDGER\""
   if [ -n "$CHAINED" ]; then

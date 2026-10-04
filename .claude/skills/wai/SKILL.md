@@ -148,8 +148,10 @@ PERIODIC (after a few features/refactors, or on security triggers)
   no outcome column, ever; the model-written record stays `run-log.md`, and
   `retro-compliance.sh` prints the two per skill side by side — starts beside subject rows, two
   units, never a rate. Fail-open by design:
-  `exit 0` = row appended or input ignored (a hook must never break the harness) · `exit 2` =
-  misuse only (an unknown argument), so a typo in the hook config is visible.
+  `exit 0` = row appended or input ignored (a hook must never break the harness) · `exit 1` =
+  `--snippet` in a plugin install: no snippet, because the start log needs a repo install; the
+  output says why · `exit 2` = misuse only (an unknown argument), so a typo in the hook config is
+  visible.
 - **Did a script and the prompt that invokes it drift apart** — after changing a script's exit
   codes, renaming a skill, or before a release? → run
   `sh <skill-dir>/scripts/contract-lint.sh` (from the repo root). It reads both sides of the joint and fails

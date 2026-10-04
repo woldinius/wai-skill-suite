@@ -7,6 +7,28 @@ since the newest tag and no section here is newer; released entries are dated re
 re-measures their numbers.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
+## [Unreleased]
+
+### Added
+
+- **A display name and a plugin smoke eval.** `plugin.json` names the plugin "wAI Skill Suite";
+  both manifests pass `claude plugin validate --strict`. `evals/pr-review-smoke` checks that a PR
+  review loads `wai-pr-review` from the plugin and runs its gate script by the plugin path. It
+  calls the model, so it runs by hand, not in CI.
+  ([#132](https://github.com/woldinius/wai-skill-suite/issues/132))
+
+### Fixed
+
+- **`doctor.sh` tells a plugin install from a repo install.** From a plugin it reads the version
+  from the plugin manifest and no longer sends the user to `install.sh`. Printed commands, here and
+  in `retro-compliance.sh`, name a script by its path beside the running one; the learning-gap
+  `CLAUDE.md` anchor names the skill, not a repo path.
+  ([#124](https://github.com/woldinius/wai-skill-suite/issues/124))
+- **`invocation-log.sh --snippet` in a plugin install** printed a hook command whose path does not
+  exist there, so the hook failed on every Skill call. It now prints no hook, says the start log
+  needs a repo install, and exits 1.
+  ([#123](https://github.com/woldinius/wai-skill-suite/issues/123))
+
 ## [0.5.3] — 2026-09-30
 
 Hardening after an audit of every Markdown file: Claude Code's configuration directory is a
