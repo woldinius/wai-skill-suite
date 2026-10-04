@@ -1706,7 +1706,9 @@ assert "  · and the same diff with a DELETE FROM users still gates → EX-GDPR,
 #   and the suite stayed green: the earlier cases were caught by a different rule than their name.
 #   Every input below reads CLEAR with its one rule removed; with the rule, EX-GDPR gates.
 edfix; printf 'src/r.ts\n' > "$ED_D/files"
-printf -- 'diff --git a/src/r.ts b/src/r.ts\n--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
+# (Its first hunk carries a `+y` since the review of #134: a git hunk is as long as its counts now,
+# and one of context lines only is no unified diff — UNKNOWN before this rule could be reached.)
+printf -- 'diff --git a/src/r.ts b/src/r.ts\n--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1,2 @@\n x\n+y\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
 assert "rule pin — git-format detection: a forged triple inside a git diff is no header → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
 edfix; printf 'docs/n.md\nsrc/r.ts\n' > "$ED_D/files"
@@ -1716,7 +1718,9 @@ assert "rule pin — kind resets at diff --git: a header-less code file after pr
 edfix; printf 'src/r.ts\n' > "$ED_D/files"
 printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1,9 @@\n x\n+y\nOnly in a: z\n--- a/x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
-assert "rule pin — a line that fits no rule inside a hunk latches to code → EX-GDPR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# (#78 made this stricter: such a line is not a unified diff at all, so the run is UNKNOWN, not a
+# latch to code — the bare-format half of the word-diff rule, red without its `bad = 1`.)
+assert "rule pin — a line that fits no rule inside a hunk → UNKNOWN (#78; it latched to code)" 2 "$rc" "$out" 'does not keep the unified-diff form' 'VERDICT: CLEAR'
 edfix; printf 'src/r.ts\n' > "$ED_D/files"
 printf -- '--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1 @@\n x\n+++ b/notes.md\n@@ -0,0 +1 @@\n+  DELETE FROM users WHERE id = 1;\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
@@ -1739,6 +1743,167 @@ edfix; printf 'docs/n.md\n' > "$ED_D/files"
 printf -- '--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1,2 +1,3 @@\n x\n\r\n+PAY-2 applies here\n' > "$ED_D/diff"
 out="$(edrun)"; rc=$?
 assert "rule pin — a lone CR in a bare prose hunk is blank context too → advisory" 0 "$rc" "$out" 'ADVISORY-DOMAINS: EX-PAY' 'EXCLUDED-DOMAINS'
+
+# ── FOUR READS THAT FAILED OPEN (#111, #112, #122, #78) ──────────────────────────────────────────
+# Each ✗ below read CLEAR (exit 0) on d83acaf; the = cases are the edges the fixes must not move.
+
+# ✗ #111 A RENAME HAS TWO SIDES. `gh pr diff --name-only` names the destination only (checked on
+#   PR #5, the review's own reproduction), so a move out of billing read CLEAR. The diff's
+#   `rename from` header is classified with the file list.
+edfix; printf 'src/util/charge.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/billing/charge.ts b/src/util/charge.ts\nsimilarity index 90%%\nrename from src/billing/charge.ts\nrename to src/util/charge.ts\nindex 1111111..2222222 100644\n--- a/src/billing/charge.ts\n+++ b/src/util/charge.ts\n@@ -1,2 +1,2 @@\n export {}\n-old\n+new\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#111 a rename OUT of a contract path, file list naming the destination → EX-PAY" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+# ✗ …and a pure rename (no hunk at all) out of the floor.
+edfix; printf 'docs/agents/wai-reviewer.md\n' > "$ED_D/files"
+printf -- 'diff --git a/.claude/agents/wai-reviewer.md b/docs/agents/wai-reviewer.md\nsimilarity index 100%%\nrename from .claude/agents/wai-reviewer.md\nrename to docs/agents/wai-reviewer.md\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#111 a pure rename OUT of the floor → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# ✗ The gate, end to end through `--pr`: the stub serves exactly what gh does — the destination in
+#   `--name-only`, both sides only in the diff's headers.
+gfix; printf 'apps/api/src/util/charge.ts\n' > "$D/files"
+printf -- 'diff --git a/apps/api/src/billing/charge.ts b/apps/api/src/util/charge.ts\nsimilarity index 90%%\nrename from apps/api/src/billing/charge.ts\nrename to apps/api/src/util/charge.ts\nindex 1111111..2222222 100644\n--- a/apps/api/src/billing/charge.ts\n+++ b/apps/api/src/util/charge.ts\n@@ -1,2 +1,2 @@\n export {}\n-old\n+new\n' > "$D/diff"
+out="$(gate)"; rc=$?
+assert "#111 gate: a PR that moves a billing file out of billing → NO-GO, EX-PAY" 1 "$rc" "$out" 'EX-PAY' 'VERDICT: GO'
+
+# ✗ #112 A CASE-INSENSITIVE FILE SYSTEM. On macOS a clone puts `.Claude/agents/evil.md` into the
+#   directory Claude Code loads `.claude/agents/` from; the floor matched it byte for byte.
+edfix; printf '.Claude/agents/evil.md\n' > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#112 a case variant of the floor (.Claude/agents/evil.md) → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# ✗ …and of a CONTRACT_PATHS glob — the same fold for every blocklist conf.
+edfix; printf 'src/Billing/charge.ts\n' > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#112 a case variant of a contract path (src/Billing/) → EX-PAY" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+# ✗ A bare `.claude` is a symlink in the directory's place, and Claude Code reads through it — the
+#   floor guarded only the paths BELOW it (the review of #109, round 5). The blocklist now reads
+#   every path as a directory too (`path/`), so `.claude/*` holds the bare name.
+for _p in .claude apps/web/.claude; do
+  edfix; printf '%s\n' "$_p" > "$ED_D/files"; printf -- '+../../docs/cfg\n' > "$ED_D/diff"
+  out="$(edrun)"; rc=$?
+  assert "#112   · a bare $_p (a symlink in the directory's place) → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+done
+# ✗ A symlink is the path it points at: `docs/agents -> ../.claude/agents` at an unguarded path.
+edfix; printf 'docs/agents\n' > "$ED_D/files"
+printf -- 'diff --git a/docs/agents b/docs/agents\nnew file mode 120000\nindex 0000000..0efb85e\n--- /dev/null\n+++ b/docs/agents\n@@ -0,0 +1 @@\n+../.claude/agents\n\\ No newline at end of file\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#112 a symlink at an unguarded path pointing into the floor → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# ✗ …and one whose target leaves the repository cannot be classified at all: UNKNOWN.
+edfix; printf 'docs/cfg\n' > "$ED_D/files"
+printf -- 'diff --git a/docs/cfg b/docs/cfg\nindex 0efb85e..454b842 120000\n--- a/docs/cfg\n+++ b/docs/cfg\n@@ -1 +1 @@\n-../src/util\n\\ No newline at end of file\n+../../outside\n\\ No newline at end of file\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#112 a symlink whose target climbs out of the repo → UNKNOWN, exit 2" 2 "$rc" "$out" 'points outside the repository' 'VERDICT: CLEAR'
+# ✗ (review of #134, m2) …and a symlink to a contract DIRECTORY resolves to `src/billing`, which the
+#   glob `src/billing/*` does not match as a name — read as a directory, it does.
+edfix; printf 'src/util/paylink\n' > "$ED_D/files"
+printf -- 'diff --git a/src/util/paylink b/src/util/paylink\nnew file mode 120000\nindex 0000000..1111111\n--- /dev/null\n+++ b/src/util/paylink\n@@ -0,0 +1 @@\n+../billing\n\\ No newline at end of file\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#112 a symlink to a contract directory (src/util/paylink -> ../billing) → EX-PAY" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+# ✗ (review of #134, m1) APFS folds more than ASCII case onto an ASCII name: `.mcp.jſon` (long s,
+#   U+017F) opens `.mcp.json`. The fold table maps the letters whose fold is ASCII…
+edfix; printf '.mcp.j\305\277on\n' > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#112 .mcp.jſon (a Unicode letter that folds to ASCII) → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# ✗ …and drops the code points HFS+ ignores (git's own HFS check skips the same set): a zero-width
+#   non-joiner inside `.github` is `.github` there.
+edfix; printf '.g\342\200\214ithub/workflows/ci.yml\n' > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#112 .g<U+200C>ithub/workflows/ci.yml (an HFS+-ignorable code point) → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+
+# ✗ (review of #134, M1) A QUOTED NAME. `gh pr diff --name-only` and git quote a path with a non-ASCII
+#   byte — `".claude/agents/\303\251vil.md"`, the leading quote kept — and the list was matched as
+#   printed: an accented letter skipped the floor. Through `--pr`, the gate's own path.
+edfix; printf '"%s"\n' '.claude/agents/\303\251vil.md' > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+out="$(edrun_pr)"; rc=$?
+assert "M1 a git-quoted name in the --name-only list (.claude/agents/évil.md) → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# ✗ …the same quoting in the diff's headers: a rename out of `.mcp.jſon`, decoded, then folded.
+edfix; printf 'docs/mcp-notes.json\n' > "$ED_D/files"
+printf -- 'diff --git ".mcp.j\\305\\277on" b/docs/mcp-notes.json\nsimilarity index 100%%\nrename from ".mcp.j\\305\\277on"\nrename to docs/mcp-notes.json\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "M1 a git-quoted name in a rename header (out of .mcp.jſon) → EX-GUARD" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD'
+# ✗ …and a quoted entry that does not decode is no name anybody can match: UNKNOWN, never CLEAR.
+edfix; printf '"src/billing/pay.ts\n' > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "M1 an undecodable quoted entry (an unbalanced quote) → UNKNOWN, exit 2" 2 "$rc" "$out" 'does not decode' 'VERDICT: CLEAR'
+# ✗ A decoded name is bytes, and not every name is UTF-8 (a Latin-1 `caf\351`). Under a UTF-8 locale
+#   sed and tr reject such a byte — and the fold table's own byte ranges — and every key came out
+#   empty: the whole list read CLEAR, the floor path beside it included. The script runs in the C
+#   locale; this case calls it from a UTF-8 one.
+_u8="$(locale -a 2>/dev/null | grep -m1 -iE '^(en_US|C)\.utf-?8$')"
+if [ -z "$_u8" ]; then skip "M1 a non-UTF-8 name under a UTF-8 locale: no UTF-8 locale installed here"
+else
+  edfix; printf '.mcp.json\nsrc/billing/caf\351.ts\n' > "$ED_D/files"; printf -- '+changed\n' > "$ED_D/diff"
+  out="$( LC_ALL="$_u8"; export LC_ALL; edrun )"; rc=$?
+  assert "M1 a non-UTF-8 name, run from a UTF-8 locale ($_u8) → EX-GUARD and EX-PAY, never CLEAR" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GUARD.*EX-PAY'
+fi
+
+# ✗ #122 THE WRONG CWD. No git work tree and no override: `./docs/architecture/merge-gate.conf` is
+#   the config, and from a plugin cache it does not exist — the contract paths read as none.
+NOREPO="$TMP/norepo$N"; mkdir -p "$NOREPO"
+printf 'src/billing/pay.ts\n' > "$NOREPO/files"; printf -- '+changed\n' > "$NOREPO/diff"
+if git -C "$NOREPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  skip "#122 cases: \$TMP sits inside a git work tree here, so no cwd outside one is available"
+else
+  out="$( cd "$NOREPO" && sh "$ED" --files files --diff diff 2>&1 )"; rc=$?
+  assert "#122 outside a git repo, no override, no docs/architecture/ → UNKNOWN, exit 2" 2 "$rc" "$out" 'no merge-gate.conf to classify against' 'VERDICT: CLEAR'
+  out="$( cd "$NOREPO" && sh "$ED" --list-domains --policy-only 2>&1 )"; rc=$?
+  assert "#122   · = --list-domains still works from there" 0 "$rc" "$out" '^EX-PAY$'
+  # = The gate's non-git fixtures carry their conf in the cwd: that cwd still classifies.
+  mkdir -p "$NOREPO/docs/architecture"; printf 'CONTRACT_PATHS="src/billing/*"\n' > "$NOREPO/docs/architecture/merge-gate.conf"
+  out="$( cd "$NOREPO" && sh "$ED" --files files --diff diff 2>&1 )"; rc=$?
+  assert "#122   · = the same call with docs/architecture/ in the cwd → EX-PAY, exit 1" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-PAY'
+fi
+
+# ✗ #78 A WORD DIFF IS NOT A UNIFIED DIFF. Its added words carry no `+`, so an added DELETE FROM
+#   users read as nothing added. Verbatim git 2.56 captures of one change (a line inserted):
+#   `git diff --word-diff=plain`, then `--color-words` with color.diff.meta/frag=normal, so no
+#   line begins with an escape sequence and the colour guard does not fire.
+edfix; printf 'src/reports.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/reports.ts b/src/reports.ts\nindex dc95d1b..96ae7b2 100644\n--- a/src/reports.ts\n+++ b/src/reports.ts\n@@ -1,4 +1,5 @@\nexport async function purge(db) {\n  const n = 1;\n  {+await db.query("DELETE FROM users WHERE id = 1");+}\n  return n;\n}\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 a --word-diff=plain capture with an added DELETE FROM users → UNKNOWN, exit 2" 2 "$rc" "$out" 'does not keep the unified-diff form' 'VERDICT: CLEAR'
+edfix; printf 'src/reports.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/reports.ts b/src/reports.ts\033[m\nindex dc95d1b..96ae7b2 100644\033[m\n--- a/src/reports.ts\033[m\n+++ b/src/reports.ts\033[m\n@@ -1,4 +1,5 @@\033[m\nexport async function purge(db) {\033[m\n  const n = 1;\033[m\n  \033[32mawait db.query("DELETE FROM users WHERE id = 1");\033[m\n  return n;\033[m\n}\033[m\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 the same as --color-words, meta/frag uncoloured → UNKNOWN, exit 2" 2 "$rc" "$out" 'does not keep the unified-diff form' 'VERDICT: CLEAR'
+# Three git-format rules, each with the case only it catches (review of #134, m3):
+# ✗ AN EDIT INSIDE AN INDENTED LINE: every word-diff line starts with a space and the @@ counts come
+#   out exact — but a hunk with no `+` or `-` line is written by no unified diff.
+edfix; printf 'src/reports.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/reports.ts b/src/reports.ts\nindex c044565..b003fb8 100644\n--- a/src/reports.ts\n+++ b/src/reports.ts\n@@ -3,7 +3,7 @@ export async function purge(db) {\n  const b = 2;\n  const c = 3;\n  const d = 4;\n  const e = [-5;-]{+db.query("DELETE FROM users WHERE id = 1");+}\n  const f = 6;\n  const g = 7;\n  return a;\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 an in-line word diff in an indented block (exact counts, no +/- line) → UNKNOWN" 2 "$rc" "$out" 'does not keep the unified-diff form' 'VERDICT: CLEAR'
+# ✗ THE GAP THE REVIEW REPRODUCED: a YAML in-line edit beside a `- name:` context line, which reads
+#   as a `-` line. Only the @@ counts catch it: they do not come out (2 old lines read, 1 new).
+edfix; printf 'ci/cleanup.yml\n' > "$ED_D/files"
+printf -- 'diff --git a/ci/cleanup.yml b/ci/cleanup.yml\nindex 3a3507f..147cda5 100644\n--- a/ci/cleanup.yml\n+++ b/ci/cleanup.yml\n@@ -1,3 +1,3 @@\n- name: nightly\n  run: [-echo hi-]{+psql -c "DELETE FROM users WHERE inactive"+}\n  schedule: daily\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 a YAML in-line word diff with a '- name:' context line → UNKNOWN (counts)" 2 "$rc" "$out" 'does not keep the unified-diff form' 'VERDICT: CLEAR'
+# ✗ A hunk whose counts DO balance and which has a `-` and a `+` line can still hold a line that is
+#   no unified-diff line — the first rule alone.
+edfix; printf 'ci/cleanup.yml\n' > "$ED_D/files"
+printf -- 'diff --git a/ci/cleanup.yml b/ci/cleanup.yml\nindex c25ef80..3af1315 100644\n--- a/ci/cleanup.yml\n+++ b/ci/cleanup.yml\n@@ -1,2 +1,2 @@\n- name: nightly\n+ name: nightly\n{+run: psql -c "DELETE FROM users WHERE inactive"+}\n  schedule: daily\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 balanced counts, but a {+…+} line inside the hunk → UNKNOWN (first rule)" 2 "$rc" "$out" 'does not keep the unified-diff form' 'VERDICT: CLEAR'
+# ✗ …and counts that OVERSHOOT and still land on zero together: a third line where the header
+#   promised two. Only the negative-count check sees it.
+edfix; printf 'ci/cleanup.yml\n' > "$ED_D/files"
+printf -- 'diff --git a/ci/cleanup.yml b/ci/cleanup.yml\nindex c25ef80..3af1315 100644\n--- a/ci/cleanup.yml\n+++ b/ci/cleanup.yml\n@@ -1,2 +1,2 @@\n- name: nightly\n  run: [-echo hi-]\n  {+run: psql -c "DELETE FROM users WHERE inactive"+}\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 a hunk longer than its @@ counts (the counts overshoot) → UNKNOWN" 2 "$rc" "$out" 'does not keep the unified-diff form' 'VERDICT: CLEAR'
+# = A HUNK ENDS WHERE ITS COUNTS DO. `git format-patch` writes a signature after the last hunk, and
+#   `git log -p` the next commit; read as hunk lines they made a real capture UNKNOWN, with a word
+#   diff blamed. Verbatim git 2.56 output; the DELETE FROM users in it still gates.
+edfix; printf 'src/r.ts\n' > "$ED_D/files"
+printf -- 'From b139d3cd283063bd1ee2f09cd71d3655352390da Mon Sep 17 00:00:00 2001\nFrom: a <a@b>\nDate: Sun, 4 Oct 2026 15:09:37 +0200\nSubject: [PATCH] purge\n\n---\n src/r.ts | 1 +\n 1 file changed, 1 insertion(+)\n\ndiff --git a/src/r.ts b/src/r.ts\nindex 336ce12..ebaa9fa 100644\n--- a/src/r.ts\n+++ b/src/r.ts\n@@ -1 +1,2 @@\n export {}\n+await db.query("DELETE FROM users WHERE id = 1");\n-- \n2.56.0\n\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 = a git format-patch capture (signature after the hunk) → EX-GDPR, exit 1, not UNKNOWN" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
+# = …while the same change as a plain unified diff still gates, beside a mode-only section and a
+#   hunk that ends in `\ No newline at end of file`.
+edfix; printf 'bin/run\nsrc/reports.ts\ndocs/n.md\n' > "$ED_D/files"
+printf -- 'diff --git a/bin/run b/bin/run\nold mode 100644\nnew mode 100755\ndiff --git a/src/reports.ts b/src/reports.ts\nindex c044565..dd58450 100644\n--- a/src/reports.ts\n+++ b/src/reports.ts\n@@ -3,6 +3,7 @@ export async function purge(db) {\n   const b = 2;\n   const c = 3;\n   const d = 4;\n+  await db.query("DELETE FROM users WHERE id = 1");\n   const e = 5;\n   const f = 6;\n   const g = 7;\ndiff --git a/docs/n.md b/docs/n.md\nindex 1111111..2222222 100644\n--- a/docs/n.md\n+++ b/docs/n.md\n@@ -1 +1 @@\n-old\n\\ No newline at end of file\n+new\n\\ No newline at end of file\n' > "$ED_D/diff"
+out="$(edrun)"; rc=$?
+assert "#78 = the same change as a plain unified git diff → EX-GDPR, exit 1 (not UNKNOWN)" 1 "$rc" "$out" 'EXCLUDED-DOMAINS:.*EX-GDPR'
 
 # ── excluded-domains.sh --autonomy (the ALLOWLIST eligibility gate) ──────────────────────────────
 # The blocklist above is UNDER-inclusive by construction — it cannot know a risky path idiom no rule
@@ -1774,6 +1939,18 @@ assert "empty ERASURE_PATHS under --autonomy → not eligible (erasure surface u
 edfix; printf 'AUTONOMY_ENABLED="yes"\nAUTONOMY_SAFE_PATHS="docs/* src/util/*"\nAUTONOMY_AFFIRMED=""\nCOMMS_TOOL="none"\n' > "$ED_D/coordination.conf"
 out="$(edrun --autonomy)"; rc=$?
 assert "missing AUTONOMY_AFFIRMED under --autonomy → not eligible (no human affirmed), exit 2" 2 "$rc" "$out" 'AUTONOMY_AFFIRMED is absent' 'AUTONOMY-ELIGIBLE'
+
+# ✗ #111 A move OUT of an unsafe path touches it: the allowlist reads both sides of a rename, not
+#   only the destination the file list names (src/util/* is affirmed safe, src/services/* is not).
+edfix; printf 'src/util/reports.ts\n' > "$ED_D/files"
+printf -- 'diff --git a/src/services/reports.ts b/src/util/reports.ts\nsimilarity index 100%%\nrename from src/services/reports.ts\nrename to src/util/reports.ts\n' > "$ED_D/diff"
+out="$(edrun --autonomy)"; rc=$?
+assert "#111 --autonomy: a rename from an unsafe path into a safe one → HELD, exit 1" 1 "$rc" "$out" 'AUTONOMY_SAFE_PATHS allowlist: src/services/reports.ts' 'AUTONOMY-ELIGIBLE'
+# = #112 The allowlist does NOT fold case: on a case-sensitive file system `Docs/` is not the
+#   affirmed `docs/`, and a fold there could only make more paths "safe".
+edfix; printf 'Docs/notes.md\n' > "$ED_D/files"
+out="$(edrun --autonomy)"; rc=$?
+assert "#112 --autonomy: Docs/notes.md is not the affirmed docs/* → HELD (the allowlist stays exact)" 1 "$rc" "$out" 'AUTONOMY_SAFE_PATHS allowlist: Docs/notes.md' 'AUTONOMY-ELIGIBLE'
 
 # ── merge-gate.sh × autonomy: the merge always routes through THIS gate ──────────────────────────
 # There is NO autonomous-merge command. Whatever a drain-preflight decided, the real merge runs this

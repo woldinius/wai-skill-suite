@@ -7,6 +7,17 @@ since the newest tag and no section here is newer; released entries are dated re
 re-measures their numbers.
 New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
+## [Unreleased]
+
+### Fixed
+
+- **`excluded-domains.sh` reads the whole change or holds it.** A rename out of a guarded path, a
+  git-quoted, case-variant or symlinked path, a run outside a repo without config, and a word diff
+  classified CLEAR. Both rename sides, decoded names and symlink targets are classified now, case
+  folds like file systems, the rest is UNKNOWN. ([#111](https://github.com/woldinius/wai-skill-suite/issues/111),
+  [#112](https://github.com/woldinius/wai-skill-suite/issues/112), [#122](https://github.com/woldinius/wai-skill-suite/issues/122),
+  [#78](https://github.com/woldinius/wai-skill-suite/issues/78))
+
 ## [0.5.3] — 2026-09-30
 
 Hardening after an audit of every Markdown file: Claude Code's configuration directory is a
