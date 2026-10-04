@@ -125,3 +125,5 @@ a suite update must never touch this file (the same never-eaten guarantee as the
 | 2026-09-30T21:29Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-30T21:41Z | wai-pr-review | PR #110 | NO-GO |
 | 2026-09-30T21:48Z | wai-pr-review | PR #130 | NO-GO |
+| 2026-09-30T21:52Z | wai-pr-review | PR #131 | GO |
+| 2026-10-04T13:02Z | wai-pr-review | PR #134 | NO-GO |
