@@ -151,3 +151,73 @@ unchanged and never printed under that name, so no caller's `grep '^ANCHORED'` c
 two. `merge-gate.sh` states it as one terminal line — *citations decide here: …* — and keeps it
 out of the ledger row on purpose: it is a property of the conf, not of the PR the row is about, and
 a row is capped at 400 characters that belong to the verdict's reasons.
+
+## Four reads that failed open
+
+Four issues, one shape (#111, #112, #122, #78): the classifier read a path or a diff as *smaller*
+than it was, and smaller read as CLEAR — under `--autonomy`, as AUTONOMY-ELIGIBLE. All four were
+found by reading the script, in reviews and in PR #121. Each now reads the whole change or says it
+cannot.
+
+**A rename has two sides (#111).** In `--pr` mode the file list comes from `gh pr diff
+--name-only`, which names a rename's destination only (so does `git diff --name-only`; checked on
+this repo's PR #5, the review's own reproduction). `src/billing/charge.ts` moved to
+`src/util/charge.ts` with an edit classified CLEAR; an agent file moved out of the floor did too.
+The classifier now reads the diff's `rename from` / `rename to` headers and classifies both sides
+with the file list. The set is only ever added to. A header line exists only between `diff --git`
+and the file's first `@@`, where no content line can be, because every content line carries a
+one-character prefix. The `--autonomy` allowlist reads the same set: a move *out of* an unsafe path
+touches that path.
+
+**Case and symlinks (#112).** macOS's default file system ignores case: a clone puts
+`.Claude/agents/evil.md` into the directory `.claude/agents/` resolves to, where Claude Code loads
+it, and the floor matched byte for byte. The blocklist — the floor and the `CONTRACT_PATHS`,
+`MIGRATION_PATHS` and `ERASURE_PATHS` globs — now folds case on both sides. The cost, named: a
+case-sensitive repo whose `Src/Billing/` is not billing is held for a human, a false positive on
+the side the suite errs toward. The `AUTONOMY_SAFE_PATHS` allowlist does *not* fold: there a fold
+could only make more paths "safe", and on a case-sensitive file system `Docs/` is not the `docs/` a
+human affirmed.
+
+A bare `apps/web/.claude` in a file list is a symlink in the directory's place (the review of
+#109, round 5): Claude Code reads through it, so a package's whole configuration moved to an
+unguarded path and classified CLEAR. Every directory-shaped floor entry now guards the bare name
+too — `.claude`, `*/.claude`, `.claude-plugin`, `.github`, `docs/architecture/catalog`. And a
+symlink anywhere is classified as the path it points at: git marks it with mode `120000`, its one
+added line is the target, resolved against the link's directory. A target that is absolute, empty,
+climbs out of the repository or points at its root cannot be classified, and the run is UNKNOWN.
+
+What it still cannot see, because each needs the repository and not the diff: a bare diff
+(`diff -u`) carries no file modes, so a symlink there reads as an ordinary file; a target that is
+itself an existing symlink is resolved one step only; a pure rename of a symlink carries no mode
+line, so its (unchanged) target is not re-read.
+
+**The wrong cwd (#122).** With no override and no git work tree, the config base is the cwd. From
+a skill's directory in a plugin install — the plugin cache, not a git repo — there is no
+`docs/architecture/merge-gate.conf`, `CONTRACT_PATHS` reads as empty, and `src/billing/pay.ts`
+printed `ANCHORED-DOMAINS: none` and `VERDICT: CLEAR`, exit 0, where the same call from the repo
+root said `EX-PAY`. PR #121 moved the one documented call that ran this way to the repo root; the
+script itself still did not refuse the wrong cwd. Now `--files` / `--pr` with no
+`EXCLUDED_DOMAINS_MERGE_CONF`, no git work tree and no `docs/architecture/` in the cwd is UNKNOWN,
+exit 2. `--list-domains` reads no config and works from anywhere. The test is the directory, not
+the conf file: a repo root without `merge-gate.conf` is a state the gate already reports itself
+(UNKNOWN in `merge-gate.sh`, drift in `doctor.sh`), and the gate's non-git test fixtures carry
+their conf in the cwd.
+
+**A word diff is not a unified diff (#78).** `git diff --word-diff=plain` writes an added line as
+`{+…+}` with no `+` prefix, so an added `DELETE FROM users` was never scanned and the run read
+CLEAR. `--color-words` with `color.diff.meta` and `color.diff.frag` set to `normal` read the same:
+no line begins with an escape sequence, so the colour guard does not fire. Only a local capture
+passed with `--files/--diff` can carry one; `gh pr diff` emits a unified diff. Two rules hold it
+now, each through a marker in the work directory, the way a failed awk does:
+
+1. In both formats, a line inside a hunk that starts with none of `+`, `-`, a space or `\`, and is
+   not empty or a lone CR. In a bare diff this replaces the latch to code the parser applied to
+   such a line — UNKNOWN is the stricter answer.
+2. In a git-format diff, a hunk with no `+` or `-` line at all. No unified diff writes one; a word
+   diff of an indented block does, every line starting with the space rule 1 reads as context.
+   Not applied to bare diffs: no tool writes a bare word diff, and the parser's latch rules are
+   pinned by forged bare hunks of a single context line.
+
+Still open, named: a word diff whose hunk holds a context line that starts with `-` or `+` while
+every other line starts with a space passes both rules. Parsing word diffs is out of scope (#78);
+capture without `--word-diff` and with `--no-color`.

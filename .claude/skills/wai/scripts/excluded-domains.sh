@@ -12,10 +12,10 @@
 # tags:
 #
 #   EX-GUARD  the hardcoded guardrail FLOOR (catalog, testing strategy, gate config, Claude
-#             Code's configuration directory — `.claude/` at any depth: skills, agents, settings,
-#             hooks, commands — the plugin manifest, `.mcp.json` at any depth, CI, build/lint
-#             enforcement; instruction files such as CLAUDE.md are an open decision, #128). Never
-#             configurable, never human-listable — a-fortiori.
+#             Code's configuration directory — `.claude/` at any depth, the directory itself
+#             included: skills, agents, settings, hooks, commands — the plugin manifest, `.mcp.json`
+#             at any depth, CI, build/lint enforcement; instruction files such as CLAUDE.md are an
+#             open decision, #128). Never configurable, never human-listable — a-fortiori.
 #   EX-PAY    payment / token / billing        }
 #   EX-AUTH   auth / login / user management    }  the CONTRACT domain — CONTRACT_PATHS in
 #   EX-API    API / contract / DTO surface      }  merge-gate.conf. A path match trips it; the
@@ -44,8 +44,14 @@
 #   description is not. The prose deny-list is exactly PROSE_EXT below; an extension nobody listed
 #   counts as CODE, so the list's incompleteness fails toward the gate, not away from it. Where a
 #   file begins is read so that no content line can forge it (see added_lines_of); a failed or
-#   missing awk, no work directory, or a coloured diff is UNKNOWN, never clean. Why, with numbers:
+#   missing awk, no work directory, a coloured diff, or a hunk that is not unified-diff shaped (a
+#   word diff) is UNKNOWN, never clean. Why, with numbers:
 #   docs/rationale/excluded-domains.md § Three text channels, one reach
+#
+# WHAT COUNTS AS A TOUCHED PATH (#111, #112): every listed file, plus what the diff's git headers
+# add — both sides of a rename, and the path a symlink points at (one that cannot be resolved inside
+# the repo is UNKNOWN). The blocklist matches case-insensitively; the --autonomy allowlist exactly.
+# Why: docs/rationale/excluded-domains.md § Four reads that failed open
 #
 # EXIT CODES — fail closed, because this is a gate:
 #   default mode
@@ -55,8 +61,10 @@
 #   every classified default-mode run (0 or 1) also prints `ANCHORED-DOMAINS: EX-GDPR EX-PAY` (or
 #   `ANCHORED-DOMAINS: none`): the families whose citations DECIDE here. Beside it, exit 0 may
 #   carry `ADVISORY-DOMAINS: …` (reported, not gating).
-#     2  UNKNOWN   — a file list or diff could not be read. A gate that says CLEAR when unsure is
-#                    an invitation, not a gate, so unreadable == held for the human.
+#     2  UNKNOWN   — a file list or diff could not be read, or there is no config to read it
+#                    against (no git work tree, no docs/architecture/ in the cwd, no override). A
+#                    gate that says CLEAR when unsure is an invitation, not a gate, so unreadable ==
+#                    held for the human.
 #   --autonomy mode  (the ALLOWLIST eligibility gate — see below)
 #     0  AUTONOMY-ELIGIBLE   1  HELD   2  UNKNOWN (held)
 #   --list-domains mode      0 always.
@@ -113,10 +121,13 @@ COORD_CONF="${EXCLUDED_DOMAINS_COORD_CONF:-${REPO_ROOT:-.}/docs/architecture/coo
 # harmless-looking steps. It stays in the shared script so no config can lower it, and so BOTH the
 # everyday gate and the autonomy gate inherit it. (a) what DEFINES "good"; (b) what ENFORCES it — the
 # second layer is the one that bites: protecting ci.yml protects `run: pnpm lint`, not what lint DOES.
+# A bare directory name (`.claude`, `*/.claude`) in a file list is a symlink in that directory's
+# place: Claude Code reads through it (#112).
 GUARDRAIL_PATHS="docs/architecture/quality-attributes.md docs/architecture/catalog/*
                  docs/architecture/testing-strategy.md docs/architecture/merge-gate.conf
-                 docs/architecture/coordination.conf
+                 docs/architecture/coordination.conf docs/architecture/catalog
                  .claude/* */.claude/* .claude-plugin/* .mcp.json */.mcp.json
+                 .claude */.claude .claude-plugin .github
                  .github/*
                  package.json */package.json
                  turbo.json nx.json
@@ -194,24 +205,30 @@ conf_val() {   # $1 = key, $2 = conf file
 }
 
 # Match a newline file-list ($1) against a whitespace glob-list ($2); print the files that hit.
+# $3 = ci folds case on both sides: the BLOCKLIST's mode, because on a case-insensitive file system
+# `.Claude/agents/x.md` lands in `.claude/agents/` (#112). The allowlist stays exact — there a fold
+# could only make more paths "safe". The ORIGINAL name is printed, folded or not.
 # Uses `read`, never `for x in $VAR`: the latter splits in POSIX sh but NOT in zsh, and that failure
 # is silent AND fails open (every path reported clean). Feeding both through read behaves identically
 # in every shell — the lesson merge-gate.sh paid for twice.
-match_any() {   # $1 = files (newlines), $2 = globs (whitespace) → matching files on stdout
-  _mf="$1"; _mg="$2"
+match_any() {   # $1 = files (newlines), $2 = globs (whitespace), $3 = ci or empty → matching files
+  _mf="$1"; _mg="$(printf '%s\n' "$2" | tr -s ' \t\n' '\n')"; _mc="${3:-}"
+  if [ "$_mc" = ci ]; then _mg="$(printf '%s\n' "$_mg" | tr '[:upper:]' '[:lower:]')"; fi
   printf '%s\n' "$_mf" | while IFS= read -r _f; do
     [ -n "$_f" ] || continue
-    printf '%s\n' "$_mg" | tr -s ' \t\n' '\n' | while IFS= read -r _g; do
+    _k="$_f"
+    if [ "$_mc" = ci ]; then _k="$(printf '%s\n' "$_f" | tr '[:upper:]' '[:lower:]')"; fi
+    printf '%s\n' "$_mg" | while IFS= read -r _g; do
       [ -n "$_g" ] || continue
       # shellcheck disable=SC2254  # _g is a glob on purpose
-      case "$_f" in $_g) printf '%s\n' "$_f" ;; esac
+      case "$_k" in $_g) printf '%s\n' "$_f" ;; esac
     done
   done
 }
 
 # The files in $1 that match NO glob in $2 — the "not provably safe" set for the autonomy allowlist.
 # Computed as a set difference against match_any so it uses the exact same matcher (no second, subtly
-# different globber to drift). grep -xF is a whole-line fixed-string test — no regex, no surprises.
+# different globber to drift), without the case fold. grep -xF is a whole-line fixed-string test.
 outside_globs() {   # $1 = files, $2 = globs → files matching no glob, on stdout
   _of="$1"; _og="$2"
   _matched="$(match_any "$_of" "$_og" | sort -u)"
@@ -254,6 +271,11 @@ added_lines() { grep '^+' "$DIFF_FILE" 2>/dev/null | grep -v '^+++' ; }
 #    UNKNOWN (see acquire_inputs).
 # A diff captured without any header (a bare `+line` stream) is all code — the fail-closed default.
 # `CMakeLists.txt` is code although `.txt` is prose: a build file that runs commands.
+# NOT A UNIFIED DIFF (#78): a word diff (`--word-diff`, `--color-words`) writes an added word without
+# a `+`, so it reads as nothing added. In both formats a line inside a hunk that starts with none of
+# `+ - space \` (and is not empty or a lone CR) exits 3; so does a git-format hunk with no `+` or
+# `-` line at all, which no unified diff writes (an indented word diff starts every line with a
+# space). Either leaves the `not-unified` marker in $WORK: UNKNOWN.
 # awk is the one tool this split adds to the deciding path, so its failure must not read as "no
 # text": a non-zero exit leaves a marker in $WORK that the run turns into UNKNOWN, never CLEAR —
 # and classify() refuses to run without a work directory to hold that marker.
@@ -261,7 +283,8 @@ PROSE_EXT="md markdown txt rst adoc rdoc textile"
 CODE_NAMES="cmakelists.txt"
 added_lines_of() {   # $1 = code | prose → the added lines of files of that kind, header lines dropped
   _gitfmt=0; grep -q '^diff --git ' "$DIFF_FILE" 2>/dev/null && _gitfmt=1
-  awk -v prose="$PROSE_EXT" -v codenames="$CODE_NAMES" -v want="$1" -v gitfmt="$_gitfmt" '
+  awk -v prose="$PROSE_EXT" -v codenames="$CODE_NAMES" -v want="$1" -v gitfmt="$_gitfmt" \
+      -v nu="${WORK:+$WORK/not-unified}" '
     function kind_of(line,   f, base, ext) {
       f = line; sub(/^\+\+\+ /, "", f); sub(/\r$/, "", f); sub(/\t.*/, "", f)
       sub(/^"/, "", f); sub(/"$/, "", f)
@@ -270,14 +293,19 @@ added_lines_of() {   # $1 = code | prose → the added lines of files of that ki
       if (base ~ /\./) { ext = base; sub(/.*\./, ".", ext); if (tolower(ext) in isprose) return "prose" }
       return "code" }
     function latch() { latched = 1; kind = "code" }
+    function endhunk() { if (inh && !chg) bad = 1; inh = 0 }
     BEGIN { n = split(prose, p, " "); for (i = 1; i <= n; i++) isprose["." p[i]] = 1
             n = split(codenames, q, " "); for (i = 1; i <= n; i++) iscode[q[i]] = 1
-            kind = "code"; ro = 0; rn = 0; hdr = 0; pm = 0; latched = 0 }
+            kind = "code"; ro = 0; rn = 0; hdr = 0; pm = 0; latched = 0; inh = 0; chg = 0; bad = 0 }
     # GIT FORMAT
-    gitfmt && /^diff --git / { kind = "code"; hdr = 1; next }
-    gitfmt && hdr { if ($0 ~ /^@@ /) hdr = 0; else if ($0 ~ /^\+\+\+ /) kind = kind_of($0); next }
+    gitfmt && /^diff --git / { endhunk(); kind = "code"; hdr = 1; next }
+    gitfmt && hdr { if ($0 ~ /^@@ /) { hdr = 0; inh = 1; chg = 0 } else if ($0 ~ /^\+\+\+ /) kind = kind_of($0); next }
+    gitfmt && /^@@ / { endhunk(); inh = 1; chg = 0; next }
     gitfmt && /^\+\+\+ / { kind = "code" }
-    gitfmt { if (substr($0, 1, 1) == "+" && kind == want) print; next }
+    gitfmt { c = substr($0, 1, 1)
+             if (c == "+" || c == "-") chg = 1
+             else if (inh && c != " " && c != "\\" && $0 != "" && $0 != "\r") bad = 1
+             if (c == "+" && kind == want) print; next }
     # BARE FORMAT
     /^@@ -[0-9]+(,[0-9]+)? \+[0-9]+(,[0-9]+)? @@/ {
       if (ro > 0 || rn > 0) latch()
@@ -292,15 +320,56 @@ added_lines_of() {   # $1 = code | prose → the added lines of files of that ki
       if (c == "-")  { ro--; next }
       if (c == " ")  { ro--; rn--; next }
       if (c == "\\") { next }
-      latch(); ro = 0; rn = 0 }
+      bad = 1; latch(); ro = 0; rn = 0 }
     /^--- / { pm = 1; next }
     /^\+\+\+ / { if (pm && !latched) kind = kind_of($0); else latch(); pm = 0; next }
     /^[-+ ]/ { latch(); pm = 0; if (substr($0, 1, 1) == "+" && want == "code") print; next }
     { pm = 0 }
+    END { if (gitfmt) endhunk(); if (bad && nu != "") { printf "" > nu; close(nu) } }
   ' "$DIFF_FILE" 2>/dev/null || { [ -n "$WORK" ] && : > "$WORK/awk-failed" 2>/dev/null; true; }
 }
 added_code_lines()  { added_lines_of code; }
 added_prose_lines() { added_lines_of prose; }
+
+# The paths a git diff's HEADERS touch beyond its file list. `--name-only` names a rename's
+# destination only, so a move out of a guarded path read CLEAR (#111): both `rename from` and
+# `rename to` are printed. A symlink (mode 120000) is the path it points at (#112): its target — the
+# one added line — is resolved against the link's directory. A target that is absolute, empty,
+# climbs out of the repo or IS its root cannot be classified: `U <reason>`, which the run holds.
+# Header lines exist only between `diff --git` and the first `@@`, where no content line can be.
+# Why: docs/rationale/excluded-domains.md § Four reads that failed open
+header_facts() {   # → `P <path>` per extra path to classify, `U <reason>` per unresolvable symlink
+  awk '
+    function unq(s) { sub(/\r$/, "", s); sub(/\t.*/, "", s)
+                      if (s ~ /^".*"$/) s = substr(s, 2, length(s) - 2); return s }
+    function flush(   d, full, n, parts, i, m, k, res, out) {
+      if (!link) return
+      link = 0; sub(/\r$/, "", tgt)
+      if (lpath == "") return
+      if (tgt == "")                 { print "U " lpath " is a symlink whose target the diff does not show"; return }
+      if (substr(tgt, 1, 1) == "/")  { print "U " lpath " -> " tgt " points outside the repository"; return }
+      d = lpath; if (d ~ /\//) sub(/\/[^\/]*$/, "", d); else d = ""
+      full = (d == "") ? tgt : d "/" tgt
+      n = split(full, parts, "/"); m = 0
+      for (i = 1; i <= n; i++) {
+        if (parts[i] == "" || parts[i] == ".") continue
+        if (parts[i] == "..") { if (m == 0) { print "U " lpath " -> " tgt " points outside the repository"; return }
+                                m--; continue }
+        out[++m] = parts[i] }
+      if (m == 0) { print "U " lpath " -> " tgt " points at the repository root"; return }
+      res = out[1]; for (k = 2; k <= m; k++) res = res "/" out[k]
+      print "P " res }
+    /^diff --git / { flush(); hdr = 1; lpath = ""; tgt = ""; next }
+    hdr && /^@@ / { hdr = 0; next }
+    hdr && /^rename (from|to) / { s = $0; sub(/^rename (from|to) /, "", s); print "P " unq(s); next }
+    hdr && /^(new file mode|new mode) 120000/ { link = 1; next }
+    hdr && /^index [0-9a-f]+\.\.[0-9a-f]+ 120000/ { link = 1; next }
+    hdr && /^\+\+\+ / { s = $0; sub(/^\+\+\+ /, "", s); s = unq(s)
+                        if (s == "/dev/null") s = ""; else sub(/^[bciwo]\//, "", s); lpath = s; next }
+    !hdr && link && /^\+/ { tgt = substr($0, 2) }
+    END { flush() }
+  ' "$DIFF_FILE" 2>/dev/null || { [ -n "$WORK" ] && : > "$WORK/awk-failed" 2>/dev/null; true; }
+}
 
 # Sub-classify a contract-domain PATH into a reporting sub-family from its SHAPE. This never changes
 # the DECISION (any CONTRACT_PATHS hit is EXCLUDED regardless); it only makes the tag legible, and
@@ -342,12 +411,22 @@ gh_pr() {
   if [ -n "$REPO_SEL" ]; then gh pr "$@" --repo "$REPO_SEL"; else gh pr "$@"; fi
 }
 
+# THE WRONG CWD (#122). No git work tree and no override leaves `./docs/architecture/` as the
+# config base; from a plugin cache it does not exist, the contract paths read as none, and a billing
+# path classified CLEAR. Without a docs/architecture/ here, there is nothing to classify against.
+# Why: docs/rationale/excluded-domains.md § Four reads that failed open
+no_config_base() {
+  [ -z "${EXCLUDED_DOMAINS_MERGE_CONF:-}" ] && [ -z "$REPO_ROOT" ] && [ ! -d docs/architecture ]
+}
+NO_CONF_REASON="not inside a git work tree and no docs/architecture/ here — no merge-gate.conf to classify against (run it from the repo root, or set EXCLUDED_DOMAINS_MERGE_CONF)"
+
 acquire_inputs() {
   # awk splits the diff by file kind for both text channels (#67). Without it neither channel runs,
   # and "did not run" must never read as CLEAR — the same rule gh and git get below.
   command -v awk >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="awk is not installed"; return; }
   if [ -n "$PR" ]; then
     if [ -n "$FILES_ARG$DIFF_ARG" ]; then die_usage "--pr and --files/--diff are mutually exclusive"; fi
+    if no_config_base; then INPUT_UNKNOWN=1; INPUT_REASON="$NO_CONF_REASON"; return; fi
     command -v gh  >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="gh is not installed"; return; }
     command -v git >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="git is not installed"; return; }
     gh auth status >/dev/null 2>&1 || { INPUT_UNKNOWN=1; INPUT_REASON="gh is not authenticated"; return; }
@@ -362,6 +441,7 @@ acquire_inputs() {
     gh_pr view "$PR" --json labels --jq '.labels[].name' >"$LABELS_FILE" 2>/dev/null || true
   else
     [ -n "$FILES_ARG" ] && [ -n "$DIFF_ARG" ] || die_usage "give --pr <n>, or both --files <f> and --diff <f>"
+    if no_config_base; then INPUT_UNKNOWN=1; INPUT_REASON="$NO_CONF_REASON"; return; fi
     [ -f "$FILES_ARG" ] || { INPUT_UNKNOWN=1; INPUT_REASON="file list '$FILES_ARG' is not readable"; return; }
     [ -f "$DIFF_ARG" ]  || { INPUT_UNKNOWN=1; INPUT_REASON="diff '$DIFF_ARG' is not readable"; return; }
     FILES_FILE="$FILES_ARG"; DIFF_FILE="$DIFF_ARG"; LABELS_FILE=""
@@ -384,6 +464,7 @@ acquire_inputs() {
 TAGS=""
 DETAIL=""
 ADVISORY=""
+UNRESOLVED=""   # symlinks header_facts could not resolve inside the repo — UNKNOWN after classify
 add_tag()    { TAGS="$TAGS $1"; }
 add_advisory() { ADVISORY="$ADVISORY $1"; }
 
@@ -433,9 +514,21 @@ classify() {
     exit 2
   fi
   FILES="$(cat "$FILES_FILE" 2>/dev/null)"
+  # The touched set is the file list PLUS what the diff's headers name (a rename's other side, a
+  # symlink's target) — only ever added to, so a header can widen the set and never shrink it.
+  _hf="$(header_facts)"
+  UNRESOLVED="$(printf '%s\n' "$_hf" | sed -n 's/^U //p')"
+  _xtra="$(printf '%s\n' "$_hf" | sed -n 's/^P //p' | while IFS= read -r _x; do
+             [ -n "$_x" ] || continue
+             printf '%s\n' "$FILES" | grep -qxF -- "$_x" || printf '%s\n' "$_x"
+           done | sort -u)"
+  if [ -n "$_xtra" ]; then
+    FILES="$(printf '%s\n%s' "$FILES" "$_xtra")"
+    add_detail "classified with the file list (a rename's other side, a symlink's target): $(printf '%s' "$_xtra" | tr '\n' ' ')"
+  fi
 
   # --- EX-GUARD — the floor ---------------------------------------------------------------------
-  G="$(match_any "$FILES" "$GUARDRAIL_PATHS")"
+  G="$(match_any "$FILES" "$GUARDRAIL_PATHS" ci)"
   if [ -n "$G" ]; then
     add_tag EX-GUARD
     add_detail "EX-GUARD  touches the suite's own guardrails (a human merges these, always): $(printf '%s' "$G" | tr '\n' ' ')"
@@ -444,7 +537,7 @@ classify() {
   # --- EX-CONTRACT / EX-PAY/AUTH/API/SEC — CONTRACT_PATHS ---------------------------------------
   CONTRACT_PATHS="$(conf_val CONTRACT_PATHS "$MERGE_CONF")"
   if [ -n "$CONTRACT_PATHS" ]; then
-    C="$(match_any "$FILES" "$CONTRACT_PATHS")"
+    C="$(match_any "$FILES" "$CONTRACT_PATHS" ci)"
     if [ -n "$C" ]; then
       CSUB="$(printf '%s\n' "$C" | while IFS= read -r _cf; do
                 [ -n "$_cf" ] || continue
@@ -460,7 +553,7 @@ classify() {
   # --- EX-MIG — MIGRATION_PATHS touched AND a destructive statement -----------------------------
   MIGRATION_PATHS="$(conf_val MIGRATION_PATHS "$MERGE_CONF")"
   if [ -n "$MIGRATION_PATHS" ]; then
-    M="$(match_any "$FILES" "$MIGRATION_PATHS")"
+    M="$(match_any "$FILES" "$MIGRATION_PATHS" ci)"
     if [ -n "$M" ]; then
       D="$(added_lines | grep -icE 'drop (table|column|constraint)|rename (table|column|to)|alter column .* type|set not null' 2>/dev/null || true)"
       if [ "${D:-0}" -gt 0 ]; then
@@ -483,7 +576,7 @@ classify() {
   ERASURE_PATHS="$(conf_val ERASURE_PATHS "$MERGE_CONF")"
   ERASURE_RE='delete[[:space:]]+from[[:space:]]+[^;()[:space:]]*(user|account|person|customer|member|profile|subscriber|contact)|on[[:space:]]+delete[[:space:]]+cascade|drop[[:space:]]+database|truncate[[:space:]]+(table[[:space:]]+)?[^;()[:space:]]*(user|account|person|customer|member)|delete[_[:space:]]?account|erase[_[:space:]]?(user|account|personal|data)|right[_[:space:]]?to[_[:space:]]?be[_[:space:]]?forgotten|gdpr[_[:space:] -]*(delet|eras|purge|forget|remov)|hard[_[:space:]]?delet|purge[_[:space:]]?(user|account|personal|data)|forget[_[:space:]]?(me|user|account)'
   EP=""
-  [ -n "$ERASURE_PATHS" ] && EP="$(match_any "$FILES" "$ERASURE_PATHS")"
+  [ -n "$ERASURE_PATHS" ] && EP="$(match_any "$FILES" "$ERASURE_PATHS" ci)"
   EG="$(added_code_lines  | grep -icE "$ERASURE_RE" 2>/dev/null || true)"
   EGP="$(added_prose_lines | grep -icE "$ERASURE_RE" 2>/dev/null || true)"
   if [ -n "$EP" ] || [ "${EG:-0}" -gt 0 ]; then
@@ -576,6 +669,18 @@ if [ -n "$WORK" ] && [ -f "$WORK/awk-failed" ]; then
   echo "VERDICT: UNKNOWN — could not scan the diff; held for the human."
   exit 2
 fi
+# A word diff writes added text without a `+`: read as unified, it is "nothing added" (#78).
+if [ -n "$WORK" ] && [ -f "$WORK/not-unified" ]; then
+  echo "excluded-domains: UNKNOWN — a hunk is not unified-diff shaped (a word diff, --word-diff or --color-words?); capture a plain unified diff" >&2
+  echo "VERDICT: UNKNOWN — could not scan the diff; held for the human."
+  exit 2
+fi
+# A symlink is the path it points at (#112); one that cannot be resolved inside the repo is unknown.
+if [ -n "$UNRESOLVED" ]; then
+  printf '%s\n' "$UNRESOLVED" | sed 's/^/excluded-domains: UNKNOWN — symlink /' >&2
+  echo "VERDICT: UNKNOWN — a symlink's target cannot be classified; held for the human."
+  exit 2
+fi
 
 # ANCHORED-DOMAINS on EVERY classified run: which families a citation decides for is a property of
 # merge-gate.conf, and removing a path there can un-anchor a family with nothing else saying so.
@@ -633,8 +738,8 @@ if [ "$AUTONOMY" -eq 1 ]; then
     exit 1
   fi
 
-  # The allowlist floor: every touched path must be provably safe.
-  FILES="$(cat "$FILES_FILE" 2>/dev/null)"
+  # The allowlist floor: every touched path must be provably safe — FILES as classify() built it,
+  # rename sources and symlink targets included (#111): a move OUT of an unsafe path touches it.
   UNSAFE="$(outside_globs "$FILES" "$AUTONOMY_SAFE_PATHS")"
   if [ -n "$UNSAFE" ]; then
     echo "  x path(s) not in the affirmed AUTONOMY_SAFE_PATHS allowlist: $(printf '%s' "$UNSAFE" | tr '\n' ' ')"

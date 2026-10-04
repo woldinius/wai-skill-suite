@@ -160,6 +160,11 @@ EXCLUDED DOMAINS = contract domain   (EX-PAY ∪ EX-AUTH ∪ EX-API ∪ EX-SEC �
 | `EX-MIG` | destructive migration | `MIGRATION_PATHS` + a destructive-statement grep | — |
 | `EX-GDPR` | erasure / data-deletion | `ERASURE_PATHS` + an erasure grep **over every added code line of the diff** | labels; `GDPR-` family prefix |
 
+**How a path is read (#111, #112).** A rename counts on both sides, a symlink as the path it points
+at (one the classifier cannot resolve inside the repo is UNKNOWN). The blocklist matches
+case-insensitively — on macOS `.Claude/` is `.claude/` — and the `AUTONOMY_SAFE_PATHS` allowlist
+exactly.
+
 `EX-GDPR` closes an everyday self-merge hole. An ad-hoc `DELETE FROM users`, an `ON DELETE CASCADE`,
 or a `deleteAccount()` that lands **outside** any migration file used to slip through, because
 migration detection only watched `MIGRATION_PATHS`. The erasure grep runs over every **added code
