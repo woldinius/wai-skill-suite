@@ -113,9 +113,24 @@ printf 'SUCCESS\ttest\nSKIPPED\tbuild-push\n' > "$D/checks"
 out="$(gate)"; rc=$?
 assert "unreadable required set → strict, fail-closed" 1 "$rc" "$out" 'no required status checks' 'Branch not protected|message'
 
+# ZERO CHECKS IS NOT GREEN — and the repair depends on what the base declares (#127). On #109 the
+# required check `ci` existed; GitHub started no run because the PR conflicted with main, and the
+# gate still prescribed wai-cicd. Declared: the line names the likely causes. None declared: wai-cicd.
 gfix; : > "$D/checks"
 out="$(gate)"; rc=$?
-assert "zero checks is not green" 1 "$rc" "$out" 'zero checks'
+assert "zero checks, required checks declared → NO-GO naming the likely causes, not wai-cicd (#127)" 1 "$rc" "$out" \
+  "✗ required check\(s\) not green: main declares 2 \(size-gate, test\) and none reported on this PR — zero checks is not 'green'; likely a merge conflict with main, or a workflow that was not triggered\$" \
+  'run wai-cicd'
+out="$(sh "$ROOT/.claude/skills/wai-pr-review/scripts/gate-stats.sh" "$D/docs/architecture/gate-ledger.md" 2>&1)"; rc=$?
+assert "  · and gate-stats counts that row under checks, not setup" 0 "$rc" "$out" 'setup 0 · checks 1 · domain 0 · other 0'
+gfix; : > "$D/checks"; rm -f "$D/ruleset-ids"; printf 'ci\n' > "$D/protection"
+out="$(gate)"; rc=$?
+assert "  · the same when branch protection, not a ruleset, declares them" 1 "$rc" "$out" \
+  'main declares 1 \(ci\) and none reported on this PR' 'run wai-cicd'
+gfix; : > "$D/checks"; rm -f "$D/ruleset-ids"
+out="$(gate)"; rc=$?
+assert "zero checks, no required checks declared → NO-GO that prescribes wai-cicd" 1 "$rc" "$out" \
+  "✗ no CI checks report on this PR — zero checks is not 'green'; run wai-cicd\$" 'merge conflict'
 
 # The guardrail floor: the agent may not merge a change to the standard it is judged against.
 gfix; printf '.claude/skills/wai/SKILL.md\n' > "$D/files"

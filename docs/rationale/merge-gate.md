@@ -105,6 +105,22 @@ evasion class the stub guard was hardened against. A fix that swaps one hole for
 So: ask the branch what it **requires**, and judge only that. A required check that is SKIPPED is a
 NO-GO — deliberately stricter than GitHub, which lets a skipped required check pass.
 
+## Zero checks: a setup gap, or a run that never started
+
+Zero checks is never green, but the ✗ line also names the repair, and one repair did not fit both
+cases. On #109 the base's ruleset required `ci`; GitHub started no run because the PR conflicted
+with main, and the gate said *run wai-cicd* — a setup step for a repo that was already set up
+(found by the fresh-context review of #109, 2026-09-29; #127).
+
+So the gate asks the same required set it judges by — rulesets, then legacy branch protection —
+before it advises. **None declared:** *run wai-cicd*, unchanged. **Declared:** the line says the base
+declares them and none reported, and names the likely causes: a merge conflict with the base, or a
+workflow that was not triggered. The verdict is NO-GO either way; only the advice differs.
+
+The declared case is worded as *required check(s) not green*, so `gate-stats.sh` counts it under
+*checks*, not *setup* — setup there means "no required checks declared", which is not this case.
+Rows written before #127 keep the old wording and stay under setup; the ledger is append-only.
+
 ## Verdict reasons first
 
 The reasons arrive in check order — ✓ preambles, then the failure — and under any cap the ledger
