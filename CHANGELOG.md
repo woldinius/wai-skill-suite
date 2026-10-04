@@ -11,10 +11,10 @@ New entries (from 2026-09-26) stay at most 60 words; the PR carries the detail.
 
 ### Fixed
 
-- **`excluded-domains.sh` no longer fails open on four reads.** A rename out of a guarded path, a
-  case-variant or symlinked path, a run outside a repo without config, and a word diff classified
-  CLEAR. Both rename sides and symlink targets are classified now, the blocklist ignores case, the
-  rest is UNKNOWN. ([#111](https://github.com/woldinius/wai-skill-suite/issues/111),
+- **`excluded-domains.sh` reads the whole change or holds it.** A rename out of a guarded path, a
+  git-quoted, case-variant or symlinked path, a run outside a repo without config, and a word diff
+  classified CLEAR. Both rename sides, decoded names and symlink targets are classified now, case
+  folds like file systems, the rest is UNKNOWN. ([#111](https://github.com/woldinius/wai-skill-suite/issues/111),
   [#112](https://github.com/woldinius/wai-skill-suite/issues/112), [#122](https://github.com/woldinius/wai-skill-suite/issues/122),
   [#78](https://github.com/woldinius/wai-skill-suite/issues/78))
 

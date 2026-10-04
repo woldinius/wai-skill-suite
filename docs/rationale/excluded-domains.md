@@ -156,8 +156,9 @@ a row is capped at 400 characters that belong to the verdict's reasons.
 
 Four issues, one shape (#111, #112, #122, #78): the classifier read a path or a diff as *smaller*
 than it was, and smaller read as CLEAR — under `--autonomy`, as AUTONOMY-ELIGIBLE. All four were
-found by reading the script, in reviews and in PR #121. Each now reads the whole change or says it
-cannot.
+found by reading the script, in reviews and in PR #121. The review of their fix (#134) found four
+more of the same shape: a quoted name, a Unicode case fold, a symlink to a directory, and hunks read
+past their counts. Each now reads the whole change or says it cannot.
 
 **A rename has two sides (#111).** In `--pr` mode the file list comes from `gh pr diff
 --name-only`, which names a rename's destination only (so does `git diff --name-only`; checked on
@@ -169,22 +170,41 @@ and the file's first `@@`, where no content line can be, because every content l
 one-character prefix. The `--autonomy` allowlist reads the same set: a move *out of* an unsafe path
 touches that path.
 
+**A quoted name (the review of #134).** `gh pr diff --name-only`, `git diff --name-only` and
+every git header quote a path that holds a non-ASCII byte (`core.quotePath`):
+`"src/billing/caf\303\251.ts"`, with the leading `"` kept. The list was matched as printed, so one
+accented letter took `.claude/agents/évil.md` or a billing file past every glob — on the
+gate's own `--pr` path, ever since the list was first read. Each entry of the list, and each path a header
+names, is now decoded once (`\ooo`, `\\`, `\"`). An entry that does not decode — an unbalanced
+quote, another escape, a control character — is still matched as printed, and the run is UNKNOWN.
+A decoded name is bytes and need not be UTF-8, which a UTF-8 locale's `tr`, `sed` and `sort` reject
+mid-pipeline: an empty key matched nothing, and the whole list read CLEAR. The script therefore
+runs in the C locale.
+
 **Case and symlinks (#112).** macOS's default file system ignores case: a clone puts
 `.Claude/agents/evil.md` into the directory `.claude/agents/` resolves to, where Claude Code loads
 it, and the floor matched byte for byte. The blocklist — the floor and the `CONTRACT_PATHS`,
-`MIGRATION_PATHS` and `ERASURE_PATHS` globs — now folds case on both sides. The cost, named: a
-case-sensitive repo whose `Src/Billing/` is not billing is held for a human, a false positive on
-the side the suite errs toward. The `AUTONOMY_SAFE_PATHS` allowlist does *not* fold: there a fold
-could only make more paths "safe", and on a case-sensitive file system `Docs/` is not the `docs/` a
-human affirmed.
+`MIGRATION_PATHS` and `ERASURE_PATHS` globs — now folds case on both sides. ASCII case alone was
+not enough (the review of #134): APFS folds the long s `ſ`, the Kelvin sign, both sharp s and
+the ligatures `ﬀ ﬁ ﬂ ﬃ ﬄ ﬅ ﬆ` to ASCII, so `.mcp.jſon` opens
+`.mcp.json`; NTFS upper-cases the dotless `ı` to `I`; HFS+ ignores the zero-width and
+bidi-control code points git's own HFS check skips. Those are mapped byte-wise before the ASCII fold.
+Every other non-ASCII letter folds to a non-ASCII one, so it cannot reach an ASCII glob; a
+non-ASCII letter *in* a conf glob gets the ASCII fold only, and composed and decomposed accents
+are not unified. The cost, named: a case-sensitive repo whose `Src/Billing/` is not billing is held
+for a human, a false positive on the side the suite errs toward. The `AUTONOMY_SAFE_PATHS`
+allowlist does *not* fold: there a fold could only make more paths "safe", and on a case-sensitive
+file system `Docs/` is not the `docs/` a human affirmed.
 
 A bare `apps/web/.claude` in a file list is a symlink in the directory's place (the review of
 #109, round 5): Claude Code reads through it, so a package's whole configuration moved to an
-unguarded path and classified CLEAR. Every directory-shaped floor entry now guards the bare name
-too — `.claude`, `*/.claude`, `.claude-plugin`, `.github`, `docs/architecture/catalog`. And a
-symlink anywhere is classified as the path it points at: git marks it with mode `120000`, its one
-added line is the target, resolved against the link's directory. A target that is absolute, empty,
-climbs out of the repository or points at its root cannot be classified, and the run is UNKNOWN.
+unguarded path and classified CLEAR. The blocklist now reads every path as a directory too
+(`path/`), so `.claude/*` holds the bare `.claude`, and `src/billing/*` holds a link at
+`src/billing`. A symlink anywhere is classified as the path it points at: git marks it with mode
+`120000`, its one added line is the target, resolved against the link's directory — and read as a
+directory as well, so `src/util/paylink -> ../billing` is billing (the review of #134). A target
+that is absolute, empty, climbs out of the repository or points at its root cannot be classified,
+and the run is UNKNOWN. The allowlist reads neither as a directory.
 
 What it still cannot see, because each needs the repository and not the diff: a bare diff
 (`diff -u`) carries no file modes, so a symlink there reads as an ordinary file; a target that is
@@ -207,17 +227,27 @@ their conf in the cwd.
 `{+…+}` with no `+` prefix, so an added `DELETE FROM users` was never scanned and the run read
 CLEAR. `--color-words` with `color.diff.meta` and `color.diff.frag` set to `normal` read the same:
 no line begins with an escape sequence, so the colour guard does not fire. Only a local capture
-passed with `--files/--diff` can carry one; `gh pr diff` emits a unified diff. Two rules hold it
-now, each through a marker in the work directory, the way a failed awk does:
+passed with `--files/--diff` can carry one; `gh pr diff` emits a unified diff. The classifier does
+not parse word diffs; it checks the unified form, and a breach is UNKNOWN through a marker in the
+work directory, the way a failed awk is. In a git-format diff a hunk runs exactly as far as its
+`@@ -o,l +n,m @@` counts, and three rules hold:
 
-1. In both formats, a line inside a hunk that starts with none of `+`, `-`, a space or `\`, and is
-   not empty or a lone CR. In a bare diff this replaces the latch to code the parser applied to
-   such a line — UNKNOWN is the stricter answer.
-2. In a git-format diff, a hunk with no `+` or `-` line at all. No unified diff writes one; a word
-   diff of an indented block does, every line starting with the space rule 1 reads as context.
-   Not applied to bare diffs: no tool writes a bare word diff, and the parser's latch rules are
-   pinned by forged bare hunks of a single context line.
+1. Every line inside it starts with `+`, `-`, a space or `\`, or is empty or a lone CR.
+2. Its counts come out exact: the space and `-` lines make `l`, the space and `+` lines make `m`,
+   neither overshoots. A word diff writes one line where unified writes a `-` and a `+` line, so its
+   counts do not come out — the YAML in-line edit beside a `- name:` context line the review of
+   #134 reproduced included.
+3. One line at least is `+` or `-`. An in-line edit inside an indented block passes the first two
+   — every line starts with a space, the counts match — and fails this one.
 
-Still open, named: a word diff whose hunk holds a context line that starts with `-` or `+` while
-every other line starts with a space passes both rules. Parsing word diffs is out of scope (#78);
-capture without `--word-diff` and with `--no-color`.
+A line after the counts run out is no hunk's: the signature `git format-patch` writes, the next
+commit of `git log -p`. Those captures read UNKNOWN while the rules ran to the next header (the
+review of #134); they classify now. A bare diff keeps its count-based latch rules and adds the
+first rule; in a bare diff that rule replaces the latch to code the parser applied to such a line —
+UNKNOWN is the stricter answer. The message names the form that broke, not a tool: which tool
+wrote a capture is not knowable from it.
+
+Still open, named: a word diff whose lines all start with `+`, `-` or a space *and* whose counts
+come out exact *and* which has a `+` or `-` line would pass. No such capture was found, and the
+classifier is a check on the unified form, not a word-diff reader (#78). Capture with
+`--no-color` and without `--word-diff`.

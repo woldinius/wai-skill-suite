@@ -48,9 +48,11 @@
 #   word diff) is UNKNOWN, never clean. Why, with numbers:
 #   docs/rationale/excluded-domains.md § Three text channels, one reach
 #
-# WHAT COUNTS AS A TOUCHED PATH (#111, #112): every listed file, plus what the diff's git headers
-# add — both sides of a rename, and the path a symlink points at (one that cannot be resolved inside
-# the repo is UNKNOWN). The blocklist matches case-insensitively; the --autonomy allowlist exactly.
+# WHAT COUNTS AS A TOUCHED PATH (#111, #112): every listed file, decoded from git's quoting (one that
+# does not decode is UNKNOWN), plus what the diff's git headers add — both sides of a rename, and the
+# path a symlink points at (one that cannot be resolved inside the repo is UNKNOWN). The blocklist
+# folds case as file systems do (see fold_key) and reads each path as a directory too; the
+# --autonomy allowlist matches exactly.
 # Why: docs/rationale/excluded-domains.md § Four reads that failed open
 #
 # EXIT CODES — fail closed, because this is a gate:
@@ -108,6 +110,11 @@ set -u
 # were launched under zsh, re-exec under sh. (Same guard as merge-gate.sh, for the same reason.)
 if [ -n "${ZSH_VERSION:-}" ]; then exec /bin/sh "$0" "$@"; fi
 
+# A path is BYTES here. A decoded non-ASCII name that is not valid UTF-8 makes tr, sort and grep
+# fail with "illegal byte sequence" under a UTF-8 locale — and a path that drops out of a pipeline
+# is a path nobody classified. The C locale reads every byte as itself, on every platform.
+LC_ALL=C; export LC_ALL
+
 # Default paths are REPO-relative, not cwd-relative (merge-gate.sh carries the incident that
 # forced this; same rule here so the two halves of one gate read the same files). Overrides win;
 # outside a git repo the cwd stays the base. --show-toplevel on purpose — see merge-gate.sh.
@@ -121,13 +128,13 @@ COORD_CONF="${EXCLUDED_DOMAINS_COORD_CONF:-${REPO_ROOT:-.}/docs/architecture/coo
 # harmless-looking steps. It stays in the shared script so no config can lower it, and so BOTH the
 # everyday gate and the autonomy gate inherit it. (a) what DEFINES "good"; (b) what ENFORCES it — the
 # second layer is the one that bites: protecting ci.yml protects `run: pnpm lint`, not what lint DOES.
-# A bare directory name (`.claude`, `*/.claude`) in a file list is a symlink in that directory's
-# place: Claude Code reads through it (#112).
+# A bare `.claude` or `src/billing` in a file list is a symlink in that directory's place, read
+# through by everything that loads it: the blocklist also matches every path as a directory
+# (`path/`, see match_any), so `.claude/*` catches the bare name too (#112).
 GUARDRAIL_PATHS="docs/architecture/quality-attributes.md docs/architecture/catalog/*
                  docs/architecture/testing-strategy.md docs/architecture/merge-gate.conf
-                 docs/architecture/coordination.conf docs/architecture/catalog
+                 docs/architecture/coordination.conf
                  .claude/* */.claude/* .claude-plugin/* .mcp.json */.mcp.json
-                 .claude */.claude .claude-plugin .github
                  .github/*
                  package.json */package.json
                  turbo.json nx.json
@@ -204,24 +211,37 @@ conf_val() {   # $1 = key, $2 = conf file
   sed -n "s/^$1=//p" "$2" 2>/dev/null | tr -d '"' | head -1
 }
 
+# THE BLOCKLIST'S FOLD (#112, review of #134). A case-insensitive file system maps more than ASCII
+# onto an ASCII name: APFS folds ſ→s, K→k, both sharp s→ss and the ligatures ﬀ ﬁ ﬂ ﬃ ﬄ ﬅ ﬆ; NTFS upper-cases
+# ı→I; İ lower-cases to i; HFS+ skips the zero-width and bidi-control code points git's own HFS
+# check skips. Those are mapped as UTF-8 bytes, then ASCII case. Every other non-ASCII letter folds
+# to a non-ASCII one, so it cannot alias an ASCII glob; a non-ASCII letter IN a conf glob gets the
+# ASCII fold only. Why: docs/rationale/excluded-domains.md § Four reads that failed open
+FOLD_SED="$(printf 's/\305\277/s/g\ns/\304\261/i/g\ns/\304\260/i/g\ns/\342\204\252/k/g\ns/\303\237/ss/g\ns/\341\272\236/ss/g\ns/\357\254\200/ff/g\ns/\357\254\201/fi/g\ns/\357\254\202/fl/g\ns/\357\254\203/ffi/g\ns/\357\254\204/ffl/g\ns/\357\254[\205\206]/st/g\ns/\342\200[\214-\217]//g\ns/\342\200[\252-\256]//g\ns/\342\201[\252-\257]//g\ns/\357\273\277//g')"
+fold_key() { sed "$FOLD_SED" | tr '[:upper:]' '[:lower:]'; }
+
 # Match a newline file-list ($1) against a whitespace glob-list ($2); print the files that hit.
-# $3 = ci folds case on both sides: the BLOCKLIST's mode, because on a case-insensitive file system
-# `.Claude/agents/x.md` lands in `.claude/agents/` (#112). The allowlist stays exact — there a fold
-# could only make more paths "safe". The ORIGINAL name is printed, folded or not.
+# $3 = ci is the BLOCKLIST's mode, and it reads a path the way a file system may: folded on both
+# sides (fold_key — on macOS `.Claude/agents/x.md` lands in `.claude/agents/`), and as a directory
+# too (`path/`), so a symlink at `.claude` or `src/billing`, or one resolving there, is that whole
+# directory (#112). The allowlist gets neither: there each could only make more paths "safe". The
+# ORIGINAL name is printed, once.
 # Uses `read`, never `for x in $VAR`: the latter splits in POSIX sh but NOT in zsh, and that failure
 # is silent AND fails open (every path reported clean). Feeding both through read behaves identically
 # in every shell — the lesson merge-gate.sh paid for twice.
 match_any() {   # $1 = files (newlines), $2 = globs (whitespace), $3 = ci or empty → matching files
   _mf="$1"; _mg="$(printf '%s\n' "$2" | tr -s ' \t\n' '\n')"; _mc="${3:-}"
-  if [ "$_mc" = ci ]; then _mg="$(printf '%s\n' "$_mg" | tr '[:upper:]' '[:lower:]')"; fi
+  if [ "$_mc" = ci ]; then _mg="$(printf '%s\n' "$_mg" | fold_key)"; fi
   printf '%s\n' "$_mf" | while IFS= read -r _f; do
     [ -n "$_f" ] || continue
     _k="$_f"
-    if [ "$_mc" = ci ]; then _k="$(printf '%s\n' "$_f" | tr '[:upper:]' '[:lower:]')"; fi
+    if [ "$_mc" = ci ]; then _k="$(printf '%s\n' "$_f" | fold_key)"; fi
     printf '%s\n' "$_mg" | while IFS= read -r _g; do
       [ -n "$_g" ] || continue
       # shellcheck disable=SC2254  # _g is a glob on purpose
-      case "$_k" in $_g) printf '%s\n' "$_f" ;; esac
+      case "$_k" in $_g) printf '%s\n' "$_f"; break ;; esac
+      # shellcheck disable=SC2254
+      if [ "$_mc" = ci ]; then case "$_k/" in $_g) printf '%s\n' "$_f"; break ;; esac; fi
     done
   done
 }
@@ -271,11 +291,13 @@ added_lines() { grep '^+' "$DIFF_FILE" 2>/dev/null | grep -v '^+++' ; }
 #    UNKNOWN (see acquire_inputs).
 # A diff captured without any header (a bare `+line` stream) is all code — the fail-closed default.
 # `CMakeLists.txt` is code although `.txt` is prose: a build file that runs commands.
-# NOT A UNIFIED DIFF (#78): a word diff (`--word-diff`, `--color-words`) writes an added word without
-# a `+`, so it reads as nothing added. In both formats a line inside a hunk that starts with none of
-# `+ - space \` (and is not empty or a lone CR) exits 3; so does a git-format hunk with no `+` or
-# `-` line at all, which no unified diff writes (an indented word diff starts every line with a
-# space). Either leaves the `not-unified` marker in $WORK: UNKNOWN.
+# NOT A UNIFIED DIFF (#78, review of #134): a word diff (`--word-diff`, `--color-words`) writes an
+# added word without a `+`, so it reads as nothing added. A git-format hunk runs exactly as far as
+# its `@@ -o,l +n,m @@` counts: inside it every line starts with `+ - space \` (or is empty or a lone
+# CR), the counts come out exact, and one line at least is `+` or `-`. A line after the counts run
+# out is no hunk's (a format-patch signature, the next commit of `git log -p`). A bare hunk keeps
+# its latch rules and adds one: a line inside it that fits none. Any breach leaves the `not-unified`
+# marker in $WORK: UNKNOWN.
 # awk is the one tool this split adds to the deciding path, so its failure must not read as "no
 # text": a non-zero exit leaves a marker in $WORK that the run turns into UNKNOWN, never CLEAR —
 # and classify() refuses to run without a work directory to hold that marker.
@@ -293,18 +315,27 @@ added_lines_of() {   # $1 = code | prose → the added lines of files of that ki
       if (base ~ /\./) { ext = base; sub(/.*\./, ".", ext); if (tolower(ext) in isprose) return "prose" }
       return "code" }
     function latch() { latched = 1; kind = "code" }
-    function endhunk() { if (inh && !chg) bad = 1; inh = 0 }
+    function endhunk() { if (inh && (!chg || ro > 0 || rn > 0)) bad = 1; inh = 0 }
     BEGIN { n = split(prose, p, " "); for (i = 1; i <= n; i++) isprose["." p[i]] = 1
             n = split(codenames, q, " "); for (i = 1; i <= n; i++) iscode[q[i]] = 1
             kind = "code"; ro = 0; rn = 0; hdr = 0; pm = 0; latched = 0; inh = 0; chg = 0; bad = 0 }
-    # GIT FORMAT
+    # GIT FORMAT — a hunk is exactly as long as its @@ counts; a line after it is in no hunk
     gitfmt && /^diff --git / { endhunk(); kind = "code"; hdr = 1; next }
-    gitfmt && hdr { if ($0 ~ /^@@ /) { hdr = 0; inh = 1; chg = 0 } else if ($0 ~ /^\+\+\+ /) kind = kind_of($0); next }
-    gitfmt && /^@@ / { endhunk(); inh = 1; chg = 0; next }
+    gitfmt && hdr && !/^@@ / { if ($0 ~ /^\+\+\+ /) kind = kind_of($0); next }
+    gitfmt && /^@@ / {
+      endhunk(); hdr = 0; ro = 1; rn = 1; split($0, h, " ")
+      if (index(h[2], ",")) ro = substr(h[2], index(h[2], ",") + 1) + 0
+      if (index(h[3], ",")) rn = substr(h[3], index(h[3], ",") + 1) + 0
+      inh = 1; chg = 0; next }
     gitfmt && /^\+\+\+ / { kind = "code" }
     gitfmt { c = substr($0, 1, 1)
-             if (c == "+" || c == "-") chg = 1
-             else if (inh && c != " " && c != "\\" && $0 != "" && $0 != "\r") bad = 1
+             if (inh) {
+               if ($0 == "" || $0 == "\r" || c == " ") { ro--; rn-- }
+               else if (c == "-") { ro--; chg = 1 }
+               else if (c == "+") { rn--; chg = 1 }
+               else if (c != "\\") bad = 1
+               if (ro < 0 || rn < 0) bad = 1
+               if (ro <= 0 && rn <= 0) endhunk() }
              if (c == "+" && kind == want) print; next }
     # BARE FORMAT
     /^@@ -[0-9]+(,[0-9]+)? \+[0-9]+(,[0-9]+)? @@/ {
@@ -331,6 +362,30 @@ added_lines_of() {   # $1 = code | prose → the added lines of files of that ki
 added_code_lines()  { added_lines_of code; }
 added_prose_lines() { added_lines_of prose; }
 
+# A QUOTED NAME (review of #134). `git diff --name-only`, `gh pr diff --name-only` and every git
+# header quote a path with a non-ASCII byte (core.quotePath): `"src/billing/caf\303\251.ts"`. Matched
+# as printed, the leading `"` made `.claude/agents/évil.md` CLEAR. gitpath() decodes `\ooo`, `\\`
+# and `\"`; any other escape, a control character, or an unbalanced quote is UNDECODABLE — the raw
+# entry is still matched, and the run is UNKNOWN (the `undecodable` marker).
+GITPATH_AWK='
+  function gitpath(s,   r, i, c, n) {
+    if (substr(s, 1, 1) != "\"") return s
+    if (length(s) < 2 || substr(s, length(s), 1) != "\"") { undec = 1; return s }
+    s = substr(s, 2, length(s) - 2); r = ""
+    for (i = 1; i <= length(s); i++) {
+      c = substr(s, i, 1)
+      if (c == "\"") { undec = 1; return s }
+      if (c != "\\") { r = r c; continue }
+      c = substr(s, ++i, 1)
+      if (c == "\\" || c == "\"") { r = r c; continue }
+      if (c !~ /^[0-3]$/ || substr(s, i + 1, 2) !~ /^[0-7][0-7]$/) { undec = 1; return s }
+      n = c * 64 + substr(s, i + 1, 1) * 8 + substr(s, i + 2, 1); i += 2
+      if (n < 32 || n == 127) { undec = 1; return s }
+      r = r sprintf("%c", n) }
+    return r }
+  function undecmark() { if (undec && mk != "") { printf "" > mk; close(mk) } }'
+gitpaths() { awk -v mk="${WORK:+$WORK/undecodable}" "$GITPATH_AWK"' { print gitpath($0) } END { undecmark() }'; }
+
 # The paths a git diff's HEADERS touch beyond its file list. `--name-only` names a rename's
 # destination only, so a move out of a guarded path read CLEAR (#111): both `rename from` and
 # `rename to` are printed. A symlink (mode 120000) is the path it points at (#112): its target — the
@@ -339,9 +394,8 @@ added_prose_lines() { added_lines_of prose; }
 # Header lines exist only between `diff --git` and the first `@@`, where no content line can be.
 # Why: docs/rationale/excluded-domains.md § Four reads that failed open
 header_facts() {   # → `P <path>` per extra path to classify, `U <reason>` per unresolvable symlink
-  awk '
-    function unq(s) { sub(/\r$/, "", s); sub(/\t.*/, "", s)
-                      if (s ~ /^".*"$/) s = substr(s, 2, length(s) - 2); return s }
+  awk -v mk="${WORK:+$WORK/undecodable}" "$GITPATH_AWK"'
+    function unq(s) { sub(/\r$/, "", s); sub(/\t.*/, "", s); return gitpath(s) }
     function flush(   d, full, n, parts, i, m, k, res, out) {
       if (!link) return
       link = 0; sub(/\r$/, "", tgt)
@@ -367,7 +421,7 @@ header_facts() {   # → `P <path>` per extra path to classify, `U <reason>` per
     hdr && /^\+\+\+ / { s = $0; sub(/^\+\+\+ /, "", s); s = unq(s)
                         if (s == "/dev/null") s = ""; else sub(/^[bciwo]\//, "", s); lpath = s; next }
     !hdr && link && /^\+/ { tgt = substr($0, 2) }
-    END { flush() }
+    END { flush(); undecmark() }
   ' "$DIFF_FILE" 2>/dev/null || { [ -n "$WORK" ] && : > "$WORK/awk-failed" 2>/dev/null; true; }
 }
 
@@ -513,7 +567,9 @@ classify() {
     echo "VERDICT: UNKNOWN — could not scan the diff; held for the human."
     exit 2
   fi
-  FILES="$(cat "$FILES_FILE" 2>/dev/null)"
+  # Each entry decoded once (gitpath above): the list is matched as the names it means, not as git
+  # printed them.
+  FILES="$(gitpaths < "$FILES_FILE" 2>/dev/null)" || : > "$WORK/awk-failed"
   # The touched set is the file list PLUS what the diff's headers name (a rename's other side, a
   # symlink's target) — only ever added to, so a header can widen the set and never shrink it.
   _hf="$(header_facts)"
@@ -669,10 +725,17 @@ if [ -n "$WORK" ] && [ -f "$WORK/awk-failed" ]; then
   echo "VERDICT: UNKNOWN — could not scan the diff; held for the human."
   exit 2
 fi
-# A word diff writes added text without a `+`: read as unified, it is "nothing added" (#78).
+# A hunk that breaks the unified-diff form (#78) — a word diff writes added text without a `+`, and
+# read as unified it is "nothing added". Which tool wrote it is not knowable here; the form is.
 if [ -n "$WORK" ] && [ -f "$WORK/not-unified" ]; then
-  echo "excluded-domains: UNKNOWN — a hunk is not unified-diff shaped (a word diff, --word-diff or --color-words?); capture a plain unified diff" >&2
+  echo "excluded-domains: UNKNOWN — a hunk does not keep the unified-diff form (a line that is not + - space or \\, or line counts that differ from its @@ header); capture a plain diff (git diff --no-color, no --word-diff)" >&2
   echo "VERDICT: UNKNOWN — could not scan the diff; held for the human."
+  exit 2
+fi
+# A quoted path that does not decode is a name nobody can match (review of #134).
+if [ -n "$WORK" ] && [ -f "$WORK/undecodable" ]; then
+  echo "excluded-domains: UNKNOWN — a quoted path in the file list or the diff headers does not decode (git's C-style quoting); it cannot be classified" >&2
+  echo "VERDICT: UNKNOWN — could not read a path; held for the human."
   exit 2
 fi
 # A symlink is the path it points at (#112); one that cannot be resolved inside the repo is unknown.

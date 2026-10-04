@@ -160,10 +160,12 @@ EXCLUDED DOMAINS = contract domain   (EX-PAY ∪ EX-AUTH ∪ EX-API ∪ EX-SEC �
 | `EX-MIG` | destructive migration | `MIGRATION_PATHS` + a destructive-statement grep | — |
 | `EX-GDPR` | erasure / data-deletion | `ERASURE_PATHS` + an erasure grep **over every added code line of the diff** | labels; `GDPR-` family prefix |
 
-**How a path is read (#111, #112).** A rename counts on both sides, a symlink as the path it points
-at (one the classifier cannot resolve inside the repo is UNKNOWN). The blocklist matches
-case-insensitively — on macOS `.Claude/` is `.claude/` — and the `AUTONOMY_SAFE_PATHS` allowlist
-exactly.
+**How a path is read (#111, #112).** A git-quoted name is decoded first (one that does not decode
+is UNKNOWN). A rename counts on both sides, a symlink as the path it points at (one the classifier
+cannot resolve inside the repo is UNKNOWN). The blocklist folds ASCII case plus the few non-ASCII
+letters a file system folds to ASCII (`ſ`, the Kelvin sign, sharp s, the `ﬁ`-type ligatures,
+dotless `ı`), drops HFS+-ignorable code points, and also reads each path as a directory. Other
+non-ASCII letters are matched as written. The `AUTONOMY_SAFE_PATHS` allowlist matches exactly.
 
 `EX-GDPR` closes an everyday self-merge hole. An ad-hoc `DELETE FROM users`, an `ON DELETE CASCADE`,
 or a `deleteAccount()` that lands **outside** any migration file used to slip through, because
